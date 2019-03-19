@@ -1,0 +1,17 @@
+<component name="libraryTable">
+  <library name="com.google.auto.service:auto-service:1.0-rc4" type="repository">
+    <properties maven-id="com.google.auto.service:auto-service:1.0-rc4" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/auto-service-1.0-rc4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/auto-common-0.8.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/guava-23.5-jre.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jsr305-1.3.9.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/checker-qual-2.0.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/error_prone_annotations-2.0.18.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/j2objc-annotations-1.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/animal-sniffer-annotations-1.14.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
