@@ -14,6 +14,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 import java.util.Set;
 
@@ -45,27 +46,29 @@ public class MyProcessor extends AbstractProcessor {
     }
 
     private void checkHQL(Element element) {
-        JCTree tree = ((JavacElements) processingEnv.getElementUtils())
-                .getTree(element);
-        if (tree != null) {
-            tree.accept(new TreeScanner() {
-                @Override
-                public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
-                    Name name = getMethodName(jcMethodInvocation.getMethodSelect());
-                    if (name != null && name.toString().equals("createQuery")) {
-                        super.visitApply(jcMethodInvocation);
+        Elements elementUtils = processingEnv.getElementUtils();
+        if (elementUtils instanceof JavacElements) {
+            JCTree tree = ((JavacElements) elementUtils).getTree(element);
+            if (tree != null) {
+                tree.accept(new TreeScanner() {
+                    @Override
+                    public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
+                        Name name = getMethodName(jcMethodInvocation.getMethodSelect());
+                        if (name != null && name.toString().equals("createQuery")) {
+                            super.visitApply(jcMethodInvocation);
+                        }
                     }
-                }
 
-                @Override
-                public void visitLiteral(JCTree.JCLiteral jcLiteral) {
-                    if (jcLiteral.value instanceof String) {
-                        String string = (String) jcLiteral.value;
-                        messager.printMessage(Diagnostic.Kind.WARNING, string);
+                    @Override
+                    public void visitLiteral(JCTree.JCLiteral jcLiteral) {
+                        if (jcLiteral.value instanceof String) {
+                            String string = (String) jcLiteral.value;
+                            messager.printMessage(Diagnostic.Kind.WARNING, string);
+                        }
+                        super.visitLiteral(jcLiteral);
                     }
-                    super.visitLiteral(jcLiteral);
-                }
-            });
+                });
+            }
         }
     }
 
