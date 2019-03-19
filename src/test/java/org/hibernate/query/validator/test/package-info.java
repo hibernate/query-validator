@@ -1,2 +1,2 @@
 //@CheckHQL
-package org.hibernate.query.validator;
+package org.hibernate.query.validator.test;

@@ -1,4 +1,6 @@
-package org.hibernate.query.validator;
+package org.hibernate.query.validator.test;
+
+import org.hibernate.query.validator.CheckHQL;
 
 @CheckHQL
 public class MyProcessorTest {
