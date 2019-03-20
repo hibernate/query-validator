@@ -27,7 +27,7 @@ import java.util.Set;
 
 @SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
 @AutoService(Processor.class)
-public class MyProcessor extends AbstractProcessor {
+public class HQLValidatingProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {

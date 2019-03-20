@@ -3,7 +3,7 @@ package org.hibernate.query.validator.test;
 import org.hibernate.query.validator.CheckHQL;
 
 @CheckHQL
-public class MyProcessorTest {
+public class HQLValidationTest {
 //    @CheckHQL
     public void run() {
         System.out.print("hello");
