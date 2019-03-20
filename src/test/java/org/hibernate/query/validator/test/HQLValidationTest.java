@@ -10,6 +10,7 @@ public class HQLValidationTest {
         createQuery("from People p where p.name='gavin'");
         createQuery("from People where p.name='gavin' select");
         createQuery("from People p where p.name+='gavin'");
+        createQuery("select from People where p.name='gavin'");
     }
 
     private static void createQuery(String s) {}
