@@ -459,7 +459,43 @@ class DummySessionFactory implements SessionFactoryImplementor {
 
             @Override
             public JpaCompliance getJpaCompliance() {
-                return null;
+                return new JpaCompliance() {
+
+                    @Override
+                    public boolean isJpaQueryComplianceEnabled() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isJpaTransactionComplianceEnabled() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isJpaListComplianceEnabled() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isJpaClosedComplianceEnabled() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isJpaProxyComplianceEnabled() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isJpaCacheComplianceEnabled() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean isGlobalGeneratorScopeEnabled() {
+                        return false;
+                    }
+                };
             }
 
             @Override

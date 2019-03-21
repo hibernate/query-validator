@@ -7,22 +7,31 @@ import org.hibernate.hql.internal.antlr.HqlBaseParser;
 import org.hibernate.hql.internal.ast.util.ASTUtil;
 
 import java.io.StringReader;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 class HqlParser extends HqlBaseParser {
-    private Map<String, Set<String>> treatMap;
+//    private Map<String, Set<String>> treatMap;
+//    private ParseErrorHandler parseErrorHandler;
 
     HqlParser(String hql) {
         super(new HqlLexer(new StringReader(hql)));
         this.setASTFactory(new HqlASTFactory());
     }
 
-    public Map<String, Set<String>> getTreatMap() {
-        return treatMap;
-    }
+//    public void reportError(RecognitionException e) {
+//        parseErrorHandler.reportError(e);
+//    }
+//
+//    public void reportError(String s) {
+//        parseErrorHandler.reportError(s);
+//    }
+//
+//    public void reportWarning(String s) {
+//        parseErrorHandler.reportWarning(s);
+//    }
+
+//    public Map<String, Set<String>> getTreatMap() {
+//        return treatMap;
+//    }
 
     public AST handleIdentifierError(Token token, RecognitionException ex)
             throws RecognitionException, TokenStreamException {
@@ -282,20 +291,20 @@ class HqlParser extends HqlBaseParser {
     }
 
     protected void registerTreat(AST pathToTreat, AST treatAs) {
-        String path = this.toPathText(pathToTreat);
-        String subclassName = this.toPathText(treatAs);
-//        LOG.debugf("Registering discovered request to treat(%s as %s)", path, subclassName);
-        if (this.treatMap == null) {
-            this.treatMap = new HashMap();
-        }
-
-        Set<String> subclassNames = (Set)this.treatMap.get(path);
-        if (subclassNames == null) {
-            subclassNames = new HashSet();
-            this.treatMap.put(path, subclassNames);
-        }
-
-        ((Set)subclassNames).add(subclassName);
+//        String path = this.toPathText(pathToTreat);
+//        String subclassName = this.toPathText(treatAs);
+////        LOG.debugf("Registering discovered request to treat(%s as %s)", path, subclassName);
+//        if (this.treatMap == null) {
+//            this.treatMap = new HashMap();
+//        }
+//
+//        Set<String> subclassNames = (Set)this.treatMap.get(path);
+//        if (subclassNames == null) {
+//            subclassNames = new HashSet();
+//            this.treatMap.put(path, subclassNames);
+//        }
+//
+//        ((Set)subclassNames).add(subclassName);
     }
 
     private String toPathText(AST node) {
