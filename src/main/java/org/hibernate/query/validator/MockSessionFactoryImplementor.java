@@ -60,7 +60,7 @@ import java.util.TimeZone;
 
 import static java.util.Collections.*;
 
-class DummySessionFactory implements SessionFactoryImplementor {
+class MockSessionFactory implements SessionFactoryImplementor {
 
     EntityPersister entityPersister(String entityName) {
         return null;
@@ -91,8 +91,23 @@ class DummySessionFactory implements SessionFactoryImplementor {
     }
 
     @Override
+    public Type getIdentifierType(String s) throws MappingException {
+        return entityPersister(s).getIdentifierType();
+    }
+
+    @Override
+    public String getIdentifierPropertyName(String s) throws MappingException {
+        return entityPersister(s).getIdentifierPropertyName();
+    }
+
+    @Override
+    public Type getReferencedPropertyType(String s, String propertyName) throws MappingException {
+        return entityPersister(s).getPropertyType(propertyName);
+    }
+
+    @Override
     public MetamodelImplementor getMetamodel() {
-        return new MetamodelImpl(DummySessionFactory.this, new TypeConfiguration()) {
+        return new MetamodelImpl(MockSessionFactory.this, new TypeConfiguration()) {
             @Override
             public String getImportedClassName(String className) {
                 return className;
@@ -100,7 +115,7 @@ class DummySessionFactory implements SessionFactoryImplementor {
 
             @Override
             public EntityPersister entityPersister(String entityName) throws MappingException {
-                return DummySessionFactory.this.entityPersister(entityName);
+                return MockSessionFactory.this.entityPersister(entityName);
             }
         };
     }
@@ -131,7 +146,7 @@ class DummySessionFactory implements SessionFactoryImplementor {
         return new SessionFactoryOptions() {
             @Override
             public String getUuid() {
-                return DummySessionFactory.this.getUuid();
+                return MockSessionFactory.this.getUuid();
             }
 
             @Override
@@ -142,6 +157,16 @@ class DummySessionFactory implements SessionFactoryImplementor {
             @Override
             public StandardServiceRegistry getServiceRegistry() {
                 return serviceRegistry;
+            }
+
+            @Override
+            public String getSessionFactoryName() {
+                return getName();
+            }
+
+            @Override
+            public EntityMode getDefaultEntityMode() {
+                return EntityMode.POJO;
             }
 
             @Override
@@ -162,11 +187,6 @@ class DummySessionFactory implements SessionFactoryImplementor {
             @Override
             public boolean isJtaTransactionAccessEnabled() {
                 return false;
-            }
-
-            @Override
-            public String getSessionFactoryName() {
-                return getName();
             }
 
             @Override
@@ -217,11 +237,6 @@ class DummySessionFactory implements SessionFactoryImplementor {
             @Override
             public boolean isIdentifierRollbackEnabled() {
                 return false;
-            }
-
-            @Override
-            public EntityMode getDefaultEntityMode() {
-                return null;
             }
 
             @Override
@@ -517,21 +532,6 @@ class DummySessionFactory implements SessionFactoryImplementor {
 
     @Override
     public IdentifierGeneratorFactory getIdentifierGeneratorFactory() {
-        return null;
-    }
-
-    @Override
-    public Type getIdentifierType(String s) throws MappingException {
-        return entityPersister(s).getIdentifierType();
-    }
-
-    @Override
-    public String getIdentifierPropertyName(String s) throws MappingException {
-        return null;
-    }
-
-    @Override
-    public Type getReferencedPropertyType(String s, String s1) throws MappingException {
         return null;
     }
 

@@ -34,12 +34,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-class DummyEntityPersister implements EntityPersister, Queryable {
+class MockEntityPersister implements EntityPersister, Queryable {
 
     private final String entityName;
     private SessionFactoryImplementor factory;
 
-    DummyEntityPersister(String entityName, SessionFactoryImplementor factory) {
+    MockEntityPersister(String entityName, SessionFactoryImplementor factory) {
         this.entityName = entityName;
         this.factory = factory;
     }
@@ -260,19 +260,13 @@ class DummyEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void lock(Serializable serializable, Object o, Object o1, LockMode lockMode, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-
-    }
+    public void lock(Serializable serializable, Object o, Object o1, LockMode lockMode, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
 
     @Override
-    public void lock(Serializable serializable, Object o, Object o1, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-
-    }
+    public void lock(Serializable serializable, Object o, Object o1, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
 
     @Override
-    public void insert(Serializable serializable, Object[] objects, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-
-    }
+    public void insert(Serializable serializable, Object[] objects, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
 
     @Override
     public Serializable insert(Object[] objects, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
@@ -280,14 +274,10 @@ class DummyEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void delete(Serializable serializable, Object o, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-
-    }
+    public void delete(Serializable serializable, Object o, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
 
     @Override
-    public void update(Serializable serializable, Object[] objects, int[] ints, boolean b, Object[] objects1, Object o, Object o1, Object o2, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-
-    }
+    public void update(Serializable serializable, Object[] objects, int[] ints, boolean b, Object[] objects1, Object o, Object o1, Object o2, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
 
     @Override
     public Type[] getPropertyTypes() {
@@ -460,14 +450,10 @@ class DummyEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void afterInitialize(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
-
-    }
+    public void afterInitialize(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {}
 
     @Override
-    public void afterReassociate(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
-
-    }
+    public void afterReassociate(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {}
 
     @Override
     public Object createProxy(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
@@ -485,14 +471,10 @@ class DummyEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void processInsertGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {
-
-    }
+    public void processInsertGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {}
 
     @Override
-    public void processUpdateGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {
-
-    }
+    public void processUpdateGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {}
 
     @Override
     public Class getMappedClass() {
@@ -510,14 +492,10 @@ class DummyEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void setPropertyValues(Object o, Object[] objects) {
-
-    }
+    public void setPropertyValues(Object o, Object[] objects) {}
 
     @Override
-    public void setPropertyValue(Object o, int i, Object o1) {
-
-    }
+    public void setPropertyValue(Object o, int i, Object o1) {}
 
     @Override
     public Object[] getPropertyValues(Object o) {
@@ -577,7 +555,7 @@ class DummyEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public EntityMode getEntityMode() {
-        return null;
+        return EntityMode.POJO;
     }
 
     @Override
@@ -607,7 +585,7 @@ class DummyEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public EntityPersister getEntityPersister() {
-        return null;
+        return this;
     }
 
     @Override
@@ -630,7 +608,7 @@ class DummyEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String getTableAliasForColumn(String s, String s1) {
-        return null;
+        return "";
     }
 
     @Override
@@ -750,7 +728,7 @@ class DummyEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String getSubclassTableName(int i) {
-        return null;
+        return "";
     }
 
     @Override
@@ -775,12 +753,12 @@ class DummyEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String getName() {
-        return null;
+        return getEntityName();
     }
 
     @Override
     public String getTableName() {
-        return null;
+        return "";
     }
 
     @Override
@@ -790,7 +768,7 @@ class DummyEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String whereJoinFragment(String s, boolean b, boolean b1) {
-        return null;
+        return "";
     }
 
     @Override
@@ -840,7 +818,7 @@ class DummyEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public boolean consumesEntityAlias() {
-        return false;
+        return true;
     }
 
     @Override

@@ -1,6 +1,5 @@
 package org.hibernate.query.validator;
 
-import antlr.RecognitionException;
 import com.google.auto.service.AutoService;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.IdentifierTree;
@@ -11,6 +10,7 @@ import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeScanner;
 import com.sun.tools.javac.util.Names;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.hql.internal.ast.HqlParser;
 import org.hibernate.hql.internal.ast.HqlSqlWalker;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.hql.internal.ast.QueryTranslatorImpl;
@@ -83,55 +83,21 @@ public class HQLValidatingProcessor extends AbstractProcessor {
 
                             ParseErrorHandler handler =
                                     new JavacErrorReporter(jcLiteral, element, processingEnv);
-
-                            //first parse with a special parser that correctly
-                            //reports column numbers for syntax errors
                             try {
-                                HqlParser parser = new HqlParser(hql){
-                                    @Override
-                                    public void reportError(String s) {
-                                        handler.reportError(s);
-                                    }
-                                    @Override
-                                    public void reportError(RecognitionException e) {
-                                        handler.reportError(e);
-                                    }
-                                    @Override
-                                    public void reportWarning(String s) {
-                                        handler.reportWarning(s);
-                                    }
-                                };
+
+                                HqlParser parser = HqlParser.getInstance(hql);
+                                setHandler(parser, handler);
                                 parser.statement();
 
                                 if (handler.getErrorCount()==0) {
-                                    //now reparse and then transform with Hibernate's
-                                    //parser and transformer, that don't correctly
-                                    //report column numbers, but can do more stuff
-                                    org.hibernate.hql.internal.ast.HqlParser parser2 =
-                                            org.hibernate.hql.internal.ast.HqlParser.getInstance(hql);
-                                    parser2.statement();
-
                                     SessionFactoryImplementor factory =
                                             new JavacSessionFactory(processingEnv);
-
                                     QueryTranslatorImpl queryTranslator =
                                             new QueryTranslatorImpl(null, hql, emptyMap(), factory);
-                                    HqlSqlWalker walker = new HqlSqlWalker(queryTranslator, factory, parser2, emptyMap(), null) {
-                                        @Override
-                                        public void reportError(String s) {
-                                            handler.reportError(s);
-                                        }
-                                        @Override
-                                        public void reportError(RecognitionException e) {
-                                            handler.reportError(e);
-                                        }
-                                        @Override
-                                        public void reportWarning(String s) {
-                                            handler.reportWarning(s);
-                                        }
-                                    };
+                                    HqlSqlWalker walker = new HqlSqlWalker(queryTranslator, factory, parser, emptyMap(), null);
+                                    setHandler(walker, handler);
                                     try {
-                                        walker.statement(parser2.getAST());
+                                        walker.statement(parser.getAST());
                                     }
                                     catch (Exception e) {
                                         handler.reportError(e.getMessage());

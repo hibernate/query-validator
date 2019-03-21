@@ -7,6 +7,7 @@ public class HQLValidationTest {
 //    @CheckHQL
     public void run() {
         createQuery("from Person p where p.name='gavin'");
+        createQuery("from Employee p where p.name='gavin' and p.id=111");
         createQuery("from Person p join p.address a where a.city='barcelona'");
         createQuery("from Person p where p.address.city='barcelona'");
 

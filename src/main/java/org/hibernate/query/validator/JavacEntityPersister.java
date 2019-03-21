@@ -1,8 +1,6 @@
 package org.hibernate.query.validator;
 
 import com.sun.tools.javac.code.Symbol;
-import com.sun.tools.javac.code.Symtab;
-import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
 import org.hibernate.QueryException;
 import org.hibernate.persister.entity.EntityPersister;
@@ -12,14 +10,14 @@ import org.hibernate.type.*;
 import javax.lang.model.type.MirroredTypeException;
 import javax.persistence.*;
 
-class JavacEntityPersister extends DummyEntityPersister {
+class JavacEntityPersister extends MockEntityPersister {
 
     private final Symbol type;
     private final Names names;
-    private final DummySessionFactory factory;
+    private final MockSessionFactory factory;
 
     JavacEntityPersister(String entityName, Symbol type, Names names,
-                         DummySessionFactory factory) {
+                         MockSessionFactory factory) {
         super(entityName, factory);
         this.type = type;
         this.names = names;
@@ -32,8 +30,18 @@ class JavacEntityPersister extends DummyEntityPersister {
         Symbol.TypeSymbol memberType = type.type.tsym;
         String memberEntityName = null;
         for (String segment: segments) {
-            Symbol member = HQLValidatingProcessor.lookup(names, memberType, segment);
-            if (member == null) {
+            Symbol member = null;
+            while (member==null && memberType instanceof Symbol.ClassSymbol) {
+                member = HQLValidatingProcessor.lookup(names, memberType, segment);
+                if (member==null) {
+                    com.sun.tools.javac.code.Type superclass =
+                            ((Symbol.ClassSymbol) memberType).getSuperclass();
+                    if (superclass!=null) {
+                        memberType = superclass.tsym;
+                    }
+                }
+            }
+            if (member == null || member.getAnnotation(Transient.class)!=null) {
                 return null;
             }
             else {

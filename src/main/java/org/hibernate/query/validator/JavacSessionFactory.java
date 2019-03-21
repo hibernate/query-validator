@@ -13,7 +13,7 @@ import javax.persistence.Entity;
 import java.util.ArrayList;
 import java.util.Collection;
 
-class JavacSessionFactory extends DummySessionFactory {
+class JavacSessionFactory extends MockSessionFactory {
 
     private final Names names;
     private final Symtab syms;
