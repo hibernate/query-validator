@@ -316,7 +316,7 @@ class HqlParser extends HqlBaseParser {
 //        return this.treatMap == null ? Collections.emptyMap() : this.treatMap;
 //    }
 
-    public static void panic() {
-        throw new QueryException("Parser: panic");
-    }
+//    public static void panic() {
+//        throw new QueryException("Parser: panic");
+//    }
 }
