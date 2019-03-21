@@ -20,6 +20,9 @@ class HqlParser extends HqlBaseParser {
         this.setASTFactory(new HqlASTFactory());
     }
 
+    public Map<String, Set<String>> getTreatMap() {
+        return treatMap;
+    }
 
     public AST handleIdentifierError(Token token, RecognitionException ex)
             throws RecognitionException, TokenStreamException {
