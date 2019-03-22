@@ -21,8 +21,11 @@ public class Queries {
         createQuery("from Person p where p.address.town='barcelona'");
 
         createQuery("from Person p where p.name in (select p.name from Person p)");
-
         createQuery("from Person p where p.name in (select a.name from Address a)");
+
+        createQuery("select new test.Pair(p,a) from Person p join p.address a");
+        createQuery("select new test.Nil(p,a) from Person p join p.address a");
+        createQuery("select new test.Pair(p) from Person p");
     }
 
     private static void createQuery(String s) {}

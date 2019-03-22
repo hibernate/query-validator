@@ -5,18 +5,14 @@ import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.tools.javac.model.JavacElements;
+import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeScanner;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.hql.internal.ast.HqlParser;
-import org.hibernate.hql.internal.ast.HqlSqlWalker;
-import org.hibernate.hql.internal.ast.ParseErrorHandler;
-import org.hibernate.hql.internal.ast.QueryTranslatorImpl;
+import org.hibernate.hql.internal.antlr.HqlSqlTokenTypes;
+import org.hibernate.hql.internal.ast.*;
 
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Processor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.Name;
@@ -59,6 +55,14 @@ public class HQLValidatingProcessor extends AbstractProcessor {
         }
     }
 
+    @Override
+    public synchronized void init(ProcessingEnvironment processingEnv) {
+        super.init(processingEnv);
+        if (processingEnv instanceof JavacProcessingEnvironment) {
+            JavacHelper.init((JavacProcessingEnvironment) processingEnv);
+        }
+    }
+
     private void checkHQL(Element element) {
         Elements elementUtils = processingEnv.getElementUtils();
         if (elementUtils instanceof JavacElements) {
@@ -93,11 +97,18 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                                 parser.statement();
 
                                 if (handler.getErrorCount()==0) {
-                                    SessionFactoryImplementor factory =
-                                            new JavacSessionFactory(processingEnv);
+                                    SessionFactoryImplementor factory = new JavacSessionFactory();
                                     HqlSqlWalker walker = new HqlSqlWalker(
                                             new QueryTranslatorImpl("", hql, emptyMap(), factory),
                                             factory, parser, emptyMap(), null);
+                                    walker.setASTFactory(new SqlASTFactory(walker) {
+                                        @Override
+                                        public Class getASTNodeType(int tokenType) {
+                                            return tokenType == HqlSqlTokenTypes.CONSTRUCTOR ?
+                                                    WorkaroundConstructorNode.class :
+                                                    super.getASTNodeType(tokenType);
+                                        }
+                                    });
                                     setHandler(walker, handler);
                                     try {
                                         walker.statement(parser.getAST());

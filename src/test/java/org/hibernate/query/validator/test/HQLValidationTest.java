@@ -55,6 +55,7 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:9:"));
         assertFalse(errors.contains("Queries.java:10:"));
         assertFalse(errors.contains("Queries.java:23:"));
+        assertFalse(errors.contains("Queries.java:26:"));
 
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
@@ -66,8 +67,9 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:19: error: Property firstName does not exist in class Person"));
         assertTrue(errors.contains("Queries.java:20: error: Property addr does not exist in class Person"));
         assertTrue(errors.contains("Queries.java:21: error: Property"));
-
-        assertTrue(errors.contains("Queries.java:25: error: Property name does not exist in class Address"));
+        assertTrue(errors.contains("Queries.java:24: error: Property name does not exist in class Address"));
+        assertTrue(errors.contains("Queries.java:27: error: Class test.Nil not found"));
+        assertTrue(errors.contains("Queries.java:28: error: No suitable constructor for class test.Pair"));
 
     }
 }
