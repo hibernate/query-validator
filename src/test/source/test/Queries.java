@@ -19,6 +19,10 @@ public class Queries {
         createQuery("from Person p where p.firstName='gavin'");
         createQuery("from Person p join p.addr a");
         createQuery("from Person p where p.address.town='barcelona'");
+
+        createQuery("from Person p where p.name in (select p.name from Person p)");
+
+        createQuery("from Person p where p.name in (select a.name from Address a)");
     }
 
     private static void createQuery(String s) {}
