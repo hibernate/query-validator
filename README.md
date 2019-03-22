@@ -6,6 +6,9 @@ Compile time validation for HQL and JPA-QL queries.
 
 Type `mvn install` from the project directory.
 
+This will produce an artifact with the Maven coordinates 
+`org.hibernate:query-validator:1.0-SNAPSHOT`.
+
 ## Usage
 
 1. Put `query-validator-1.0-SNAPSHOT.jar` and its dependencies in 
