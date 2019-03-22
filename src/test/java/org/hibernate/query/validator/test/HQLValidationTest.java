@@ -20,11 +20,6 @@ public class HQLValidationTest {
     public void run() throws Exception {
         Path tempDir = Files.createTempDirectory("validator-test-out");
 
-        Files.list(Paths.get("src/test/source"))
-                .filter(p->p.toString().endsWith(".class"))
-                .forEach(p-> { try { Files.delete(p); }
-                                catch (Exception e) {} });
-
         List<String> files = new ArrayList<>();
 
 //        files.add("-verbose");
@@ -33,7 +28,9 @@ public class HQLValidationTest {
         files.add(tempDir.toString());
 
         files.add("-classpath");
-        StringBuilder cp = new StringBuilder("target/query-validator-1.0-SNAPSHOT.jar");
+        StringBuilder cp = new StringBuilder();
+//        cp.append("target/query-validator-1.0-SNAPSHOT.jar");
+        cp.append(":target/classes");
         Files.list(Paths.get("lib"))
                 .map(Path::toString)
                 .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
@@ -50,7 +47,7 @@ public class HQLValidationTest {
         int rc = javac.run(null, null, err, files.toArray(new String[0]));
         assert rc!=0;
         String errors = err.toString();
-        System.out.println(errors);
+//        System.out.println(errors);
 
         assertFalse(errors.contains("Queries.java:6:"));
         assertFalse(errors.contains("Queries.java:7:"));
