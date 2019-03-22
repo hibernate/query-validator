@@ -1,4 +1,4 @@
 @CheckHQL
-package org.hibernate.query.validator.test;
+package test;
 
 import org.hibernate.query.validator.CheckHQL;

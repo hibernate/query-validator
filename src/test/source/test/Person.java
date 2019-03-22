@@ -1,4 +1,4 @@
-package org.hibernate.query.validator.test;
+package test;
 
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
