@@ -10,7 +10,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="org.hibernate:hibernate-core:5.4.1.Final" level="project" />
     <orderEntry type="library" name="com.google.auto.service:auto-service:1.0-rc4" level="project" />
+    <orderEntry type="library" name="org.hibernate:hibernate-core:5.4.2.Final" level="project" />
   </component>
 </module>
