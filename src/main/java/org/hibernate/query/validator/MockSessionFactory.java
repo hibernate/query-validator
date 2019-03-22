@@ -1,16 +1,22 @@
 package org.hibernate.query.validator;
 
 import org.hibernate.*;
-import org.hibernate.boot.registry.internal.BootstrapServiceRegistryImpl;
+import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
+import org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl;
+import org.hibernate.boot.registry.BootstrapServiceRegistry;
+import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.internal.StandardServiceRegistryImpl;
 import org.hibernate.boot.spi.SessionFactoryOptions;
 import org.hibernate.cache.internal.DisabledCaching;
+import org.hibernate.cache.internal.RegionFactoryInitiator;
 import org.hibernate.cache.spi.CacheImplementor;
 import org.hibernate.cfg.Settings;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
-import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunctionRegistry;
-import org.hibernate.engine.jdbc.internal.JdbcServicesImpl;
+import org.hibernate.engine.config.internal.ConfigurationServiceInitiator;
+import org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator;
+import org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator;
+import org.hibernate.engine.jdbc.internal.JdbcServicesInitiator;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
 import org.hibernate.engine.profile.FetchProfile;
 import org.hibernate.engine.query.spi.QueryPlanCache;
@@ -28,7 +34,6 @@ import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.proxy.EntityNotFoundDelegate;
 import org.hibernate.query.spi.NamedQueryRepository;
-import org.hibernate.service.internal.ProvidedService;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.stat.spi.StatisticsImplementor;
 import org.hibernate.type.Type;
@@ -46,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static java.util.Arrays.asList;
 import static java.util.Collections.*;
 
 abstract class MockSessionFactory implements SessionFactoryImplementor {
@@ -60,33 +66,25 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     static final TypeHelper typeHelper = new TypeLocatorImpl(typeResolver);
 
-    static class GenericDialect extends Dialect {}
-
-    static final JdbcServicesImpl jdbcServices =
-            new JdbcServicesImpl() {
-                private Dialect defaultDialect;
-                @Override
-                public Dialect getDialect() {
-                    Dialect dialect = super.getDialect();
-                    if (dialect!=null) {
-                        return dialect;
-                    }
-                    if (defaultDialect==null) {
-                        defaultDialect = new GenericDialect();
-                    }
-                    return defaultDialect;
-                }
-            };
+    static final BootstrapServiceRegistry bootstrapServiceRegistry =
+            new BootstrapServiceRegistryBuilder()
+                    .applyStrategySelector(ImplicitNamingStrategy.class, "default",
+                            ImplicitNamingStrategyJpaCompliantImpl.class)
+                    .build();
 
     static final StandardServiceRegistryImpl serviceRegistry =
-            new StandardServiceRegistryImpl(new BootstrapServiceRegistryImpl(),
+            new StandardServiceRegistryImpl(bootstrapServiceRegistry,
+                    asList(GenericDialectFactoryInitiator.INSTANCE,
+                            ConfigurationServiceInitiator.INSTANCE,
+                            RegionFactoryInitiator.INSTANCE,
+                            JdbcServicesInitiator.INSTANCE,
+                            JdbcEnvironmentInitiator.INSTANCE,
+                            ConnectionProviderInitiator.INSTANCE),
                     emptyList(),
-                    singletonList(new ProvidedService<>(JdbcServices.class, jdbcServices)),
                     emptyMap());
 
-    static {
-        jdbcServices.injectServices(serviceRegistry);
-    }
+    private final JdbcServices jdbcServices =
+            serviceRegistry.getService(JdbcServices.class);
 
     private final MetamodelImpl metamodel =
             new MetamodelImpl(MockSessionFactory.this, typeConfiguration) {
@@ -286,7 +284,7 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public SQLFunctionRegistry getSqlFunctionRegistry() {
-        return new SQLFunctionRegistry(jdbcServices.getDialect(),
+        return new SQLFunctionRegistry(getJdbcServices().getDialect(),
                 options.getCustomSqlFunctionMap());
     }
 

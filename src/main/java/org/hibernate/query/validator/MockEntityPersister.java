@@ -1,7 +1,10 @@
 package org.hibernate.query.validator;
 
 import org.hibernate.*;
-import org.hibernate.boot.spi.MetadataImplementor;
+import org.hibernate.boot.internal.BootstrapContextImpl;
+import org.hibernate.boot.internal.MetadataBuilderImpl;
+import org.hibernate.boot.model.naming.ObjectNameNormalizer;
+import org.hibernate.boot.spi.*;
 import org.hibernate.bytecode.spi.BytecodeEnhancementMetadata;
 import org.hibernate.cache.spi.access.EntityDataAccess;
 import org.hibernate.cache.spi.access.NaturalIdDataAccess;
@@ -10,7 +13,6 @@ import org.hibernate.cache.spi.entry.CacheEntryStructure;
 import org.hibernate.engine.spi.*;
 import org.hibernate.id.IdentifierGenerator;
 import org.hibernate.internal.FilterAliasGenerator;
-import org.hibernate.mapping.KeyValue;
 import org.hibernate.mapping.RootClass;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.metadata.ClassMetadata;
@@ -21,11 +23,8 @@ import org.hibernate.persister.walking.spi.EntityIdentifierDefinition;
 import org.hibernate.sql.SelectFragment;
 import org.hibernate.tuple.entity.EntityMetamodel;
 import org.hibernate.tuple.entity.EntityTuplizer;
-import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.Type;
-import org.hibernate.type.TypeFactory;
 import org.hibernate.type.VersionType;
-import org.hibernate.type.spi.TypeConfiguration;
 
 import java.io.Serializable;
 import java.sql.ResultSet;
@@ -34,10 +33,53 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-class MockEntityPersister implements EntityPersister, Queryable {
+import static org.hibernate.query.validator.MockSessionFactory.serviceRegistry;
+
+abstract class MockEntityPersister implements EntityPersister, Queryable {
+
+    private static final Serializable[] NO_SPACES = new Serializable[0];
+
+    private static MetadataBuildingOptions metadataBuildOptions =
+            new MetadataBuilderImpl.MetadataBuildingOptionsImpl(serviceRegistry);
+
+    //Note: this is unnecessary
+    private static final MetadataBuildingContext metadataBuildContext
+            = new MetadataBuildingContext() {
+        @Override
+        public MetadataBuildingOptions getBuildingOptions() {
+            return metadataBuildOptions;
+        }
+
+        @Override
+        public BootstrapContext getBootstrapContext() {
+            return new BootstrapContextImpl(serviceRegistry, metadataBuildOptions);
+        }
+
+        @Override
+        public MappingDefaults getMappingDefaults() {
+            return new MetadataBuilderImpl.MappingDefaultsImpl(serviceRegistry);
+        }
+
+        @Override
+        public InFlightMetadataCollector getMetadataCollector() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ClassLoaderAccess getClassLoaderAccess() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ObjectNameNormalizer getObjectNameNormalizer() {
+            throw new UnsupportedOperationException();
+        }
+    };
 
     private final String entityName;
     private SessionFactoryImplementor factory;
+
+    private EntityMetamodel entityMetamodel;
 
     MockEntityPersister(String entityName, SessionFactoryImplementor factory) {
         this.entityName = entityName;
@@ -55,68 +97,77 @@ class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
+    public String getName() {
+        return entityName;
+    }
+
+    @Override
     public EntityMetamodel getEntityMetamodel() {
-        return new EntityMetamodel(new RootClass(null) {
-            @Override
-            public KeyValue getIdentifier() {
-                return new SimpleValue((MetadataImplementor) null) {
-                    @Override
-                    public Type getType() throws MappingException {
-                        return getIdentifierType();
-                    }
-                    @Override
-                    public String getTypeName() {
-                        return getType().getName();
-                    }
-                };
-            }
-        }, this, factory);
+        if (entityMetamodel==null) {
+            SimpleValue id = new SimpleValue(metadataBuildContext);
+            id.setTypeName(getIdentifierType().getName());
+            RootClass rootClass = new RootClass(metadataBuildContext);
+            rootClass.setIdentifier(id);
+            entityMetamodel = new EntityMetamodel(rootClass, this, factory);
+        }
+        return entityMetamodel;
     }
 
     @Override
-    public Type toType(String s) throws QueryException {
-        return null;
+    public abstract Type getIdentifierType();
+
+    @Override
+    public abstract String getIdentifierPropertyName();
+
+    @Override
+    public abstract Type getPropertyType(String propertyName) throws MappingException;
+
+    @Override
+    public Type toType(String propertyName) throws QueryException {
+        return getPropertyType(propertyName);
     }
 
     @Override
-    public String[] toColumns(String s, String s1) throws QueryException {
-        return new String[] { s + s1 };
+    public Declarer getSubclassPropertyDeclarer(String s) {
+        return Declarer.CLASS;
     }
 
     @Override
-    public String[] toColumns(String s) throws QueryException, UnsupportedOperationException {
-        return new String[] { s };
+    public String[] toColumns(String alias, String propertyName) throws QueryException {
+        return new String[] { "" };
+    }
+
+    @Override
+    public String[] toColumns(String propertyName) throws QueryException, UnsupportedOperationException {
+        return new String[] { "" };
     }
 
     @Override
     public Type getType() {
-        return new ManyToOneType(new TypeFactory.TypeScope() {
-            @Override
-            public TypeConfiguration getTypeConfiguration() {
-                return MockSessionFactory.typeConfiguration;
-            }
-        }, entityName);
+        return MockSessionFactory.typeHelper.entity(entityName);
     }
 
     @Override
     public void generateEntityDefinition() {}
 
     @Override
-    public void postInstantiate() throws MappingException {}
+    public void postInstantiate() throws MappingException {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public NavigableRole getNavigableRole() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public EntityEntryFactory getEntityEntryFactory() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getRootEntityName() {
-        return null;
+        return entityName;
     }
 
     @Override
@@ -126,12 +177,12 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public Serializable[] getPropertySpaces() {
-        return new Serializable[0];
+        return NO_SPACES;
     }
 
     @Override
     public Serializable[] getQuerySpaces() {
-        return new Serializable[0];
+        return NO_SPACES;
     }
 
     @Override
@@ -175,18 +226,13 @@ class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public Type getPropertyType(String s) throws MappingException {
-        return null;
-    }
-
-    @Override
     public int[] findDirty(Object[] objects, Object[] objects1, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
-        return new int[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public int[] findModified(Object[] objects, Object[] objects1, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
-        return new int[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -211,7 +257,7 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public int getVersionProperty() {
-        return 0;
+        return -66;
     }
 
     @Override
@@ -221,17 +267,17 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public int[] getNaturalIdentifierProperties() {
-        return new int[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object[] getNaturalIdentifierSnapshot(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) {
-        return new Object[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public IdentifierGenerator getIdentifierGenerator() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -241,107 +287,107 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public Serializable loadEntityIdByNaturalId(Object[] objects, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object load(Serializable serializable, Object o, LockMode lockMode, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object load(Serializable serializable, Object o, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public List multiLoad(Serializable[] serializables, SharedSessionContractImplementor sharedSessionContractImplementor, MultiLoadOptions multiLoadOptions) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void lock(Serializable serializable, Object o, Object o1, LockMode lockMode, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
+    public void lock(Serializable serializable, Object o, Object o1, LockMode lockMode, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
-    public void lock(Serializable serializable, Object o, Object o1, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
+    public void lock(Serializable serializable, Object o, Object o1, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
-    public void insert(Serializable serializable, Object[] objects, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
+    public void insert(Serializable serializable, Object[] objects, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public Serializable insert(Object[] objects, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void delete(Serializable serializable, Object o, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
+    public void delete(Serializable serializable, Object o, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
-    public void update(Serializable serializable, Object[] objects, int[] ints, boolean b, Object[] objects1, Object o, Object o1, Object o2, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {}
+    public void update(Serializable serializable, Object[] objects, int[] ints, boolean b, Object[] objects1, Object o, Object o1, Object o2, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public Type[] getPropertyTypes() {
-        return new Type[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String[] getPropertyNames() {
-        return new String[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean[] getPropertyInsertability() {
-        return new boolean[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ValueInclusion[] getPropertyInsertGenerationInclusions() {
-        return new ValueInclusion[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ValueInclusion[] getPropertyUpdateGenerationInclusions() {
-        return new ValueInclusion[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean[] getPropertyUpdateability() {
-        return new boolean[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean[] getPropertyCheckability() {
-        return new boolean[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean[] getPropertyNullability() {
-        return new boolean[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean[] getPropertyVersionability() {
-        return new boolean[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean[] getPropertyLaziness() {
-        return new boolean[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CascadeStyle[] getPropertyCascadeStyles() {
-        return new CascadeStyle[0];
-    }
-
-    @Override
-    public Type getIdentifierType() {
-        return null;
-    }
-
-    @Override
-    public String getIdentifierPropertyName() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -371,17 +417,17 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public EntityDataAccess getCacheAccessStrategy() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CacheEntryStructure getCacheEntryStructure() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CacheEntry buildCacheEntry(Object o, Object[] objects, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -391,12 +437,12 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public NaturalIdDataAccess getNaturalIdCacheAccessStrategy() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ClassMetadata getClassMetadata() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -411,22 +457,22 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public Object[] getDatabaseSnapshot(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return new Object[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Serializable getIdByUniqueKey(Serializable serializable, String s, SharedSessionContractImplementor sharedSessionContractImplementor) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object getCurrentVersion(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object forceVersionIncrement(Serializable serializable, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -450,35 +496,43 @@ class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void afterInitialize(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {}
+    public void afterInitialize(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
-    public void afterReassociate(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {}
+    public void afterReassociate(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public Object createProxy(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Boolean isTransient(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object[] getPropertyValuesToInsert(Object o, Map map, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
-        return new Object[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void processInsertGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {}
+    public void processInsertGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
-    public void processUpdateGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {}
+    public void processUpdateGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public Class getMappedClass() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -488,69 +542,77 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public Class getConcreteProxyClass() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void setPropertyValues(Object o, Object[] objects) {}
+    public void setPropertyValues(Object o, Object[] objects) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
-    public void setPropertyValue(Object o, int i, Object o1) {}
+    public void setPropertyValue(Object o, int i, Object o1) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public Object[] getPropertyValues(Object o) {
-        return new Object[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object getPropertyValue(Object o, int i) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object getPropertyValue(Object o, String s) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Serializable getIdentifier(Object o) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Serializable getIdentifier(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void setIdentifier(Object o, Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) {}
+    public void setIdentifier(Object o, Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public Object getVersion(Object o) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object instantiate(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean isInstance(Object o) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean hasUninitializedLazyProperties(Object o) {
-        return false;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void resetIdentifier(Object o, Serializable serializable, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) {}
+    public void resetIdentifier(Object o, Serializable serializable, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public EntityPersister getSubclassEntityPersister(Object o, SessionFactoryImplementor sessionFactoryImplementor) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -560,22 +622,22 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public EntityTuplizer getEntityTuplizer() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public BytecodeEnhancementMetadata getInstrumentationMetadata() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public FilterAliasGenerator getFilterAliasGenerator(String s) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public int[] resolveAttributeIndexes(String[] strings) {
-        return new int[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -590,12 +652,12 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public EntityIdentifierDefinition getEntityKeyDefinition() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Iterable<AttributeDefinition> getAttributes() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -604,7 +666,9 @@ class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void registerAffectingFetchProfile(String s) {}
+    public void registerAffectingFetchProfile(String s) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public String getTableAliasForColumn(String s, String s1) {
@@ -623,22 +687,22 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String getDiscriminatorSQLValue() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public String identifierSelectFragment(String s, String s1) {
+    public String identifierSelectFragment(String name, String suffix) {
         return "";
     }
 
     @Override
-    public String propertySelectFragment(String s, String s1, boolean b) {
+    public String propertySelectFragment(String alias, String suffix, boolean b) {
         return "";
     }
 
     @Override
     public SelectFragment propertySelectFragmentFragment(String s, String s1, boolean b) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -648,47 +712,47 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public Type getDiscriminatorType() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Object getDiscriminatorValue() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getSubclassForDiscriminatorValue(Object o) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String[] getIdentifierColumnNames() {
-        return new String[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public String[] getIdentifierAliases(String s) {
-        return new String[0];
+    public String[] getIdentifierAliases(String suffix) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public String[] getPropertyAliases(String s, int i) {
-        return new String[0];
+    public String[] getPropertyAliases(String suffix, int i) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String[] getPropertyColumnNames(int i) {
-        return new String[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getDiscriminatorAlias(String s) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getDiscriminatorColumnName() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -698,7 +762,7 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public Object[] hydrate(ResultSet resultSet, Serializable serializable, Object o, Loadable loadable, String[][] strings, boolean b, SharedSessionContractImplementor sharedSessionContractImplementor) throws SQLException, HibernateException {
-        return new Object[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -708,27 +772,22 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String[] getConstraintOrderedTableNameClosure() {
-        return new String[0];
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String[][] getContraintOrderedTableKeyColumnClosure() {
-        return new String[0][];
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public int getSubclassPropertyTableNumber(String s) {
-        return 0;
-    }
-
-    @Override
-    public Declarer getSubclassPropertyDeclarer(String s) {
-        return null;
+    public int getSubclassPropertyTableNumber(String propertyPath) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String getSubclassTableName(int i) {
-        return "";
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -738,22 +797,17 @@ class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String generateFilterConditionAlias(String s) {
-        return null;
+        return "";
     }
 
     @Override
     public DiscriminatorMetadata getTypeDiscriminatorMetadata() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public String[][] getSubclassPropertyFormulaTemplateClosure() {
-        return new String[0][];
-    }
-
-    @Override
-    public String getName() {
-        return getEntityName();
+        throw new UnsupportedOperationException();
     }
 
     @Override

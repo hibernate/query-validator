@@ -25,7 +25,19 @@ class JavacEntityPersister extends MockEntityPersister {
     }
 
     @Override
-    public Type toType(String name) throws QueryException {
+    public Type getIdentifierType() {
+        //TODO: getPropertyType(getIdentifierPropertyName())
+        return StandardBasicTypes.INTEGER;
+    }
+
+    @Override
+    public String getIdentifierPropertyName() {
+        //TODO!!!!!!
+        return "id";
+    }
+
+    @Override
+    public Type getPropertyType(String name) throws QueryException {
         String[] segments = name.split("\\.");
         Symbol.TypeSymbol memberType = type.type.tsym;
         String memberEntityName = null;
@@ -130,13 +142,4 @@ class JavacEntityPersister extends MockEntityPersister {
         return StringType.INSTANCE;
     }
 
-    @Override
-    public Type getIdentifierType() {
-        return StandardBasicTypes.INTEGER;
-    }
-
-    @Override
-    public String getIdentifierPropertyName() {
-        return "id";
-    }
 }
