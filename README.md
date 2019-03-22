@@ -2,6 +2,8 @@
 
 Compile time validation for HQL and JPA-QL queries.
 
+*WARNING: this project is still at an experimental stage!*
+
 ## Building
 
 Type `mvn install` from the project directory.
