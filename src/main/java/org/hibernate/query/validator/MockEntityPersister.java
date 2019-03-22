@@ -133,12 +133,14 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public String[] toColumns(String alias, String propertyName) throws QueryException {
+    public String[] toColumns(String alias, String propertyName)
+            throws QueryException {
         return new String[] { "" };
     }
 
     @Override
-    public String[] toColumns(String propertyName) throws QueryException, UnsupportedOperationException {
+    public String[] toColumns(String propertyName)
+            throws QueryException, UnsupportedOperationException {
         return new String[] { "" };
     }
 
@@ -226,12 +228,14 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public int[] findDirty(Object[] objects, Object[] objects1, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public int[] findDirty(Object[] objects, Object[] objects1, Object o,
+                           SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public int[] findModified(Object[] objects, Object[] objects1, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public int[] findModified(Object[] objects, Object[] objects1, Object o,
+                              SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
@@ -271,7 +275,8 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public Object[] getNaturalIdentifierSnapshot(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public Object[] getNaturalIdentifierSnapshot(Serializable serializable,
+                                                 SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
@@ -286,52 +291,72 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public Serializable loadEntityIdByNaturalId(Object[] objects, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public Serializable loadEntityIdByNaturalId(Object[] objects, LockOptions lockOptions,
+                                                SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object load(Serializable serializable, Object o, LockMode lockMode, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Object load(Serializable serializable, Object o, LockMode lockMode,
+                       SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object load(Serializable serializable, Object o, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Object load(Serializable serializable, Object o, LockOptions lockOptions,
+                       SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List multiLoad(Serializable[] serializables, SharedSessionContractImplementor sharedSessionContractImplementor, MultiLoadOptions multiLoadOptions) {
+    public List multiLoad(Serializable[] serializables,
+                          SharedSessionContractImplementor sharedSessionContractImplementor,
+                          MultiLoadOptions multiLoadOptions) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void lock(Serializable serializable, Object o, Object o1, LockMode lockMode, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public void lock(Serializable serializable, Object o, Object o1, LockMode lockMode,
+                     SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void lock(Serializable serializable, Object o, Object o1, LockOptions lockOptions, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public void lock(Serializable serializable, Object o, Object o1, LockOptions lockOptions,
+                     SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void insert(Serializable serializable, Object[] objects, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public void insert(Serializable serializable, Object[] objects, Object o,
+                       SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Serializable insert(Object[] objects, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Serializable insert(Object[] objects, Object o,
+                               SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void delete(Serializable serializable, Object o, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public void delete(Serializable serializable, Object o, Object o1,
+                       SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void update(Serializable serializable, Object[] objects, int[] ints, boolean b, Object[] objects1, Object o, Object o1, Object o2, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public void update(Serializable serializable, Object[] objects, int[] ints, boolean b,
+                       Object[] objects1, Object o, Object o1, Object o2,
+                       SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
@@ -426,7 +451,8 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public CacheEntry buildCacheEntry(Object o, Object[] objects, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public CacheEntry buildCacheEntry(Object o, Object[] objects, Object o1,
+                                      SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
@@ -456,22 +482,29 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public Object[] getDatabaseSnapshot(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Object[] getDatabaseSnapshot(Serializable serializable,
+                                        SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Serializable getIdByUniqueKey(Serializable serializable, String s, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public Serializable getIdByUniqueKey(Serializable serializable, String s,
+                                         SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object getCurrentVersion(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Object getCurrentVersion(Serializable serializable,
+                                    SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object forceVersionIncrement(Serializable serializable, Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Object forceVersionIncrement(Serializable serializable, Object o,
+                                        SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
@@ -496,37 +529,47 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void afterInitialize(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public void afterInitialize(Object o,
+                                SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void afterReassociate(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public void afterReassociate(Object o,
+                                 SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object createProxy(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Object createProxy(Serializable serializable,
+                              SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Boolean isTransient(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Boolean isTransient(Object o,
+                               SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object[] getPropertyValuesToInsert(Object o, Map map, SharedSessionContractImplementor sharedSessionContractImplementor) throws HibernateException {
+    public Object[] getPropertyValuesToInsert(Object o, Map map,
+                                              SharedSessionContractImplementor sharedSessionContractImplementor)
+            throws HibernateException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void processInsertGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public void processInsertGeneratedProperties(Serializable serializable, Object o, Object[] objects,
+                                                 SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void processUpdateGeneratedProperties(Serializable serializable, Object o, Object[] objects, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public void processUpdateGeneratedProperties(Serializable serializable, Object o, Object[] objects,
+                                                 SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
@@ -576,12 +619,14 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public Serializable getIdentifier(Object o, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public Serializable getIdentifier(Object o,
+                                      SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void setIdentifier(Object o, Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public void setIdentifier(Object o, Serializable serializable,
+                              SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
@@ -591,7 +636,8 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public Object instantiate(Serializable serializable, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public Object instantiate(Serializable serializable,
+                              SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
@@ -606,7 +652,8 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public void resetIdentifier(Object o, Serializable serializable, Object o1, SharedSessionContractImplementor sharedSessionContractImplementor) {
+    public void resetIdentifier(Object o, Serializable serializable, Object o1,
+                                SharedSessionContractImplementor sharedSessionContractImplementor) {
         throw new UnsupportedOperationException();
     }
 
