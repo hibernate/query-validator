@@ -4,11 +4,9 @@ import com.google.auto.service.AutoService;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.MemberSelectTree;
-import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeScanner;
-import com.sun.tools.javac.util.Names;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.hql.internal.ast.HqlParser;
 import org.hibernate.hql.internal.ast.HqlSqlWalker;
@@ -68,17 +66,21 @@ public class HQLValidatingProcessor extends AbstractProcessor {
             if (tree != null) {
                 tree.accept(new TreeScanner() {
 
+                    boolean inCreateQueryMethod;
+
                     @Override
                     public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
                         Name name = getMethodName(jcMethodInvocation.getMethodSelect());
                         if (name != null && name.toString().equals("createQuery")) {
+                            inCreateQueryMethod = true;
                             super.visitApply(jcMethodInvocation);
+                            inCreateQueryMethod = false;
                         }
                     }
 
                     @Override
                     public void visitLiteral(JCTree.JCLiteral jcLiteral) {
-                        if (jcLiteral.value instanceof String) {
+                        if (inCreateQueryMethod && jcLiteral.value instanceof String) {
                             String hql = (String) jcLiteral.value;
 
                             ParseErrorHandler handler =
@@ -94,7 +96,8 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                                             new JavacSessionFactory(processingEnv);
                                     QueryTranslatorImpl queryTranslator =
                                             new QueryTranslatorImpl(null, hql, emptyMap(), factory);
-                                    HqlSqlWalker walker = new HqlSqlWalker(queryTranslator, factory, parser, emptyMap(), null);
+                                    HqlSqlWalker walker = new HqlSqlWalker(queryTranslator, factory,
+                                            parser, emptyMap(), null);
                                     setHandler(walker, handler);
                                     try {
                                         walker.statement(parser.getAST());
@@ -112,7 +115,6 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                             catch (Exception e) {
                                 e.printStackTrace();
                             }
-
                         }
                     }
 
