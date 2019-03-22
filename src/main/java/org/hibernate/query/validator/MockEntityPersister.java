@@ -93,7 +93,7 @@ class MockEntityPersister implements EntityPersister, Queryable {
         return new ManyToOneType(new TypeFactory.TypeScope() {
             @Override
             public TypeConfiguration getTypeConfiguration() {
-                return null;
+                return MockSessionFactory.typeConfiguration;
             }
         }, entityName);
     }

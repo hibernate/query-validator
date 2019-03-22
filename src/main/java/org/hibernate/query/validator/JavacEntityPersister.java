@@ -93,7 +93,7 @@ class JavacEntityPersister extends MockEntityPersister {
     }
 
     private Type entity(String entityName) {
-        EntityPersister ep = factory.entityPersister(entityName);
+        EntityPersister ep = factory.createMockEntityPersister(entityName);
         if (ep instanceof Queryable) {
             return ((Queryable) ep).getType();
         }

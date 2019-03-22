@@ -25,7 +25,7 @@ class JavacSessionFactory extends MockSessionFactory {
     }
 
     @Override
-    EntityPersister entityPersister(String entityName) {
+    EntityPersister createMockEntityPersister(String entityName) {
         //TODO: is it truly quicker to split the search up into two steps like this??
         //first search for things with defaulted entity names
         Collection<PackageSymbol> packages = new ArrayList<>(syms.packages.values());

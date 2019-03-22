@@ -1,20 +1,14 @@
 package org.hibernate.query.validator;
 
 import org.hibernate.*;
-import org.hibernate.boot.SchemaAutoTooling;
-import org.hibernate.boot.TempTableDdlTransactionHandling;
-import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.internal.BootstrapServiceRegistryImpl;
 import org.hibernate.boot.registry.internal.StandardServiceRegistryImpl;
 import org.hibernate.boot.spi.SessionFactoryOptions;
+import org.hibernate.cache.internal.DisabledCaching;
 import org.hibernate.cache.spi.CacheImplementor;
-import org.hibernate.cache.spi.TimestampsCacheFactory;
-import org.hibernate.cfg.BaselineSessionEventsListenerBuilder;
 import org.hibernate.cfg.Settings;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.hibernate.dialect.Dialect;
-import org.hibernate.dialect.HSQLDialect;
-import org.hibernate.dialect.function.SQLFunction;
 import org.hibernate.dialect.function.SQLFunctionRegistry;
 import org.hibernate.engine.jdbc.internal.JdbcServicesImpl;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
@@ -24,11 +18,9 @@ import org.hibernate.engine.spi.FilterDefinition;
 import org.hibernate.engine.spi.SessionBuilderImplementor;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.graph.spi.RootGraphImplementor;
-import org.hibernate.hql.spi.id.MultiTableBulkIdStrategy;
 import org.hibernate.id.IdentifierGenerator;
 import org.hibernate.id.factory.IdentifierGeneratorFactory;
-import org.hibernate.jpa.spi.JpaCompliance;
-import org.hibernate.loader.BatchFetchStyle;
+import org.hibernate.internal.TypeLocatorImpl;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.metadata.CollectionMetadata;
 import org.hibernate.metamodel.internal.MetamodelImpl;
@@ -36,12 +28,9 @@ import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.proxy.EntityNotFoundDelegate;
 import org.hibernate.query.spi.NamedQueryRepository;
-import org.hibernate.resource.jdbc.spi.PhysicalConnectionHandlingMode;
-import org.hibernate.resource.jdbc.spi.StatementInspector;
 import org.hibernate.service.internal.ProvidedService;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.stat.spi.StatisticsImplementor;
-import org.hibernate.tuple.entity.EntityTuplizerFactory;
 import org.hibernate.type.Type;
 import org.hibernate.type.TypeFactory;
 import org.hibernate.type.TypeResolver;
@@ -56,75 +45,109 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 
 import static java.util.Collections.*;
 
-class MockSessionFactory implements SessionFactoryImplementor {
+abstract class MockSessionFactory implements SessionFactoryImplementor {
 
-    EntityPersister entityPersister(String entityName) {
-        return null;
+    static final SessionFactoryOptions options = new MockSessionFactoryOptions();
+
+    static final TypeConfiguration typeConfiguration = new TypeConfiguration();
+
+    static final TypeResolver typeResolver =
+            new TypeResolver(typeConfiguration,
+                    new TypeFactory(typeConfiguration));
+
+    static final TypeHelper typeHelper = new TypeLocatorImpl(typeResolver);
+
+    static class GenericDialect extends Dialect {}
+
+    static final JdbcServicesImpl jdbcServices =
+            new JdbcServicesImpl() {
+                private Dialect defaultDialect;
+                @Override
+                public Dialect getDialect() {
+                    Dialect dialect = super.getDialect();
+                    if (dialect!=null) {
+                        return dialect;
+                    }
+                    if (defaultDialect==null) {
+                        defaultDialect = new GenericDialect();
+                    }
+                    return defaultDialect;
+                }
+            };
+
+    static final StandardServiceRegistryImpl serviceRegistry =
+            new StandardServiceRegistryImpl(new BootstrapServiceRegistryImpl(),
+                    emptyList(),
+                    singletonList(new ProvidedService<>(JdbcServices.class, jdbcServices)),
+                    emptyMap());
+
+    static {
+        jdbcServices.injectServices(serviceRegistry);
     }
 
-    private static Dialect defaultDialect;
+    private final MetamodelImpl metamodel =
+            new MetamodelImpl(MockSessionFactory.this, typeConfiguration) {
+                @Override
+                public String getImportedClassName(String className) {
+                    return className;
+                }
+
+                @Override
+                public EntityPersister entityPersister(String entityName)
+                        throws MappingException {
+                    return createMockEntityPersister(entityName);
+                }
+
+                @Override
+                public EntityPersister locateEntityPersister(String entityName)
+                        throws MappingException {
+                    return createMockEntityPersister(entityName);
+                }
+            };
+
+    /**
+     * Lazily create a {@link MockEntityPersister}
+     */
+    abstract EntityPersister createMockEntityPersister(String entityName);
 
     @Override
     public JdbcServices getJdbcServices() {
-        return new JdbcServicesImpl() {
-            @Override
-            public Dialect getDialect() {
-                Dialect dialect = super.getDialect();
-                if (dialect!=null) {
-                    return dialect;
-                }
-                if (defaultDialect==null) {
-                    defaultDialect = new HSQLDialect();
-                }
-                return defaultDialect;
-            }
-        };
+        return jdbcServices;
     }
 
     @Override
     public TypeResolver getTypeResolver() {
-        return new TypeResolver(null, new TypeFactory(null));
+        return typeResolver;
     }
 
     @Override
-    public Type getIdentifierType(String s) throws MappingException {
-        return entityPersister(s).getIdentifierType();
+    public Type getIdentifierType(String className)
+            throws MappingException {
+        return createMockEntityPersister(className)
+                .getIdentifierType();
     }
 
     @Override
-    public String getIdentifierPropertyName(String s) throws MappingException {
-        return entityPersister(s).getIdentifierPropertyName();
+    public String getIdentifierPropertyName(String className)
+            throws MappingException {
+        return createMockEntityPersister(className)
+                .getIdentifierPropertyName();
     }
 
     @Override
-    public Type getReferencedPropertyType(String s, String propertyName) throws MappingException {
-        return entityPersister(s).getPropertyType(propertyName);
+    public Type getReferencedPropertyType(String className, String propertyName)
+            throws MappingException {
+        return createMockEntityPersister(className)
+                .getPropertyType(propertyName);
     }
 
     @Override
     public MetamodelImplementor getMetamodel() {
-        return new MetamodelImpl(MockSessionFactory.this, new TypeConfiguration()) {
-            @Override
-            public String getImportedClassName(String className) {
-                return className;
-            }
-
-            @Override
-            public EntityPersister entityPersister(String entityName) throws MappingException {
-                return MockSessionFactory.this.entityPersister(entityName);
-            }
-        };
+        return metamodel;
     }
-
-    private StandardServiceRegistryImpl serviceRegistry =
-            new StandardServiceRegistryImpl(new BootstrapServiceRegistryImpl(),
-                    emptyList(),
-                    singletonList(new ProvidedService<>(JdbcServices.class, getJdbcServices())),
-                    emptyMap());
 
     @Override
     public ServiceRegistryImplementor getServiceRegistry() {
@@ -133,477 +156,107 @@ class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public String getUuid() {
-        return "dummy";
+        return options.getUuid();
     }
 
     @Override
     public String getName() {
-        return "dummy";
+        return options.getSessionFactoryName();
     }
 
     @Override
     public SessionFactoryOptions getSessionFactoryOptions() {
-        return new SessionFactoryOptions() {
-            @Override
-            public String getUuid() {
-                return MockSessionFactory.this.getUuid();
-            }
-
-            @Override
-            public EntityTuplizerFactory getEntityTuplizerFactory() {
-                return new EntityTuplizerFactory();
-            }
-
-            @Override
-            public StandardServiceRegistry getServiceRegistry() {
-                return serviceRegistry;
-            }
-
-            @Override
-            public String getSessionFactoryName() {
-                return getName();
-            }
-
-            @Override
-            public EntityMode getDefaultEntityMode() {
-                return EntityMode.POJO;
-            }
-
-            @Override
-            public Object getBeanManagerReference() {
-                return null;
-            }
-
-            @Override
-            public Object getValidatorFactoryReference() {
-                return null;
-            }
-
-            @Override
-            public boolean isJpaBootstrap() {
-                return false;
-            }
-
-            @Override
-            public boolean isJtaTransactionAccessEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isSessionFactoryNameAlsoJndiName() {
-                return false;
-            }
-
-            @Override
-            public boolean isFlushBeforeCompletionEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isAutoCloseSessionEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isStatisticsEnabled() {
-                return false;
-            }
-
-            @Override
-            public Interceptor getInterceptor() {
-                return null;
-            }
-
-            @Override
-            public Class<? extends Interceptor> getStatelessInterceptorImplementor() {
-                return null;
-            }
-
-            @Override
-            public StatementInspector getStatementInspector() {
-                return null;
-            }
-
-            @Override
-            public SessionFactoryObserver[] getSessionFactoryObservers() {
-                return new SessionFactoryObserver[0];
-            }
-
-            @Override
-            public BaselineSessionEventsListenerBuilder getBaselineSessionEventsListenerBuilder() {
-                return null;
-            }
-
-            @Override
-            public boolean isIdentifierRollbackEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isCheckNullability() {
-                return false;
-            }
-
-            @Override
-            public boolean isInitializeLazyStateOutsideTransactionsEnabled() {
-                return false;
-            }
-
-            @Override
-            public MultiTableBulkIdStrategy getMultiTableBulkIdStrategy() {
-                return null;
-            }
-
-            @Override
-            public TempTableDdlTransactionHandling getTempTableDdlTransactionHandling() {
-                return null;
-            }
-
-            @Override
-            public BatchFetchStyle getBatchFetchStyle() {
-                return null;
-            }
-
-            @Override
-            public boolean isDelayBatchFetchLoaderCreationsEnabled() {
-                return false;
-            }
-
-            @Override
-            public int getDefaultBatchFetchSize() {
-                return 0;
-            }
-
-            @Override
-            public Integer getMaximumFetchDepth() {
-                return null;
-            }
-
-            @Override
-            public NullPrecedence getDefaultNullPrecedence() {
-                return null;
-            }
-
-            @Override
-            public boolean isOrderUpdatesEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isOrderInsertsEnabled() {
-                return false;
-            }
-
-            @Override
-            public MultiTenancyStrategy getMultiTenancyStrategy() {
-                return null;
-            }
-
-            @Override
-            public CurrentTenantIdentifierResolver getCurrentTenantIdentifierResolver() {
-                return null;
-            }
-
-            @Override
-            public boolean isJtaTrackByThread() {
-                return false;
-            }
-
-            @Override
-            public Map getQuerySubstitutions() {
-                return null;
-            }
-
-            @Override
-            public boolean isNamedQueryStartupCheckingEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isConventionalJavaConstants() {
-                return true;
-            }
-
-            @Override
-            public boolean isSecondLevelCacheEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isQueryCacheEnabled() {
-                return false;
-            }
-
-            @Override
-            public TimestampsCacheFactory getTimestampsCacheFactory() {
-                return null;
-            }
-
-            @Override
-            public String getCacheRegionPrefix() {
-                return null;
-            }
-
-            @Override
-            public boolean isMinimalPutsEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isStructuredCacheEntriesEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isDirectReferenceCacheEntriesEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isAutoEvictCollectionCache() {
-                return false;
-            }
-
-            @Override
-            public SchemaAutoTooling getSchemaAutoTooling() {
-                return null;
-            }
-
-            @Override
-            public int getJdbcBatchSize() {
-                return 0;
-            }
-
-            @Override
-            public boolean isJdbcBatchVersionedData() {
-                return false;
-            }
-
-            @Override
-            public boolean isScrollableResultSetsEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isWrapResultSetsEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isGetGeneratedKeysEnabled() {
-                return false;
-            }
-
-            @Override
-            public Integer getJdbcFetchSize() {
-                return null;
-            }
-
-            @Override
-            public PhysicalConnectionHandlingMode getPhysicalConnectionHandlingMode() {
-                return null;
-            }
-
-            @Override
-            public ConnectionReleaseMode getConnectionReleaseMode() {
-                return null;
-            }
-
-            @Override
-            public boolean isCommentsEnabled() {
-                return false;
-            }
-
-            @Override
-            public CustomEntityDirtinessStrategy getCustomEntityDirtinessStrategy() {
-                return null;
-            }
-
-            @Override
-            public EntityNameResolver[] getEntityNameResolvers() {
-                return new EntityNameResolver[0];
-            }
-
-            @Override
-            public EntityNotFoundDelegate getEntityNotFoundDelegate() {
-                return null;
-            }
-
-            @Override
-            public Map<String, SQLFunction> getCustomSqlFunctionMap() {
-                return null;
-            }
-
-            @Override
-            public void setCheckNullability(boolean b) {}
-
-            @Override
-            public boolean isPreferUserTransaction() {
-                return false;
-            }
-
-            @Override
-            public boolean isProcedureParameterNullPassingEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isCollectionJoinSubqueryRewriteEnabled() {
-                return false;
-            }
-
-            @Override
-            public boolean isAllowOutOfTransactionUpdateOperations() {
-                return false;
-            }
-
-            @Override
-            public boolean isReleaseResourcesOnCloseEnabled() {
-                return false;
-            }
-
-            @Override
-            public TimeZone getJdbcTimeZone() {
-                return null;
-            }
-
-            @Override
-            public boolean jdbcStyleParamsZeroBased() {
-                return false;
-            }
-
-            @Override
-            public JpaCompliance getJpaCompliance() {
-                return new JpaCompliance() {
-
-                    @Override
-                    public boolean isJpaQueryComplianceEnabled() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean isJpaTransactionComplianceEnabled() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean isJpaListComplianceEnabled() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean isJpaClosedComplianceEnabled() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean isJpaProxyComplianceEnabled() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean isJpaCacheComplianceEnabled() {
-                        return false;
-                    }
-
-                    @Override
-                    public boolean isGlobalGeneratorScopeEnabled() {
-                        return false;
-                    }
-                };
-            }
-
-            @Override
-            public boolean isFailOnPaginationOverCollectionFetchEnabled() {
-                return false;
-            }
-        };
+        return options;
+    }
+
+    @Override
+    public Settings getSettings() {
+        return new Settings(options);
+    }
+
+    @Override
+    public Set getDefinedFilterNames() {
+        return emptySet();
     }
 
     @Override
     public Type resolveParameterBindType(Object o) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Type resolveParameterBindType(Class aClass) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public IdentifierGeneratorFactory getIdentifierGeneratorFactory() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Reference getReference() throws NamingException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public SessionBuilderImplementor withOptions() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Session openSession() throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Session getCurrentSession() throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public StatelessSessionBuilder withStatelessOptions() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public StatelessSession openStatelessSession() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public StatelessSession openStatelessSession(Connection connection) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Session openTemporarySession() throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CacheImplementor getCache() {
-        return null;
+        return new DisabledCaching(this);
     }
 
     @Override
     public PersistenceUnitUtil getPersistenceUnitUtil() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void addNamedQuery(String s, Query query) {}
+    public void addNamedQuery(String s, Query query) {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public <T> T unwrap(Class<T> aClass) {
-        return null;
-    }
-
-    @Override
-    public <T> void addNamedEntityGraph(String s, EntityGraph<T> entityGraph) {}
-
-    @Override
-    public Set getDefinedFilterNames() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public FilterDefinition getFilterDefinition(String s) throws HibernateException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -613,45 +266,66 @@ class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public TypeHelper getTypeHelper() {
-        return null;
+        return typeHelper;
+    }
+
+    @Override
+    public EntityNotFoundDelegate getEntityNotFoundDelegate() {
+        return options.getEntityNotFoundDelegate();
+    }
+
+    @Override
+    public CustomEntityDirtinessStrategy getCustomEntityDirtinessStrategy() {
+        return options.getCustomEntityDirtinessStrategy();
+    }
+
+    @Override
+    public CurrentTenantIdentifierResolver getCurrentTenantIdentifierResolver() {
+        return options.getCurrentTenantIdentifierResolver();
+    }
+
+    @Override
+    public SQLFunctionRegistry getSqlFunctionRegistry() {
+        return new SQLFunctionRegistry(jdbcServices.getDialect(),
+                options.getCustomSqlFunctionMap());
     }
 
     @Override
     public ClassMetadata getClassMetadata(Class aClass) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public ClassMetadata getClassMetadata(String s) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CollectionMetadata getCollectionMetadata(String s) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Map<String, ClassMetadata> getAllClassMetadata() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Map getAllCollectionMetadata() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public StatisticsImplementor getStatistics() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public void close() throws HibernateException {}
+    public void close() {}
 
     @Override
     public Map<String, Object> getProperties() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -661,85 +335,62 @@ class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public Interceptor getInterceptor() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public QueryPlanCache getQueryPlanCache() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public NamedQueryRepository getNamedQueryRepository() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public FetchProfile getFetchProfile(String s) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public IdentifierGenerator getIdentifierGenerator(String s) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public EntityNotFoundDelegate getEntityNotFoundDelegate() {
-        return null;
-    }
-
-    @Override
-    public SQLFunctionRegistry getSqlFunctionRegistry() {
-        return null;
-    }
-
-    @Override
-    public void addObserver(SessionFactoryObserver sessionFactoryObserver) {}
-
-    @Override
-    public CustomEntityDirtinessStrategy getCustomEntityDirtinessStrategy() {
-        return null;
-    }
-
-    @Override
-    public CurrentTenantIdentifierResolver getCurrentTenantIdentifierResolver() {
-        return null;
+    public void addObserver(SessionFactoryObserver sessionFactoryObserver) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public DeserializationResolver getDeserializationResolver() {
-        return null;
-    }
-
-    @Override
-    public Settings getSettings() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public EntityManager createEntityManager() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public EntityManager createEntityManager(Map map) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public EntityManager createEntityManager(SynchronizationType synchronizationType) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public EntityManager createEntityManager(SynchronizationType synchronizationType, Map map) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public CriteriaBuilder getCriteriaBuilder() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -748,12 +399,18 @@ class MockSessionFactory implements SessionFactoryImplementor {
     }
 
     @Override
+    public <T> void addNamedEntityGraph(String s, EntityGraph<T> entityGraph) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public <T> List<RootGraphImplementor<? super T>> findEntityGraphsByJavaType(Class<T> aClass) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public RootGraphImplementor<?> findEntityGraphByName(String s) {
-        return null;
+        throw new UnsupportedOperationException();
     }
+
 }
