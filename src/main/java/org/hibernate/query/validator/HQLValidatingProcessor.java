@@ -80,8 +80,9 @@ public class HQLValidatingProcessor extends AbstractProcessor {
 
                     @Override
                     public void visitLiteral(JCTree.JCLiteral jcLiteral) {
-                        if (inCreateQueryMethod && jcLiteral.value instanceof String) {
-                            String hql = (String) jcLiteral.value;
+                        Object literalValue = jcLiteral.value;
+                        if (inCreateQueryMethod && literalValue instanceof String) {
+                            String hql = (String) literalValue;
 
                             ParseErrorHandler handler =
                                     new JavacErrorReporter(jcLiteral, element, processingEnv);
@@ -94,10 +95,9 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                                 if (handler.getErrorCount()==0) {
                                     SessionFactoryImplementor factory =
                                             new JavacSessionFactory(processingEnv);
-                                    QueryTranslatorImpl queryTranslator =
-                                            new QueryTranslatorImpl(null, hql, emptyMap(), factory);
-                                    HqlSqlWalker walker = new HqlSqlWalker(queryTranslator, factory,
-                                            parser, emptyMap(), null);
+                                    HqlSqlWalker walker = new HqlSqlWalker(
+                                            new QueryTranslatorImpl("", hql, emptyMap(), factory),
+                                            factory, parser, emptyMap(), null);
                                     setHandler(walker, handler);
                                     try {
                                         walker.statement(parser.getAST());
