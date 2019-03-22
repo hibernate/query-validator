@@ -27,6 +27,8 @@ class MockSessionFactoryOptions implements SessionFactoryOptions {
     private static final SessionFactoryObserver[] NO_OBSERVERS = new SessionFactoryObserver[0];
     private static final EntityNameResolver[] NO_RESOLVERS = new EntityNameResolver[0];
 
+    static final SessionFactoryOptions INSTANCE = new MockSessionFactoryOptions();
+
     private static final JpaCompliance jpaCompliance = new JpaCompliance() {
         @Override
         public boolean isJpaQueryComplianceEnabled() {

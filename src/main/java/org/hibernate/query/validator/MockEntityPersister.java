@@ -1,10 +1,6 @@
 package org.hibernate.query.validator;
 
 import org.hibernate.*;
-import org.hibernate.boot.internal.BootstrapContextImpl;
-import org.hibernate.boot.internal.MetadataBuilderImpl;
-import org.hibernate.boot.model.naming.ObjectNameNormalizer;
-import org.hibernate.boot.spi.*;
 import org.hibernate.bytecode.spi.BytecodeEnhancementMetadata;
 import org.hibernate.cache.spi.access.EntityDataAccess;
 import org.hibernate.cache.spi.access.NaturalIdDataAccess;
@@ -13,8 +9,6 @@ import org.hibernate.cache.spi.entry.CacheEntryStructure;
 import org.hibernate.engine.spi.*;
 import org.hibernate.id.IdentifierGenerator;
 import org.hibernate.internal.FilterAliasGenerator;
-import org.hibernate.mapping.RootClass;
-import org.hibernate.mapping.SimpleValue;
 import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.metamodel.model.domain.NavigableRole;
 import org.hibernate.persister.entity.*;
@@ -33,53 +27,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.hibernate.query.validator.MockSessionFactory.serviceRegistry;
+import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
 
 abstract class MockEntityPersister implements EntityPersister, Queryable {
 
     private static final Serializable[] NO_SPACES = new Serializable[0];
 
-    private static MetadataBuildingOptions metadataBuildOptions =
-            new MetadataBuilderImpl.MetadataBuildingOptionsImpl(serviceRegistry);
-
-    //Note: this is unnecessary
-    private static final MetadataBuildingContext metadataBuildContext
-            = new MetadataBuildingContext() {
-        @Override
-        public MetadataBuildingOptions getBuildingOptions() {
-            return metadataBuildOptions;
-        }
-
-        @Override
-        public BootstrapContext getBootstrapContext() {
-            return new BootstrapContextImpl(serviceRegistry, metadataBuildOptions);
-        }
-
-        @Override
-        public MappingDefaults getMappingDefaults() {
-            return new MetadataBuilderImpl.MappingDefaultsImpl(serviceRegistry);
-        }
-
-        @Override
-        public InFlightMetadataCollector getMetadataCollector() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ClassLoaderAccess getClassLoaderAccess() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ObjectNameNormalizer getObjectNameNormalizer() {
-            throw new UnsupportedOperationException();
-        }
-    };
-
     private final String entityName;
     private SessionFactoryImplementor factory;
-
-    private EntityMetamodel entityMetamodel;
 
     MockEntityPersister(String entityName, SessionFactoryImplementor factory) {
         this.entityName = entityName;
@@ -102,18 +57,6 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public EntityMetamodel getEntityMetamodel() {
-        if (entityMetamodel==null) {
-            SimpleValue id = new SimpleValue(metadataBuildContext);
-            id.setTypeName(getIdentifierType().getName());
-            RootClass rootClass = new RootClass(metadataBuildContext);
-            rootClass.setIdentifier(id);
-            entityMetamodel = new EntityMetamodel(rootClass, this, factory);
-        }
-        return entityMetamodel;
-    }
-
-    @Override
     public abstract Type getIdentifierType();
 
     @Override
@@ -125,6 +68,11 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     @Override
     public Type toType(String propertyName) throws QueryException {
         return getPropertyType(propertyName);
+    }
+
+    @Override
+    public String getRootEntityName() {
+        return entityName;
     }
 
     @Override
@@ -146,11 +94,28 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public Type getType() {
-        return MockSessionFactory.typeHelper.entity(entityName);
+        return typeHelper.entity(entityName);
     }
 
     @Override
-    public void generateEntityDefinition() {}
+    public Serializable[] getPropertySpaces() {
+        return NO_SPACES;
+    }
+
+    @Override
+    public Serializable[] getQuerySpaces() {
+        return NO_SPACES;
+    }
+
+    @Override
+    public void generateEntityDefinition() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public EntityMetamodel getEntityMetamodel() {
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public void postInstantiate() throws MappingException {
@@ -168,23 +133,8 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public String getRootEntityName() {
-        return entityName;
-    }
-
-    @Override
     public boolean isSubclassEntityName(String s) {
         return false;
-    }
-
-    @Override
-    public Serializable[] getPropertySpaces() {
-        return NO_SPACES;
-    }
-
-    @Override
-    public Serializable[] getQuerySpaces() {
-        return NO_SPACES;
     }
 
     @Override
@@ -929,6 +879,6 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String toString() {
-        return "EntityPersister[" + entityName + "]";
+        return "MockEntityPersister[" + entityName + "]";
     }
 }

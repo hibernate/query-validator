@@ -1,27 +1,32 @@
 package org.hibernate.query.validator;
 
 import com.sun.tools.javac.code.Symbol;
+import com.sun.tools.javac.code.Type.ClassType;
 import com.sun.tools.javac.util.Names;
 import org.hibernate.QueryException;
-import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.persister.entity.Queryable;
-import org.hibernate.type.*;
+import org.hibernate.type.StandardBasicTypes;
+import org.hibernate.type.Type;
 
-import javax.lang.model.type.MirroredTypeException;
-import javax.persistence.*;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.type.TypeKind;
+import java.util.Map;
+
+import static org.hibernate.query.validator.JavacSessionFactory.superclassLookup;
+import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
+import static org.hibernate.query.validator.MockSessionFactory.typeResolver;
 
 class JavacEntityPersister extends MockEntityPersister {
 
     private final Symbol type;
     private final Names names;
-    private final MockSessionFactory factory;
 
     JavacEntityPersister(String entityName, Symbol type, Names names,
                          MockSessionFactory factory) {
         super(entityName, factory);
         this.type = type;
         this.names = names;
-        this.factory = factory;
     }
 
     @Override
@@ -38,108 +43,103 @@ class JavacEntityPersister extends MockEntityPersister {
 
     @Override
     public Type getPropertyType(String name) throws QueryException {
-        String[] segments = name.split("\\.");
-        Symbol.TypeSymbol memberType = type.type.tsym;
+        com.sun.tools.javac.code.Type memberType = type.type;
         String memberEntityName = null;
-        for (String segment: segments) {
-            Symbol member = null;
-            while (member==null && memberType instanceof Symbol.ClassSymbol) {
-                member = HQLValidatingProcessor.lookup(names, memberType, segment);
-                if (member==null) {
-                    com.sun.tools.javac.code.Type superclass =
-                            ((Symbol.ClassSymbol) memberType).getSuperclass();
-                    if (superclass!=null) {
-                        memberType = superclass.tsym;
-                    }
-                }
-            }
-            if (member == null || member.getAnnotation(Transient.class)!=null) {
+        //iterate over the path segments
+        for (String segment: name.split("\\.")) {
+            Symbol member = superclassLookup(names, memberType.tsym, segment);
+            if (member == null || isTransient(member)) {
                 return null;
             }
             else {
-                memberType = member.type.tsym;
+                memberType = member.type;
                 memberEntityName = targetEntityName(member);
             }
         }
-        return memberEntityName != null ? entity(memberEntityName) : type(memberType);
+        return memberEntityName != null ?
+                typeHelper.entity(memberEntityName) :
+                typeResolver.basic(qualifiedName(memberType));
+    }
+
+    private boolean isTransient(Symbol member) {
+        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
+            if (qualifiedName((ClassType) mirror.getAnnotationType())
+                    .equals("javax.persistence.Transient")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String targetEntityName(Symbol member) {
-        Class targetEntity = null;
-        boolean toMany = false;
-
-        ManyToOne mto = member.getAnnotation(ManyToOne.class);
-        if (mto!=null) {
-            targetEntity = mto.targetEntity();
-        }
-        try {
-            OneToOne oto = member.getAnnotation(OneToOne.class);
-            if (oto != null) {
-                targetEntity = oto.targetEntity();
+        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
+            String targetEntity;
+            switch (qualifiedName((ClassType) mirror.getAnnotationType())) {
+                case "javax.persistence.ManyToOne":
+                case "javax.persistence.OneToOne":
+                    targetEntity = targetEntity(mirror);
+                    return targetEntity==null ?
+                            simpleName(member.type) :
+                            targetEntity;
+                case "javax.persistence.ManyToMany":
+                case "javax.persistence.OneToMany":
+                    targetEntity = targetEntity(mirror);
+                    return targetEntity==null ?
+                            simpleName(member.type.getTypeArguments().head) :
+                            targetEntity;
             }
-            OneToMany otm = member.getAnnotation(OneToMany.class);
-            if (otm != null) {
-                targetEntity = otm.targetEntity();
-                toMany = true;
-            }
-            ManyToMany mtm = member.getAnnotation(ManyToMany.class);
-            if (mtm != null) {
-                targetEntity = mtm.targetEntity();
-                toMany = true;
-            }
-        }
-        catch (MirroredTypeException mte) {
-            targetEntity = void.class;
-        }
-
-        if (targetEntity!=null) {
-            if (targetEntity.equals(void.class)) {
-                return toMany ? null : member.type.tsym.name.toString();
-            }
-            else {
-                return targetEntity.getSimpleName();
-            }
-        }
-
-        return null;
-    }
-
-    private Type entity(String entityName) {
-        EntityPersister ep = factory.createMockEntityPersister(entityName);
-        if (ep instanceof Queryable) {
-            return ((Queryable) ep).getType();
         }
         return null;
     }
 
-    private Type type(Symbol.TypeSymbol symbol) {
-        switch (symbol.asType().getTag()) {
-            case BOOLEAN:
-                return BooleanType.INSTANCE;
-            case SHORT:
-                return ShortType.INSTANCE;
-            case INT:
-                return IntegerType.INSTANCE;
-            case LONG:
-                return LongType.INSTANCE;
-            case BYTE:
-                return ByteType.INSTANCE;
-            case CHAR:
-                return CharacterType.INSTANCE;
-            case FLOAT:
-                return FloatType.INSTANCE;
-            case DOUBLE:
-                return DoubleType.INSTANCE;
-            case CLASS:
-                switch (symbol.flatName().toString()) {
-                    case "java.lang.String":
-                        return StringType.INSTANCE;
-                    //TODO: JDK wrapper types!!!
-                }
-        }
-        //TODO: embeddable types!!!!
-        //rubbishy default
-        return StringType.INSTANCE;
+    private static String simpleName(com.sun.tools.javac.code.Type type) {
+        return type==null ? null : type.tsym.name.toString();
     }
+
+    private static String qualifiedName(com.sun.tools.javac.code.Type type) {
+        return type==null ? null : type.tsym.flatName().toString();
+    }
+
+    private static String targetEntity(AnnotationMirror mirr) {
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
+                mirr.getElementValues().entrySet()) {
+            if (entry.getKey().getSimpleName().toString().equals("targetEntity")) {
+                ClassType classType = (ClassType) entry.getValue().getValue();
+                return classType.getKind() == TypeKind.VOID ? null :
+                        classType.tsym.name.toString();
+            }
+        }
+        return null;
+    }
+
+//    private Type type(TypeSymbol symbol) {
+//        switch (symbol.asType().getTag()) {
+//            case BOOLEAN:
+//                return BooleanType.INSTANCE;
+//            case SHORT:
+//                return ShortType.INSTANCE;
+//            case INT:
+//                return IntegerType.INSTANCE;
+//            case LONG:
+//                return LongType.INSTANCE;
+//            case BYTE:
+//                return ByteType.INSTANCE;
+//            case CHAR:
+//                return CharacterType.INSTANCE;
+//            case FLOAT:
+//                return FloatType.INSTANCE;
+//            case DOUBLE:
+//                return DoubleType.INSTANCE;
+//            case CLASS:
+//                switch (symbol.flatName().toString()) {
+//                    case "java.lang.String":
+//                        return StringType.INSTANCE;
+//                    //TODO: JDK wrapper types!!!
+//                }
+//        }
+//        //TODO: embeddable types!!!!
+//        //rubbishy default
+//        return StringType.INSTANCE;
+//    }
 
 }

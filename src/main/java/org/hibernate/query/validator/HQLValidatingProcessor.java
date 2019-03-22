@@ -121,10 +121,6 @@ public class HQLValidatingProcessor extends AbstractProcessor {
         }
     }
 
-    static Symbol lookup(Names names, Symbol p, String name) {
-        return p.members().lookup(names.fromString(name)).sym;
-    }
-
     private static Name getMethodName(ExpressionTree select) {
         if (select instanceof MemberSelectTree) {
             MemberSelectTree ref = (MemberSelectTree) select;

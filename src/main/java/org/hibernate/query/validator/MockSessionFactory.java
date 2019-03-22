@@ -1,22 +1,14 @@
 package org.hibernate.query.validator;
 
 import org.hibernate.*;
-import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
-import org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl;
-import org.hibernate.boot.registry.BootstrapServiceRegistry;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.internal.StandardServiceRegistryImpl;
 import org.hibernate.boot.spi.SessionFactoryOptions;
 import org.hibernate.cache.internal.DisabledCaching;
-import org.hibernate.cache.internal.RegionFactoryInitiator;
 import org.hibernate.cache.spi.CacheImplementor;
 import org.hibernate.cfg.Settings;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.hibernate.dialect.function.SQLFunctionRegistry;
-import org.hibernate.engine.config.internal.ConfigurationServiceInitiator;
-import org.hibernate.engine.jdbc.connections.internal.ConnectionProviderInitiator;
-import org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentInitiator;
-import org.hibernate.engine.jdbc.internal.JdbcServicesInitiator;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
 import org.hibernate.engine.profile.FetchProfile;
 import org.hibernate.engine.query.spi.QueryPlanCache;
@@ -51,12 +43,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static java.util.Arrays.asList;
 import static java.util.Collections.*;
 
 abstract class MockSessionFactory implements SessionFactoryImplementor {
-
-    static final SessionFactoryOptions options = new MockSessionFactoryOptions();
 
     static final TypeConfiguration typeConfiguration = new TypeConfiguration();
 
@@ -66,25 +55,12 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     static final TypeHelper typeHelper = new TypeLocatorImpl(typeResolver);
 
-    static final BootstrapServiceRegistry bootstrapServiceRegistry =
-            new BootstrapServiceRegistryBuilder()
-                    .applyStrategySelector(ImplicitNamingStrategy.class, "default",
-                            ImplicitNamingStrategyJpaCompliantImpl.class)
-                    .build();
-
     static final StandardServiceRegistryImpl serviceRegistry =
-            new StandardServiceRegistryImpl(bootstrapServiceRegistry,
-                    asList(GenericDialectFactoryInitiator.INSTANCE,
-                            ConfigurationServiceInitiator.INSTANCE,
-                            RegionFactoryInitiator.INSTANCE,
-                            JdbcServicesInitiator.INSTANCE,
-                            JdbcEnvironmentInitiator.INSTANCE,
-                            ConnectionProviderInitiator.INSTANCE),
+            new StandardServiceRegistryImpl(
+                    new BootstrapServiceRegistryBuilder().build(),
+                    singletonList(MockJdbcServicesInitiator.INSTANCE),
                     emptyList(),
                     emptyMap());
-
-    private final JdbcServices jdbcServices =
-            serviceRegistry.getService(JdbcServices.class);
 
     private final MetamodelImpl metamodel =
             new MetamodelImpl(MockSessionFactory.this, typeConfiguration) {
@@ -110,11 +86,6 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
      * Lazily create a {@link MockEntityPersister}
      */
     abstract EntityPersister createMockEntityPersister(String entityName);
-
-    @Override
-    public JdbcServices getJdbcServices() {
-        return jdbcServices;
-    }
 
     @Override
     public TypeResolver getTypeResolver() {
@@ -154,27 +125,32 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public String getUuid() {
-        return options.getUuid();
+        return MockSessionFactoryOptions.INSTANCE.getUuid();
     }
 
     @Override
     public String getName() {
-        return options.getSessionFactoryName();
+        return MockSessionFactoryOptions.INSTANCE.getSessionFactoryName();
     }
 
     @Override
     public SessionFactoryOptions getSessionFactoryOptions() {
-        return options;
+        return MockSessionFactoryOptions.INSTANCE;
     }
 
     @Override
     public Settings getSettings() {
-        return new Settings(options);
+        return new Settings(MockSessionFactoryOptions.INSTANCE);
     }
 
     @Override
     public Set getDefinedFilterNames() {
         return emptySet();
+    }
+
+    @Override
+    public JdbcServices getJdbcServices() {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -269,23 +245,23 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public EntityNotFoundDelegate getEntityNotFoundDelegate() {
-        return options.getEntityNotFoundDelegate();
+        return MockSessionFactoryOptions.INSTANCE.getEntityNotFoundDelegate();
     }
 
     @Override
     public CustomEntityDirtinessStrategy getCustomEntityDirtinessStrategy() {
-        return options.getCustomEntityDirtinessStrategy();
+        return MockSessionFactoryOptions.INSTANCE.getCustomEntityDirtinessStrategy();
     }
 
     @Override
     public CurrentTenantIdentifierResolver getCurrentTenantIdentifierResolver() {
-        return options.getCurrentTenantIdentifierResolver();
+        return MockSessionFactoryOptions.INSTANCE.getCurrentTenantIdentifierResolver();
     }
 
     @Override
     public SQLFunctionRegistry getSqlFunctionRegistry() {
         return new SQLFunctionRegistry(getJdbcServices().getDialect(),
-                options.getCustomSqlFunctionMap());
+                MockSessionFactoryOptions.INSTANCE.getCustomSqlFunctionMap());
     }
 
     @Override
