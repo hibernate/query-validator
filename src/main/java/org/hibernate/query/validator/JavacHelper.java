@@ -7,8 +7,6 @@ import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
-import org.hibernate.type.CollectionType;
-import org.hibernate.type.TypeFactory;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -16,8 +14,6 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.TypeKind;
 import java.util.ArrayList;
 import java.util.Map;
-
-import static org.hibernate.query.validator.MockSessionFactory.typeResolver;
 
 class JavacHelper {
 
