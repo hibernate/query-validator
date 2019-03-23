@@ -5,6 +5,7 @@ import org.hibernate.QueryException;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.type.CollectionType;
+import org.hibernate.type.CompositeCustomType;
 import org.hibernate.type.Type;
 import org.hibernate.type.TypeFactory;
 
@@ -54,7 +55,7 @@ class JavacSessionFactory extends MockSessionFactory {
         int index = role.lastIndexOf('.');
         String entityName = role.substring(0,index);
         String propertyName = role.substring(index+1);
-        Symbol property = lookup(lookupEntity(entityName), propertyName);
+        Symbol property = superclassLookup(lookupEntity(entityName), propertyName);
         AnnotationMirror toMany = toManyAnnotation(property);
         CollectionType collectionType = collectionType(property.type, role);
         com.sun.tools.javac.code.Type elementType = property.type.getTypeArguments().last();
@@ -91,23 +92,39 @@ class JavacSessionFactory extends MockSessionFactory {
         }
     }
 
-    private static Type propertyType(com.sun.tools.javac.code.Type type,
+    static Type propertyType(com.sun.tools.javac.code.Type type,
                              String entityName, String propertyPath) {
+        return propertyType(type, entityName, propertyPath, null);
+    }
+    static Type propertyType(com.sun.tools.javac.code.Type type,
+                             String entityName, String propertyPath,
+                             String prefix) {
         com.sun.tools.javac.code.Type memberType = type;
         Type result = null;
         //iterate over the path segments
+        StringBuilder currentPath = new StringBuilder();
         for (String segment: propertyPath.split("\\.")) {
+            currentPath.append(segment);
             Symbol member = superclassLookup(memberType.tsym, segment);
-            if (member == null || hasTransientAnnotation(member)) {
+            if (member == null) {
                 result = null;
                 break;
             }
             else {
-                memberType = member.type;
+                memberType = member instanceof Symbol.MethodSymbol ?
+                        ((Symbol.MethodSymbol) member).getReturnType() :
+                        member.type;
+                if (hasEmbedAnnotation(member)) {
+                    String path = currentPath.toString();
+                    if (prefix!=null) path = prefix + '.' + path;
+                    result = new CompositeCustomType(
+                            new JavacComponent(member.type, entityName, path));
+                    continue;
+                }
                 AnnotationMirror toMany = toManyAnnotation(member);
                 if (toMany!=null) {
-                    //TODO: should trim down to current propertyPath
-                    String role = entityName + '.' + propertyPath;
+                    String role = entityName + '.' + currentPath;
+                    if (prefix!=null) role = prefix + '.' + role;
                     result = collectionType(memberType, role);
                     continue;
                 }
@@ -123,8 +140,8 @@ class JavacSessionFactory extends MockSessionFactory {
                 AnnotationMirror elementCollection =
                         elementCollectionAnnotation(member);
                 if (elementCollection!=null) {
-                    //TODO: should trim down to current propertyPath
-                    String role = entityName + '.' + propertyPath;
+                    String role = entityName + '.' + currentPath;
+                    if (prefix!=null) role = prefix + '.' + role;
                     result = collectionType(memberType, role);
                     continue;
                 }

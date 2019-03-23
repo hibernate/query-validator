@@ -94,6 +94,11 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:73:"));
         assertFalse(errors.contains("Queries.java:74:"));
 
+        assertFalse(errors.contains("Queries.java:76:"));
+
+        assertFalse(errors.contains("Queries.java:79:"));
+        assertFalse(errors.contains("Queries.java:80:"));
+
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
         assertTrue(errors.contains("Queries.java:14: error: unexpected token: select"));
@@ -111,5 +116,6 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
         assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
         assertTrue(errors.contains("Queries.java:72: error: Property length does not exist in collection Person.notes"));
+        assertTrue(errors.contains("Queries.java:77: error: Property country.type does not exist in class Address"));
     }
 }

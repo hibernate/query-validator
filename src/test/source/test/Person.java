@@ -18,4 +18,7 @@ public class Person {
     public Date dob;
     @ElementCollection
     public List<String> notes;
+    public String getWhatever() {
+        return "thing";
+    }
 }

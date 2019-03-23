@@ -28,21 +28,30 @@ class JavacHelper {
         syms = Symtab.instance(context);
     }
 
-    static Symbol lookup(Symbol container, String name) {
+    private static Symbol lookup(Symbol container, String name) {
         return container.members().lookup(names.fromString(name)).sym;
     }
 
-    static Symbol superclassLookup(Symbol type, String name) {
+    static Symbol superclassLookup(Symbol type, String propertyName) {
         //iterate up the superclass hierarchy
         while (type instanceof Symbol.ClassSymbol) {
-            Symbol member = lookup(type, name);
-            if (member!=null) {
+            Symbol member = lookup(type, propertyName);
+            String capitalized =
+                    propertyName.substring(0, 1).toUpperCase()
+                    + propertyName.substring(1).toLowerCase();
+            if (member==null) {
+                member = lookup(type, "get" + capitalized);
+            }
+            if (member==null) {
+                member = lookup(type, "is" + capitalized);
+            }
+            if (member!=null && isPersistent(member)) {
                 return member;
             }
             else {
                 Symbol.ClassSymbol classSymbol = (Symbol.ClassSymbol) type;
                 Type superclass = classSymbol.getSuperclass();
-                type = superclass==null ? null : superclass.tsym;
+                type = superclass == null ? null : superclass.tsym;
             }
         }
         return null;
@@ -56,10 +65,47 @@ class JavacHelper {
         return new ArrayList<>(syms.packages.values());
     }
 
+    static boolean isPersistent(Symbol member) {
+        if (hasTransientAnnotation(member) || member.isStatic()) {
+            return false;
+        }
+        else if (member instanceof Symbol.VarSymbol) {
+            return true;
+        }
+        else if (member instanceof Symbol.MethodSymbol) {
+            Symbol.MethodSymbol method = (Symbol.MethodSymbol) member;
+            if (!method.params().isEmpty()) {
+                return false;
+            }
+            String methodName = method.name.toString();
+            return methodName.startsWith("get")
+                || methodName.startsWith("is");
+        }
+        else {
+            return false;
+        }
+    }
+
     static boolean hasTransientAnnotation(Symbol member) {
         for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
             if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
                     .equals("javax.persistence.Transient")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean hasEmbedAnnotation(Symbol member) {
+        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
+            if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
+                    .equals("javax.persistence.Embedded")) {
+                return true;
+            }
+        }
+        for (AnnotationMirror mirror : member.type.tsym.getAnnotationMirrors()) {
+            if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
+                    .equals("javax.persistence.Embeddable")) {
                 return true;
             }
         }

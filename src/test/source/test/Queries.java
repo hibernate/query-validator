@@ -73,6 +73,11 @@ public class Queries {
         createQuery("from Person p where p.notes[0] is not null"); //HQL list indexing operator
         createQuery("from Employee e where e.contacts['boss'] is not null"); //HQL list indexing operator
 
+        createQuery("from Address add where add.country.code='au'");
+        createQuery("from Address add where add.country.type='au'");
+
+        createQuery("select p.whatever from Person p where p.whatever is not null");
+        createQuery("select p.address.country.thing from Person p where p.address.country.thing is null");
     }
 
     private static void createQuery(String s) {}
