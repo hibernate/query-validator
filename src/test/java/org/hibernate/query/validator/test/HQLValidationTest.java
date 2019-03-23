@@ -47,20 +47,40 @@ public class HQLValidationTest {
         int rc = javac.run(null, null, err, files.toArray(new String[0]));
         assert rc!=0;
         String errors = err.toString();
-//        System.out.println(errors);
+        System.out.println(errors);
 
         assertFalse(errors.contains("Queries.java:6:"));
         assertFalse(errors.contains("Queries.java:7:"));
         assertFalse(errors.contains("Queries.java:8:"));
         assertFalse(errors.contains("Queries.java:9:"));
         assertFalse(errors.contains("Queries.java:10:"));
+
         assertFalse(errors.contains("Queries.java:23:"));
-        assertFalse(errors.contains("Queries.java:26:"));
+        assertFalse(errors.contains("Queries.java:24:"));
+
         assertFalse(errors.contains("Queries.java:27:"));
-        assertFalse(errors.contains("Queries.java:35:"));
+        assertFalse(errors.contains("Queries.java:28:"));
+
         assertFalse(errors.contains("Queries.java:36:"));
-        assertFalse(errors.contains("Queries.java:38:"));
+        assertFalse(errors.contains("Queries.java:37:"));
+
         assertFalse(errors.contains("Queries.java:39:"));
+        assertFalse(errors.contains("Queries.java:40:"));
+        assertFalse(errors.contains("Queries.java:41:"));
+        assertFalse(errors.contains("Queries.java:42:"));
+
+        assertFalse(errors.contains("Queries.java:44:"));
+        assertFalse(errors.contains("Queries.java:45:"));
+        assertFalse(errors.contains("Queries.java:46:"));
+
+        assertFalse(errors.contains("Queries.java:48:"));
+        assertFalse(errors.contains("Queries.java:49:"));
+        assertFalse(errors.contains("Queries.java:50:"));
+        assertFalse(errors.contains("Queries.java:51:"));
+        assertFalse(errors.contains("Queries.java:52:"));
+        assertFalse(errors.contains("Queries.java:53:"));
+        assertFalse(errors.contains("Queries.java:54:"));
+        assertFalse(errors.contains("Queries.java:55:"));
 
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
@@ -72,10 +92,11 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:19: error: Property firstName does not exist in class Person"));
         assertTrue(errors.contains("Queries.java:20: error: Property addr does not exist in class Person"));
         assertTrue(errors.contains("Queries.java:21: error: Property"));
-        assertTrue(errors.contains("Queries.java:24: error: Property name does not exist in class Address"));
-        assertTrue(errors.contains("Queries.java:28: error: Class test.Nil not found"));
-        assertTrue(errors.contains("Queries.java:29: error: No suitable constructor for class test.Pair"));
+        assertTrue(errors.contains("Queries.java:25: error: Property name does not exist in class Address"));
+        assertTrue(errors.contains("Queries.java:29: error: Class test.Nil not found"));
         assertTrue(errors.contains("Queries.java:30: error: No suitable constructor for class test.Pair"));
+        assertTrue(errors.contains("Queries.java:31: error: No suitable constructor for class test.Pair"));
+        assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
 
     }
 }

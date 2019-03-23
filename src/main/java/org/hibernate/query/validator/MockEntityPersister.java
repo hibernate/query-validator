@@ -691,7 +691,7 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public String getDiscriminatorSQLValue() {
-        throw new UnsupportedOperationException();
+        return "";
     }
 
     @Override

@@ -76,6 +76,16 @@ class JavacHelper {
         return null;
     }
 
+    static AnnotationMirror elementCollectionAnnotation(Symbol member) {
+        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
+            if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
+                    .equals("javax.persistence.ElementCollection")) {
+                return mirror;
+            }
+        }
+        return null;
+    }
+
     static AnnotationMirror toOneAnnotation(Symbol member) {
         for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
             String name = qualifiedName((Type.ClassType) mirror.getAnnotationType());
@@ -98,26 +108,7 @@ class JavacHelper {
         return null;
     }
 
-    static String targetEntityName(Symbol member, AnnotationMirror mirror) {
-        String targetEntity;
-        switch (qualifiedName((Type.ClassType) mirror.getAnnotationType())) {
-            case "javax.persistence.ManyToOne":
-            case "javax.persistence.OneToOne":
-                targetEntity = targetEntity(mirror);
-                return targetEntity==null ?
-                        simpleName(member.type) :
-                        targetEntity;
-            case "javax.persistence.ManyToMany":
-            case "javax.persistence.OneToMany":
-                targetEntity = targetEntity(mirror);
-                return targetEntity==null ?
-                        simpleName(member.type.getTypeArguments().last()) :
-                        targetEntity;
-        }
-        return null;
-    }
-
-    private static String simpleName(Type type) {
+    static String simpleName(Type type) {
         return type==null ? null : type.tsym.name.toString();
     }
 
@@ -142,6 +133,18 @@ class JavacHelper {
                 Type.ClassType classType = (Type.ClassType) entry.getValue().getValue();
                 return classType.getKind() == TypeKind.VOID ? null :
                         classType.tsym.name.toString();
+            }
+        }
+        return null;
+    }
+
+    static String targetClass(AnnotationMirror mirr) {
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
+                mirr.getElementValues().entrySet()) {
+            if (entry.getKey().getSimpleName().toString().equals("targetClass")) {
+                Type.ClassType classType = (Type.ClassType) entry.getValue().getValue();
+                return classType.getKind() == TypeKind.VOID ? null :
+                        classType.tsym.flatName().toString();
             }
         }
         return null;
