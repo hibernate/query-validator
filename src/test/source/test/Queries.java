@@ -49,8 +49,8 @@ public class Queries {
         createQuery("from Person p where '' = maxelement(p.notes)"); //HQL "maxelement()" function
         createQuery("from Person p where maxindex(p.notes) > 1"); //HQL "maxindex()" function
         createQuery("from Person p where minindex(p.notes) > 1"); //HQL "minindex()" function
-        createQuery("from Person p where 1 in indices(p.notes)"); //HQL "indices()" function
-        createQuery("from Person p where '' in elements(p.notes)"); //HQL "elements()" function
+        createQuery("from Person p where 1 in indices(p.notes)"); //"in" operator with HQL "indices()" function
+        createQuery("from Person p where '' in elements(p.notes)"); //"in" operator with HQL "elements()" function
         createQuery("from Person p where p.notes is not empty"); //JPQL "is not empty" operator
         createQuery("from Person p where '' member of p.notes"); //JPQL "member of" operator
 
@@ -62,10 +62,16 @@ public class Queries {
 
         createQuery("from Person p where all(select a.city from p.addresses a) = 'barcelona'"); //"all" operator with correlated subquery
         createQuery("from Person p where any(select a.city from p.addresses a) = 'barcelona'"); //"any" operator with correlated subquery
-        createQuery("from Person p where all elements(p.notes) = ''"); //"all" operator with correlated HQL "elements()" function
-        createQuery("from Employee e where any indices(e.contacts) = 'boss'"); //"any" operator with correlated HQL "indices()" function
-        createQuery("from Employee e where max(indices(e.contacts)) > 1"); //"max" with correlated HQL "indices()" function
-        createQuery("from Person p where sum(elements(p.notes)) = ''"); //"sum" with correlated HQL "indices()" function
+        createQuery("from Person p where '' = all elements(p.notes)"); //"all" operator with correlated HQL "elements()" function
+        createQuery("from Person p where 1 < any indices(p.notes)"); //"any" operator with correlated HQL "indices()" function
+        createQuery("from Employee e where 'boss' = some indices(e.contacts)"); //"some" operator with correlated HQL "indices()" function
+//        createQuery("from Person p where max(indices(p.notes)) > 1"); //error!
+//        createQuery("from Person p where sum(elements(p.notes)) = ''"); //error!
+
+        createQuery("select p.name, n from Person p join p.notes n where length(n)>0"); //join an element collection
+        createQuery("select p.name, n from Person p join p.notes n where n.length>0"); //error
+        createQuery("from Person p where p.notes[0] is not null"); //HQL list indexing operator
+        createQuery("from Employee e where e.contacts['boss'] is not null"); //HQL list indexing operator
 
     }
 

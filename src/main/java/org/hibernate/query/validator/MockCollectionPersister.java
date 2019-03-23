@@ -77,7 +77,7 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public Type getType() {
-        return getCollectionType();
+        return getElementType();
     }
 
     @Override
@@ -181,7 +181,7 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public boolean isOneToMany() {
-        return true;
+        return elementEntityName!=null;
     }
 
     @Override
@@ -391,7 +391,7 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public String[] getIndexColumnNames() {
-        return new String[0];
+        return new String[] {""};
     }
 
     @Override

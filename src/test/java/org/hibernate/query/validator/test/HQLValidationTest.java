@@ -89,7 +89,10 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:65:"));
         assertFalse(errors.contains("Queries.java:66:"));
         assertFalse(errors.contains("Queries.java:67:"));
-        assertFalse(errors.contains("Queries.java:68:"));
+
+        assertFalse(errors.contains("Queries.java:71:"));
+        assertFalse(errors.contains("Queries.java:73:"));
+        assertFalse(errors.contains("Queries.java:74:"));
 
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
@@ -107,5 +110,6 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:31: error: No suitable constructor for class test.Pair"));
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
         assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
+        assertTrue(errors.contains("Queries.java:72: error: Property length does not exist in collection Person.notes"));
     }
 }

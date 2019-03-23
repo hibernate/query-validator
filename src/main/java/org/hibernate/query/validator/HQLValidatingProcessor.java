@@ -115,6 +115,7 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                                     }
                                     catch (Exception e) {
                                         handler.reportError(e.getMessage());
+//                                        e.printStackTrace();
                                     }
 
                                     //don't use this much simpler implementation
