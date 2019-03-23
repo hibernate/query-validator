@@ -59,6 +59,8 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:27:"));
         assertFalse(errors.contains("Queries.java:35:"));
         assertFalse(errors.contains("Queries.java:36:"));
+        assertFalse(errors.contains("Queries.java:38:"));
+        assertFalse(errors.contains("Queries.java:39:"));
 
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));

@@ -111,7 +111,7 @@ class JavacHelper {
             case "javax.persistence.OneToMany":
                 targetEntity = targetEntity(mirror);
                 return targetEntity==null ?
-                        simpleName(member.type.getTypeArguments().head) :
+                        simpleName(member.type.getTypeArguments().last()) :
                         targetEntity;
         }
         return null;

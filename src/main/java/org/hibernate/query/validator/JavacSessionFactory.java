@@ -55,7 +55,7 @@ class JavacSessionFactory extends MockSessionFactory {
         Symbol property = lookup(lookupEntity(entityName), propertyName);
         String elementEntityName = targetEntityName(property, toManyAnnotation(property));
         CollectionType collectionType = collectionType(property.type, role);
-        return new MockCollectionPersister(role, collectionType, elementEntityName, this);
+        return new MockCollectionPersister(role, collectionType, entityName, elementEntityName, this);
     }
 
     private static CollectionType collectionType(com.sun.tools.javac.code.Type type, String role) {

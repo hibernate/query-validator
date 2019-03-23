@@ -705,8 +705,8 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public SelectFragment propertySelectFragmentFragment(String s, String s1, boolean b) {
-        throw new UnsupportedOperationException();
+    public SelectFragment propertySelectFragmentFragment(String alias, String suffix, boolean b) {
+        return new SelectFragment();
     }
 
     @Override

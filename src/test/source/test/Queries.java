@@ -3,7 +3,7 @@ package test;
 public class Queries {
 
     public void run() {
-        createQuery("from Person p where p.name='gavin'");
+        createQuery("from Person p where lower(p.name)='gavin'");
         createQuery("from Employee p where p.name='gavin' and p.id=111");
         createQuery("from Person p join p.address a where a.city='barcelona'");
         createQuery("from Person p where p.address.city='barcelona'");
@@ -34,6 +34,9 @@ public class Queries {
 
         createQuery("from Person p where year(p.dob) > 1974");
         createQuery("select cast(p.dob as string) from Person p");
+
+        createQuery("select e, c from Employee e join e.contacts c where key(c) = 'boss'");
+        createQuery("select e, entry(c) from Employee e join e.contacts c where value(c).address is null");
     }
 
     private static void createQuery(String s) {}

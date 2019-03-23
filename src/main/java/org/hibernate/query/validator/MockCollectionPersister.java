@@ -34,12 +34,14 @@ class MockCollectionPersister implements QueryableCollection {
     private SessionFactoryImplementor factory;
     private String elementEntityName;
     private CollectionType collectionType;
+    private String ownerEntityName;
 
     MockCollectionPersister(String role, CollectionType collectionType,
-                            String elementEntityName,
+                            String ownerEntityName, String elementEntityName,
                             SessionFactoryImplementor factory) {
         this.role = role;
         this.collectionType = collectionType;
+        this.ownerEntityName = ownerEntityName;
         this.elementEntityName = elementEntityName;
         this.factory = factory;
     }
@@ -65,15 +67,26 @@ class MockCollectionPersister implements QueryableCollection {
     }
 
     @Override
+    public EntityPersister getOwnerEntityPersister() {
+        return factory.getMetamodel().entityPersister(ownerEntityName);
+    }
+
+    @Override
     public Type getKeyType() {
-        return getCollectionType() instanceof MapType ?
-                StringType.INSTANCE : null; //TODO!!!!!
+        return getOwnerEntityPersister().getIdentifierType();
     }
 
     @Override
     public Type getIndexType() {
-        return getCollectionType() instanceof ListType ?
-                IntegerType.INSTANCE : null;
+        if (collectionType instanceof ListType) {
+            return IntegerType.INSTANCE;
+        }
+        else if (collectionType instanceof MapType) {
+            return StringType.INSTANCE; //TODO!!!
+        }
+        else {
+            return null;
+        }
     }
 
     @Override
@@ -208,11 +221,6 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public void processQueuedOps(PersistentCollection collection, Serializable key, SharedSessionContractImplementor session) throws HibernateException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public EntityPersister getOwnerEntityPersister() {
         throw new UnsupportedOperationException();
     }
 
