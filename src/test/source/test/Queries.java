@@ -9,19 +9,19 @@ public class Queries {
         createQuery("from Person p where p.address.city='barcelona'");
         createQuery("from Person p join p.addresses a where a.city='barcelona'");
 
-        createQuery("do");
-        createQuery("from");
-        createQuery("from Person where p.name='gavin' select");
-        createQuery("from Person p where p.name+='gavin'");
-        createQuery("select from Person where p.name='gavin'");
+        createQuery("do"); //syntax error
+        createQuery("from"); //syntax error
+        createQuery("from Person where p.name='gavin' select"); //syntax error
+        createQuery("from Person p where p.name+='gavin'"); //syntax error
+        createQuery("select from Person where p.name='gavin'"); //syntax error
 
-        createQuery("from People p where p.name='gavin'");
-        createQuery("from Person p where p.firstName='gavin'");
-        createQuery("from Person p join p.addr a");
-        createQuery("from Person p where p.address.town='barcelona'");
+        createQuery("from People p where p.name='gavin'"); //error
+        createQuery("from Person p where p.firstName='gavin'"); //error
+        createQuery("from Person p join p.addr a"); //error
+        createQuery("from Person p where p.address.town='barcelona'"); //error
 
-        createQuery("from Person p where p.name in (select p.name from Person p)"); //"in" with subquery
-        createQuery("from Person p where exists (select a from p.addresses a)"); //"exists" with correlated subquery
+        createQuery("from Person p where p.name in (select p.name from Person p)"); //"in" operator with subquery
+        createQuery("from Person p where exists (select a from p.addresses a)"); //"exists" operator with correlated subquery
         createQuery("from Person p where p.name in (select a.name from Address a)");
 
         createQuery("select new test.Pair(p,a) from Person p join p.address a");
@@ -31,7 +31,7 @@ public class Queries {
         createQuery("select new test.Pair(p,p.name) from Person p");
 
         createQuery("from Person p where size(p.addresses) = 0"); //JPQL "size()" function
-        createQuery("from Person p where exists elements(p.addresses)"); //HQL "exists" with "elements()" function
+        createQuery("from Person p where exists elements(p.addresses)"); //HQL "exists" operator with "elements()" function
 
         createQuery("from Person p where year(p.dob) > 1974"); //JPQL "year()" function
         createQuery("select cast(p.dob as string) from Person p"); //JPQL "cast()" function
@@ -57,6 +57,15 @@ public class Queries {
         createQuery("select e from Employee e join e.contacts c where entry(c).value.address is null");
 
         createQuery("select xxx from Person");
+
+        createQuery("from Person p where type(p) = Employee");  //JPQL "type()" function
+
+        createQuery("from Person p where all(select a.city from p.addresses a) = 'barcelona'"); //"all" operator with correlated subquery
+        createQuery("from Person p where any(select a.city from p.addresses a) = 'barcelona'"); //"any" operator with correlated subquery
+        createQuery("from Person p where all elements(p.notes) = ''"); //"all" operator with correlated HQL "elements()" function
+        createQuery("from Employee e where any indices(e.contacts) = 'boss'"); //"any" operator with correlated HQL "indices()" function
+        createQuery("from Employee e where max(indices(e.contacts)) > 1"); //"max" with correlated HQL "indices()" function
+        createQuery("from Person p where sum(elements(p.notes)) = ''"); //"sum" with correlated HQL "indices()" function
 
     }
 
