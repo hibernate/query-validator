@@ -17,6 +17,7 @@ import org.hibernate.persister.walking.spi.EntityIdentifierDefinition;
 import org.hibernate.sql.SelectFragment;
 import org.hibernate.tuple.entity.EntityMetamodel;
 import org.hibernate.tuple.entity.EntityTuplizer;
+import org.hibernate.type.ClassType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
@@ -30,7 +31,7 @@ import java.util.Set;
 
 import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
 
-abstract class MockEntityPersister implements EntityPersister, Queryable {
+abstract class MockEntityPersister implements EntityPersister, Queryable, DiscriminatorMetadata {
 
     private static final Serializable[] NO_SPACES = new Serializable[0];
 
@@ -806,7 +807,17 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
 
     @Override
     public DiscriminatorMetadata getTypeDiscriminatorMetadata() {
-        throw new UnsupportedOperationException();
+        return this;
+    }
+
+    @Override
+    public String getSqlFragment(String sqlQualificationAlias) {
+        return "";
+    }
+
+    @Override
+    public Type getResolutionType() {
+        return ClassType.INSTANCE;
     }
 
     @Override
