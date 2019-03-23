@@ -28,6 +28,12 @@ public class Queries {
         createQuery("select new test.Nil(p,a) from Person p join p.address a");
         createQuery("select new test.Pair(p) from Person p");
         createQuery("select new test.Pair(p,p.name) from Person p");
+
+        createQuery("from Person p where size(p.addresses) = 0");
+        createQuery("from Person p where exists elements(p.addresses)");
+
+        createQuery("from Person p where year(p.dob) > 1974");
+        createQuery("select cast(p.dob as string) from Person p");
     }
 
     private static void createQuery(String s) {}

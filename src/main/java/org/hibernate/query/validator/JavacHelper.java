@@ -7,6 +7,8 @@ import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.TypeFactory;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -14,6 +16,8 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.TypeKind;
 import java.util.ArrayList;
 import java.util.Map;
+
+import static org.hibernate.query.validator.MockSessionFactory.typeResolver;
 
 class JavacHelper {
 
@@ -76,23 +80,43 @@ class JavacHelper {
         return null;
     }
 
-    static String targetEntityName(Symbol member) {
+    static AnnotationMirror toOneAnnotation(Symbol member) {
         for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
-            String targetEntity;
-            switch (qualifiedName((Type.ClassType) mirror.getAnnotationType())) {
-                case "javax.persistence.ManyToOne":
-                case "javax.persistence.OneToOne":
-                    targetEntity = targetEntity(mirror);
-                    return targetEntity==null ?
-                            simpleName(member.type) :
-                            targetEntity;
-                case "javax.persistence.ManyToMany":
-                case "javax.persistence.OneToMany":
-                    targetEntity = targetEntity(mirror);
-                    return targetEntity==null ?
-                            simpleName(member.type.getTypeArguments().head) :
-                            targetEntity;
+            String name = qualifiedName((Type.ClassType) mirror.getAnnotationType());
+            if (name.equals("javax.persistence.ManyToOne")
+                    || name.equals("javax.persistence.OneToOne")) {
+                return mirror;
             }
+        }
+        return null;
+    }
+
+    static AnnotationMirror toManyAnnotation(Symbol member) {
+        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
+            String name = qualifiedName((Type.ClassType) mirror.getAnnotationType());
+            if (name.equals("javax.persistence.ManyToMany")
+                    || name.equals("javax.persistence.OneToMany")) {
+                return mirror;
+            }
+        }
+        return null;
+    }
+
+    static String targetEntityName(Symbol member, AnnotationMirror mirror) {
+        String targetEntity;
+        switch (qualifiedName((Type.ClassType) mirror.getAnnotationType())) {
+            case "javax.persistence.ManyToOne":
+            case "javax.persistence.OneToOne":
+                targetEntity = targetEntity(mirror);
+                return targetEntity==null ?
+                        simpleName(member.type) :
+                        targetEntity;
+            case "javax.persistence.ManyToMany":
+            case "javax.persistence.OneToMany":
+                targetEntity = targetEntity(mirror);
+                return targetEntity==null ?
+                        simpleName(member.type.getTypeArguments().head) :
+                        targetEntity;
         }
         return null;
     }
@@ -169,4 +193,5 @@ class JavacHelper {
     static boolean isAssignable(Symbol.VarSymbol param, Symbol.ClassSymbol typeClass) {
         return !typeClass.isSubClass(param.type.tsym, types);
     }
+
 }

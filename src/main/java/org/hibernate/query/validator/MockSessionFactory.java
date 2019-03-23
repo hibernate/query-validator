@@ -23,6 +23,7 @@ import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.metadata.CollectionMetadata;
 import org.hibernate.metamodel.internal.MetamodelImpl;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
+import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.proxy.EntityNotFoundDelegate;
 import org.hibernate.query.spi.NamedQueryRepository;
@@ -62,7 +63,7 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                     emptyList(),
                     emptyMap());
 
-    private final MetamodelImpl metamodel =
+    private final MetamodelImplementor metamodel =
             new MetamodelImpl(MockSessionFactory.this, typeConfiguration) {
                 @Override
                 public String getImportedClassName(String className) {
@@ -80,12 +81,22 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                         throws MappingException {
                     return createMockEntityPersister(entityName);
                 }
+
+                @Override
+                public CollectionPersister collectionPersister(String role) {
+                    return createMockCollectionPersister(role);
+                }
             };
 
     /**
      * Lazily create a {@link MockEntityPersister}
      */
     abstract EntityPersister createMockEntityPersister(String entityName);
+
+    /**
+     * Lazily create a {@link MockCollectionPersister}
+     */
+    abstract CollectionPersister createMockCollectionPersister(String role);
 
     @Override
     public TypeResolver getTypeResolver() {
@@ -124,6 +135,11 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
     }
 
     @Override
+    public JdbcServices getJdbcServices() {
+        return serviceRegistry.getService(JdbcServices.class);
+    }
+
+    @Override
     public String getUuid() {
         return MockSessionFactoryOptions.INSTANCE.getUuid();
     }
@@ -146,11 +162,6 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
     @Override
     public Set getDefinedFilterNames() {
         return emptySet();
-    }
-
-    @Override
-    public JdbcServices getJdbcServices() {
-        throw new UnsupportedOperationException();
     }
 
     @Override

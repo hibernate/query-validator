@@ -17,6 +17,7 @@ import org.hibernate.persister.walking.spi.EntityIdentifierDefinition;
 import org.hibernate.sql.SelectFragment;
 import org.hibernate.tuple.entity.EntityMetamodel;
 import org.hibernate.tuple.entity.EntityTuplizer;
+import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
 
@@ -57,13 +58,19 @@ abstract class MockEntityPersister implements EntityPersister, Queryable {
     }
 
     @Override
-    public abstract Type getIdentifierType();
-
-    @Override
-    public abstract String getIdentifierPropertyName();
-
-    @Override
     public abstract Type getPropertyType(String propertyName) throws MappingException;
+
+    @Override
+    public Type getIdentifierType() {
+        //TODO: getPropertyType(getIdentifierPropertyName())
+        return StandardBasicTypes.INTEGER;
+    }
+
+    @Override
+    public String getIdentifierPropertyName() {
+        //TODO!!!!!!
+        return "id";
+    }
 
     @Override
     public Type toType(String propertyName) throws QueryException {
