@@ -60,6 +60,7 @@ class JavacEntityPersister extends MockEntityPersister {
         Type type = memberEntityName != null ?
                 typeHelper.entity(memberEntityName) :
                 typeResolver.basic(qualifiedName(memberType));
+
         cache.put(propertyName, type);
         return type;
     }

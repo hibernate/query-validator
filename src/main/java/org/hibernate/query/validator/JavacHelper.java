@@ -3,6 +3,7 @@ package org.hibernate.query.validator;
 import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Symtab;
 import com.sun.tools.javac.code.Type;
+import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
@@ -16,14 +17,15 @@ import java.util.Map;
 
 class JavacHelper {
 
-    private static Names names;
-    private static Symtab syms;
+    static Names names;
+    static Types types;
+    static Symtab syms;
 
     static void init(JavacProcessingEnvironment processingEnv) {
         Context context = processingEnv.getContext();
         names = Names.instance(context);
+        types = Types.instance(context);
         syms = Symtab.instance(context);
-
     }
 
     static Symbol lookup(Symbol container, String name) {
@@ -123,5 +125,48 @@ class JavacHelper {
             }
         }
         return null;
+    }
+
+    static Symbol.ClassSymbol lookupEntity(String entityName) {
+        //TODO: is it truly quicker to split the search up into two steps like this??
+        //first search for things with defaulted entity names
+        for (Symbol.PackageSymbol pack: packages()) {
+            try {
+                Symbol type = lookup(pack, entityName);
+                if (type instanceof Symbol.ClassSymbol) {
+                    AnnotationMirror entity = entityAnnotation(type);
+                    if (entity != null) {
+                        String name = entityName(entity);
+                        if (name.isEmpty() || name.equals(entityName)) {
+                            return (Symbol.ClassSymbol) type;
+                        }
+                    }
+                }
+            }
+            catch (Exception e) {}
+        }
+        //search for things by explicit @Entity(name="...")
+        for (Symbol.PackageSymbol pack: packages()) {
+            try {
+                for (Symbol type: pack.members().getElements()) {
+                    if (type instanceof Symbol.ClassSymbol) {
+                        AnnotationMirror entity = entityAnnotation(type);
+                        if (entity != null && entityName(entity).equals(entityName)) {
+                            return (Symbol.ClassSymbol) type;
+                        }
+                    }
+                }
+            }
+            catch (Exception e) {}
+        }
+        return null;
+    }
+
+    static Symbol.ClassSymbol lookupQualifiedClass(String path) {
+        return syms.classes.get(names.fromString(path));
+    }
+
+    static boolean isAssignable(Symbol.VarSymbol param, Symbol.ClassSymbol typeClass) {
+        return !typeClass.isSubClass(param.type.tsym, types);
     }
 }

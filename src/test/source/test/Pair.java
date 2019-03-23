@@ -1,5 +1,5 @@
 package test;
 
 public class Pair {
-    public Pair(Object first, Object second) {}
+    public Pair(Person person, Address address) {}
 }
