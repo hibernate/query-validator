@@ -4,10 +4,7 @@ import com.sun.tools.javac.code.Symbol;
 import org.hibernate.QueryException;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.type.CollectionType;
-import org.hibernate.type.CompositeCustomType;
-import org.hibernate.type.Type;
-import org.hibernate.type.TypeFactory;
+import org.hibernate.type.*;
 
 import javax.lang.model.element.AnnotationMirror;
 import java.util.HashMap;
@@ -18,6 +15,8 @@ import static org.hibernate.query.validator.MockCollectionPersister.createAssoci
 import static org.hibernate.query.validator.MockCollectionPersister.createElementCollection;
 
 class JavacSessionFactory extends MockSessionFactory {
+
+    private static final CustomType UNKNOWN_TYPE = new CustomType(new MockUserType());
 
     private Map<String, EntityPersister> cache = new HashMap<>();
 
@@ -146,6 +145,9 @@ class JavacSessionFactory extends MockSessionFactory {
                     continue;
                 }
                 result = typeResolver.basic(qualifiedName(memberType));
+                if (result == null) {
+                    result = UNKNOWN_TYPE;
+                }
             }
         }
         return result;
