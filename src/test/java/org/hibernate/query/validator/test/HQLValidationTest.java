@@ -97,6 +97,6 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:30: error: No suitable constructor for class test.Pair"));
         assertTrue(errors.contains("Queries.java:31: error: No suitable constructor for class test.Pair"));
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
-
+        assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
     }
 }
