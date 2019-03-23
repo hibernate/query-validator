@@ -13,6 +13,9 @@ This will produce an artifact with the Maven coordinates
 
 ## Usage
 
+The persistent entity classes must be annotated with JPA mapping
+annotations. XML-based mappings are not supported.
+
 1. Put `query-validator-1.0-SNAPSHOT.jar` and its dependencies in 
    the compile-time classpath of your project.
 2. Annotate a package or class with the `@CheckHQL` annotation.
