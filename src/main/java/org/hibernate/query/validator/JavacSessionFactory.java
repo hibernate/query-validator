@@ -47,7 +47,7 @@ class JavacSessionFactory extends MockSessionFactory {
         if (cached!=null) return cached;
 
         CollectionPersister persister;
-        int index = role.lastIndexOf('.');
+        int index = role.indexOf('.');
         String entityName = role.substring(0,index);
         String propertyPath = role.substring(index+1);
         Symbol.ClassSymbol entityClass = findEntityClass(entityName);
