@@ -31,6 +31,8 @@ import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
 class MockCollectionPersister implements QueryableCollection {
 
     private static final Serializable[] NO_SPACES = new Serializable[0];
+    private static final String[] ID_COLUMN = {"id"};
+    private static final String[] INDEX_COLUMN = {"pos"};
 
     private String role;
     private String elementClassName;
@@ -394,17 +396,17 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public String[] getIndexColumnNames() {
-        return new String[] {""};
-    }
-
-    @Override
-    public String[] getIndexFormulas() {
-        return new String[0];
+        return INDEX_COLUMN;
     }
 
     @Override
     public String[] getIndexColumnNames(String alias) {
-        return new String[] {""};
+        return INDEX_COLUMN;
+    }
+
+    @Override
+    public String[] getIndexFormulas() {
+        return null;
     }
 
     @Override
@@ -469,7 +471,7 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public String[] getKeyColumnNames() {
-        return new String[] {""};
+        return ID_COLUMN;
     }
 
     @Override

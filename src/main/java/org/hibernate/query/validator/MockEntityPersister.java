@@ -34,6 +34,7 @@ import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
 abstract class MockEntityPersister implements EntityPersister, Queryable, DiscriminatorMetadata {
 
     private static final Serializable[] NO_SPACES = new Serializable[0];
+    private static final String[] ID_COLUMN = {"id"};
 
     private final String entityName;
     private SessionFactoryImplementor factory;
@@ -731,8 +732,13 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
     }
 
     @Override
+    public String[] getKeyColumnNames() {
+        return getIdentifierColumnNames();
+    }
+
+    @Override
     public String[] getIdentifierColumnNames() {
-        throw new UnsupportedOperationException();
+        return ID_COLUMN;
     }
 
     @Override
@@ -853,11 +859,6 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
     @Override
     public String fromJoinFragment(String s, boolean b, boolean b1, Set<String> set) {
         return "";
-    }
-
-    @Override
-    public String[] getKeyColumnNames() {
-        return new String[] {"id"};
     }
 
     @Override

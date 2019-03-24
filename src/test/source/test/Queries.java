@@ -78,6 +78,12 @@ public class Queries {
 
         createQuery("select p.whatever from Person p where p.whatever is not null");
         createQuery("select p.address.country.thing from Person p where p.address.country.thing is null");
+
+        createQuery("select p2 from Person p join p.address.country.residents p2"); //join association in embeddable
+        createQuery("from Person p where p.notes is empty"); //JPQL "is empty" operator for element collection
+        createQuery("from Person p where p.addresses is empty"); //JPQL "is empty" operator for association
+        createQuery("from Address a where a.country.residents is empty"); //JPQL "is empty" operator for association in embeddable
+        createQuery("from Person p where p.address.country.residents is empty");
     }
 
     private static void createQuery(String s) {}
