@@ -1,6 +1,6 @@
 # Hibernate Query Validator
 
-Compile time validation for HQL and JPA-QL queries.
+Compile time validation for queries written in HQL and JPQL.
 
 *WARNING: this project is still at an experimental stage!*
 
@@ -13,8 +13,12 @@ This will produce an artifact with the Maven coordinates
 
 ## Usage
 
-The persistent entity classes must be annotated with JPA mapping
-annotations. XML-based mappings are not supported.
+The persistent entity classes *must* be annotated with the basic
+JPA metadata annotations like `@Entity`, `@ManyToOne`, 
+`@Embeddable`, `@MappedSuperclass`, `@ElementCollection`, and 
+`@Access`. You *may* use XML-based mappings to specify database 
+mapping information like table and column names if that's what you 
+prefer.
 
 1. Put `query-validator-1.0-SNAPSHOT.jar` and its dependencies in 
    the compile-time classpath of your project.
@@ -27,8 +31,9 @@ an identifier in the query doesn't reference a persistent entity or
 persistent field.
 
 Note that the query is checked according to Hibernate's flavor of
-JPA-QL (i.e. HQL). In future, a strict mode will produce errors for 
-non-spec-compliant queries.
+JPQL (i.e. HQL), which is a superset of the query language defined 
+by the JPA specification. In future, an optional "strict" mode will 
+produce errors for non-spec-compliant queries.
 
 ## Usage from command line
 
