@@ -12,6 +12,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.TypeKind;
+import javax.persistence.AccessType;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -28,40 +29,41 @@ class JavacHelper {
         syms = Symtab.instance(context);
     }
 
-    private static Symbol lookup(Symbol container, String name) {
+    private static Symbol findMember(Symbol container, String name) {
         return container.members().lookup(names.fromString(name)).sym;
     }
 
-    static Symbol superclassLookup(Symbol type, String propertyName) {
+    static Symbol findProperty(Symbol.TypeSymbol type, String propertyName) {
+        Symbol current = type;
         //iterate up the superclass hierarchy
-        while (type instanceof Symbol.ClassSymbol) {
-            Symbol member = lookup(type, propertyName);
+        while (current instanceof Symbol.ClassSymbol) {
+            Symbol member = findMember(current, propertyName);
             String capitalized =
                     propertyName.substring(0, 1).toUpperCase()
                     + propertyName.substring(1).toLowerCase();
             if (member==null) {
-                member = lookup(type, "get" + capitalized);
+                member = findMember(current, "get" + capitalized);
             }
             if (member==null) {
-                member = lookup(type, "is" + capitalized);
+                member = findMember(current, "is" + capitalized);
             }
             if (member!=null && isPersistent(member)) {
                 return member;
             }
             else {
-                Symbol.ClassSymbol classSymbol = (Symbol.ClassSymbol) type;
+                Symbol.ClassSymbol classSymbol = (Symbol.ClassSymbol) current;
                 Type superclass = classSymbol.getSuperclass();
-                type = superclass == null ? null : superclass.tsym;
+                current = superclass == null ? null : superclass.tsym;
             }
         }
         return null;
     }
 
-    static Symbol.PackageSymbol lookupPackage(String packageName) {
+    static Symbol.PackageSymbol findPackage(String packageName) {
         return syms.packages.get(names.fromString(packageName));
     }
 
-    static ArrayList<Symbol.PackageSymbol> packages() {
+    static ArrayList<Symbol.PackageSymbol> allPackages() {
         return new ArrayList<>(syms.packages.values());
     }
 
@@ -86,71 +88,64 @@ class JavacHelper {
         }
     }
 
-    static boolean hasTransientAnnotation(Symbol member) {
+    private static boolean hasAnnotation(Symbol member, String annotationName) {
+        return getAnnotation(member, annotationName)!=null;
+    }
+
+    private static AnnotationMirror getAnnotation(Symbol member, String annotationName) {
         for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
             if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
-                    .equals("javax.persistence.Transient")) {
-                return true;
+                    .equals(annotationName)) {
+                return mirror;
             }
         }
-        return false;
+        return null;
+    }
+
+    private static Object getAnnotationMember(AnnotationMirror annotation, String memberName) {
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
+                annotation.getElementValues().entrySet()) {
+            if (entry.getKey().getSimpleName().toString().equals(memberName)) {
+                return entry.getValue().getValue();
+            }
+        }
+        return null;
+    }
+
+    static boolean hasTransientAnnotation(Symbol member) {
+        return hasAnnotation(member, "javax.persistence.Transient");
     }
 
     static boolean hasEmbedAnnotation(Symbol member) {
-        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
-            if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
-                    .equals("javax.persistence.Embedded")) {
-                return true;
-            }
-        }
-        for (AnnotationMirror mirror : member.type.tsym.getAnnotationMirrors()) {
-            if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
-                    .equals("javax.persistence.Embeddable")) {
-                return true;
-            }
-        }
-        return false;
+        return hasAnnotation(member, "javax.persistence.Embedded")
+            || hasAnnotation(member.type.tsym, "javax.persistence.Embeddable");
     }
 
     static AnnotationMirror entityAnnotation(Symbol member) {
-        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
-            if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
-                    .equals("javax.persistence.Entity")) {
-                return mirror;
-            }
-        }
-        return null;
+        return getAnnotation(member, "javax.persistence.Entity");
     }
 
     static AnnotationMirror elementCollectionAnnotation(Symbol member) {
-        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
-            if (qualifiedName((Type.ClassType) mirror.getAnnotationType())
-                    .equals("javax.persistence.ElementCollection")) {
-                return mirror;
-            }
-        }
-        return null;
+        return getAnnotation(member, "javax.persistence.ElementCollection");
     }
 
     static AnnotationMirror toOneAnnotation(Symbol member) {
-        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
-            String name = qualifiedName((Type.ClassType) mirror.getAnnotationType());
-            if (name.equals("javax.persistence.ManyToOne")
-                    || name.equals("javax.persistence.OneToOne")) {
-                return mirror;
-            }
-        }
+        AnnotationMirror manyToOne =
+                getAnnotation(member, "javax.persistence.ManyToOne");
+        if (manyToOne!=null) return manyToOne;
+        AnnotationMirror oneToOne =
+                getAnnotation(member, "javax.persistence.OneToOne");
+        if (oneToOne!=null) return oneToOne;
         return null;
     }
 
     static AnnotationMirror toManyAnnotation(Symbol member) {
-        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
-            String name = qualifiedName((Type.ClassType) mirror.getAnnotationType());
-            if (name.equals("javax.persistence.ManyToMany")
-                    || name.equals("javax.persistence.OneToMany")) {
-                return mirror;
-            }
-        }
+        AnnotationMirror manyToMany =
+                getAnnotation(member, "javax.persistence.ManyToMany");
+        if (manyToMany!=null) return manyToMany;
+        AnnotationMirror oneToMany =
+                getAnnotation(member, "javax.persistence.OneToMany");
+        if (oneToMany!=null) return oneToMany;
         return null;
     }
 
@@ -162,46 +157,31 @@ class JavacHelper {
         return type==null ? null : type.tsym.flatName().toString();
     }
 
-    static String entityName(AnnotationMirror mirr) {
-        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
-                mirr.getElementValues().entrySet()) {
-            if (entry.getKey().getSimpleName().toString().equals("name")) {
-                return (String) entry.getValue().getValue();
-            }
-        }
-        return "";
+    static String entityName(AnnotationMirror annotation) {
+        String name = (String) getAnnotationMember(annotation, "name");
+        return name==null ? "" : name;
     }
 
-    static String targetEntity(AnnotationMirror mirr) {
-        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
-                mirr.getElementValues().entrySet()) {
-            if (entry.getKey().getSimpleName().toString().equals("targetEntity")) {
-                Type.ClassType classType = (Type.ClassType) entry.getValue().getValue();
-                return classType.getKind() == TypeKind.VOID ? null :
-                        classType.tsym.name.toString();
-            }
-        }
-        return null;
+    static String targetEntity(AnnotationMirror annotation) {
+        Type.ClassType classType = (Type.ClassType)
+                getAnnotationMember(annotation, "targetEntity");
+        return classType==null || classType.getKind() == TypeKind.VOID ?
+                null : classType.tsym.name.toString();
     }
 
-    static String targetClass(AnnotationMirror mirr) {
-        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
-                mirr.getElementValues().entrySet()) {
-            if (entry.getKey().getSimpleName().toString().equals("targetClass")) {
-                Type.ClassType classType = (Type.ClassType) entry.getValue().getValue();
-                return classType.getKind() == TypeKind.VOID ? null :
-                        classType.tsym.flatName().toString();
-            }
-        }
-        return null;
+    static String targetClass(AnnotationMirror annotation) {
+        Type.ClassType classType = (Type.ClassType)
+                getAnnotationMember(annotation, "targetClass");
+        return classType==null || classType.getKind() == TypeKind.VOID ?
+                null : classType.tsym.flatName().toString();
     }
 
-    static Symbol.ClassSymbol lookupEntity(String entityName) {
+    static Symbol.ClassSymbol findEntityClass(String entityName) {
         //TODO: is it truly quicker to split the search up into two steps like this??
         //first search for things with defaulted entity names
-        for (Symbol.PackageSymbol pack: packages()) {
+        for (Symbol.PackageSymbol pack: allPackages()) {
             try {
-                Symbol type = lookup(pack, entityName);
+                Symbol type = findMember(pack, entityName);
                 if (type instanceof Symbol.ClassSymbol) {
                     AnnotationMirror entity = entityAnnotation(type);
                     if (entity != null) {
@@ -215,7 +195,7 @@ class JavacHelper {
             catch (Exception e) {}
         }
         //search for things by explicit @Entity(name="...")
-        for (Symbol.PackageSymbol pack: packages()) {
+        for (Symbol.PackageSymbol pack: allPackages()) {
             try {
                 for (Symbol type: pack.members().getElements()) {
                     if (type instanceof Symbol.ClassSymbol) {
@@ -231,7 +211,7 @@ class JavacHelper {
         return null;
     }
 
-    static Symbol.ClassSymbol lookupQualifiedClass(String path) {
+    static Symbol.ClassSymbol findClassByQualifiedName(String path) {
         return syms.classes.get(names.fromString(path));
     }
 

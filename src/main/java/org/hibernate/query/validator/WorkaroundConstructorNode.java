@@ -13,8 +13,7 @@ import org.hibernate.type.Type;
 
 import java.util.List;
 
-import static org.hibernate.query.validator.JavacHelper.lookupEntity;
-import static org.hibernate.query.validator.JavacHelper.lookupQualifiedClass;
+import static org.hibernate.query.validator.JavacHelper.*;
 
 public class WorkaroundConstructorNode extends ConstructorNode {
     @Override
@@ -26,7 +25,7 @@ public class WorkaroundConstructorNode extends ConstructorNode {
             //Ugh, ConstructorNode throws an exception when
             //it tries to load the class and can't!
             String path = ((PathNode) getFirstChild()).getPath();
-            ClassSymbol symbol = lookupQualifiedClass(path);
+            ClassSymbol symbol = findClassByQualifiedName(path);
             if (symbol==null) {
                 throw new DetailedSemanticException("Class " + path + " not found");
             }
@@ -41,7 +40,7 @@ public class WorkaroundConstructorNode extends ConstructorNode {
                         Symbol.ClassSymbol typeClass;
                         if (type instanceof EntityType) {
                             String entityName = ((EntityType) type).getAssociatedEntityName();
-                            typeClass = lookupEntity(entityName);
+                            typeClass = findEntityClass(entityName);
                         }
                         else if (type instanceof BasicType) {
                             String className;
@@ -51,14 +50,14 @@ public class WorkaroundConstructorNode extends ConstructorNode {
                             catch (Exception e) {
                                 continue;
                             }
-                            typeClass = lookupQualifiedClass(className);
+                            typeClass = findClassByQualifiedName(className);
                         }
                         else {
                             //TODO!!!
                             continue;
                         }
                         if (typeClass!=null
-                                && JavacHelper.isAssignable(param, typeClass)) {
+                                && isAssignable(param, typeClass)) {
                             argumentsCheckOut = false;
                             break;
                         }
@@ -69,5 +68,4 @@ public class WorkaroundConstructorNode extends ConstructorNode {
             throw new DetailedSemanticException("No suitable constructor for class " + path);
         }
     }
-
 }

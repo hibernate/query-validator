@@ -12,7 +12,7 @@ import java.sql.SQLException;
 public class MockUserType implements UserType {
     @Override
     public int[] sqlTypes() {
-        throw new UnsupportedOperationException();
+        return new int[0];
     }
 
     @Override

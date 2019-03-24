@@ -24,7 +24,7 @@ class JavacSessionFactory extends MockSessionFactory {
     EntityPersister createMockEntityPersister(String entityName) {
         EntityPersister cached = cache.get(entityName);
         if (cached!=null) return cached;
-        Symbol.ClassSymbol type = lookupEntity(entityName);
+        Symbol.ClassSymbol type = findEntityClass(entityName);
         if (type==null) {
             return null;
         }
@@ -54,7 +54,7 @@ class JavacSessionFactory extends MockSessionFactory {
         int index = role.lastIndexOf('.');
         String entityName = role.substring(0,index);
         String propertyName = role.substring(index+1);
-        Symbol property = superclassLookup(lookupEntity(entityName), propertyName);
+        Symbol property = findProperty(findEntityClass(entityName), propertyName);
         AnnotationMirror toMany = toManyAnnotation(property);
         CollectionType collectionType = collectionType(property.type, role);
         com.sun.tools.javac.code.Type elementType = property.type.getTypeArguments().last();
@@ -104,7 +104,7 @@ class JavacSessionFactory extends MockSessionFactory {
         StringBuilder currentPath = new StringBuilder();
         for (String segment: propertyPath.split("\\.")) {
             currentPath.append(segment);
-            Symbol member = superclassLookup(memberType.tsym, segment);
+            Symbol member = findProperty(memberType.tsym, segment);
             if (member == null) {
                 result = null;
                 break;
