@@ -115,7 +115,10 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                                         walker.statement(parser.getAST());
                                     }
                                     catch (Exception e) {
-                                        handler.reportError(e.getMessage());
+                                        String message = e.getMessage();
+                                        handler.reportError(message == null ?
+                                                e.getClass().getName() :
+                                                message);
 //                                        e.printStackTrace();
                                     }
 
