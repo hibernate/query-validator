@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.hibernate.internal.util.StringHelper.*;
 import static org.hibernate.query.validator.JavacHelper.*;
 import static org.hibernate.query.validator.MockCollectionPersister.createAssociationCollection;
 import static org.hibernate.query.validator.MockCollectionPersister.createElementCollection;
@@ -47,9 +48,8 @@ class JavacSessionFactory extends MockSessionFactory {
         if (cached!=null) return cached;
 
         CollectionPersister persister;
-        int index = role.indexOf('.');
-        String entityName = role.substring(0,index);
-        String propertyPath = role.substring(index+1);
+        String entityName = root(role); //only works because entity names don't contain dots
+        String propertyPath = unroot(role);
         Symbol.ClassSymbol entityClass = findEntityClass(entityName);
         Symbol property =
                 findPropertyByPath(entityClass, propertyPath,
@@ -107,12 +107,10 @@ class JavacSessionFactory extends MockSessionFactory {
             return typeHelper.entity(targetEntity);
         }
         else if (isToManyAssociation(member)) {
-            String role = entityName + '.' + path;
-            return collectionType(memberType, role);
+            return collectionType(memberType, qualify(entityName, path));
         }
         else if (isElementCollectionProperty(member)) {
-            String role = entityName + '.' + path;
-            return collectionType(memberType, role);
+            return collectionType(memberType, qualify(entityName,path));
         }
         else {
             Type result = typeResolver.basic(qualifiedName(memberType));
@@ -154,7 +152,8 @@ class JavacSessionFactory extends MockSessionFactory {
                                     -> isPersistable(symbol, accessType))) {
                         String name = propertyName(member);
                         Type propertyType =
-                                createPropertyType(member, entityName, path,
+                                createPropertyType(member, entityName,
+                                        qualify(path, name),
                                         defaultAccessType);
                         if (propertyType != null) {
                             names.add(name);
