@@ -13,12 +13,13 @@ import static javax.persistence.AccessType.PROPERTY;
 
 @Entity
 public class Person {
+    @Id long id;
     public String name;
+    public Date dob;
     @OneToOne
     public Address address;
     @OneToMany(targetEntity = Address.class)
-    public Set<Address> addresses;
-    public Date dob;
+    public Set<Address> pastAddresses;
     @ElementCollection
     public List<String> notes;
     @Access(PROPERTY)
