@@ -7,7 +7,9 @@ import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.type.*;
 
 import javax.persistence.AccessType;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.hibernate.query.validator.JavacHelper.*;
@@ -18,66 +20,108 @@ class JavacSessionFactory extends MockSessionFactory {
 
     private static final CustomType UNKNOWN_TYPE = new CustomType(new MockUserType());
 
-    private Map<String, EntityPersister> cache = new HashMap<>();
-    private Map<String, CollectionPersister> collcache = new HashMap<>();
+    private final Map<String,EntityPersister> entityPersisters = new HashMap<>();
+    private final Map<String,CollectionPersister> collectionPersisters = new HashMap<>();
 
     @Override
     EntityPersister createMockEntityPersister(String entityName) {
-        EntityPersister cached = cache.get(entityName);
+        EntityPersister cached = entityPersisters.get(entityName);
         if (cached!=null) return cached;
+
+        EntityPersister persister;
         Symbol.ClassSymbol type = findEntityClass(entityName);
         if (type==null) {
-            return null;
+            persister = null;
         }
         else {
-            EntityPersister persister =
-                    new MockEntityPersister(entityName, this) {
-                        private Map<String,Type> cache = new HashMap<>();
-                        AccessType defaultAccessType = getDefaultAccessType(type);
-                        @Override
-                        public Type getPropertyType(String propertyName)
-                                throws QueryException {
-                            Type cached = cache.get(propertyName);
-                            if (cached!=null) return cached;
-                            Type result = propertyType(type.type,
-                                    getEntityName(), propertyName,
-                                    defaultAccessType);
-                            cache.put(propertyName, result);
-                            return result;
-                        }
-
-                    };
-            cache.put(entityName, persister);
-            return persister;
+            persister = new JavacEntityPersister(entityName, type);
         }
+
+        entityPersisters.put(entityName, persister);
+        return persister;
     }
 
     @Override
     CollectionPersister createMockCollectionPersister(String role) {
-        CollectionPersister cached = collcache.get(role);
+        CollectionPersister cached = collectionPersisters.get(role);
         if (cached!=null) return cached;
+
+        CollectionPersister persister;
         int index = role.lastIndexOf('.');
         String entityName = role.substring(0,index);
-        String propertyName = role.substring(index+1);
+        String propertyPath = role.substring(index+1);
         Symbol.ClassSymbol entityClass = findEntityClass(entityName);
-        Symbol property = findProperty(entityClass, propertyName,
-                getDefaultAccessType(entityClass));
-        CollectionPersister persister = null;
+        Symbol property =
+                findPropertyByPath(entityClass, propertyPath,
+                        getDefaultAccessType(entityClass));
         if (isToManyAssociation(property)) {
             persister = createAssociationCollection(role,
                     collectionType(memberType(property), role), entityName,
                     getToManyTargetEntity(property), this);
         }
-        if (isElementCollectionProperty(property)) {
+        else if (isElementCollectionProperty(property)) {
             persister = createElementCollection(role,
                     collectionType(memberType(property), role), entityName,
                     getElementCollectionClass(property), this);
         }
-        collcache.put(role, persister);
+        else {
+            persister = null;
+        }
+
+        collectionPersisters.put(role, persister);
         return persister;
     }
 
-    private static CollectionType collectionType(com.sun.tools.javac.code.Type type, String role) {
+    static Symbol findPropertyByPath(Symbol.TypeSymbol type,
+                                     String propertyPath,
+                                     AccessType defaultAccessType) {
+        com.sun.tools.javac.code.Type memberType = type.type;
+        Symbol result = null;
+        //iterate over the path segments
+        for (String segment: propertyPath.split("\\.")) {
+            Symbol member =
+                    findProperty(memberType.tsym, segment,
+                            defaultAccessType);
+            if (member == null) {
+                return null;
+            }
+            else {
+                memberType = getMemberType(member);
+                result = member;
+            }
+        }
+        return result;
+    }
+
+    static Type createPropertyType(Symbol member,
+                                   String entityName, String path,
+                                   AccessType defaultAccessType) {
+        com.sun.tools.javac.code.Type memberType = getMemberType(member);
+        if (isEmbeddedProperty(member)) {
+            return new CompositeCustomType(
+                    new JavacComponent(memberType.tsym,
+                            entityName, path, defaultAccessType));
+        }
+        else if (isToOneAssociation(member)) {
+            String targetEntity = getToOneTargetEntity(member);
+            return typeHelper.entity(targetEntity);
+        }
+        else if (isToManyAssociation(member)) {
+            String role = entityName + '.' + path;
+            return collectionType(memberType, role);
+        }
+        else if (isElementCollectionProperty(member)) {
+            String role = entityName + '.' + path;
+            return collectionType(memberType, role);
+        }
+        else {
+            Type result = typeResolver.basic(qualifiedName(memberType));
+            return result == null ? UNKNOWN_TYPE : result;
+        }
+    }
+
+    private static CollectionType collectionType(
+            com.sun.tools.javac.code.Type type, String role) {
         TypeFactory typeFactory = typeResolver.getTypeFactory();
         switch (type.tsym.name.toString()) {
             case "Set":
@@ -91,65 +135,83 @@ class JavacSessionFactory extends MockSessionFactory {
         }
     }
 
-    static Type propertyType(com.sun.tools.javac.code.Type type,
-                             String entityName, String propertyPath,
-                             AccessType defaultAccessType) {
-        return propertyType(type, entityName, propertyPath, null,
-                defaultAccessType);
-    }
-    static Type propertyType(com.sun.tools.javac.code.Type type,
-                             String entityName, String propertyPath,
-                             String prefix, AccessType defaultAccessType) {
-        com.sun.tools.javac.code.Type memberType = type;
-        Type result = null;
-        //iterate over the path segments
-        StringBuilder currentPath = new StringBuilder();
-        for (String segment: propertyPath.split("\\.")) {
-            currentPath.append(segment);
-            Symbol member =
-                    findProperty(memberType.tsym, segment,
-                            defaultAccessType);
-            if (member == null) {
-                result = null;
-                break;
-            }
-            else {
-                memberType = member instanceof Symbol.MethodSymbol ?
-                        ((Symbol.MethodSymbol) member).getReturnType() :
-                        member.type;
-                if (isEmbeddedProperty(member)) {
-                    String path = currentPath.toString();
-                    if (prefix!=null) path = prefix + '.' + path;
-                    result = new CompositeCustomType(
-                            new JavacComponent(member.type, entityName, path,
-                                    defaultAccessType));
-                    continue;
-                }
+    private static class JavacComponent extends MockComponent {
+        private String[] propertyNames;
+        private Type[] propertyTypes;
 
-                if (isToManyAssociation(member)) {
-                    String role = entityName + '.' + currentPath;
-                    if (prefix!=null) role = prefix + '.' + role;
-                    result = collectionType(memberType, role);
-                    continue;
+        JavacComponent(Symbol.TypeSymbol type,
+                       String entityName, String path,
+                       AccessType defaultAccessType) {
+            List<String> names = new ArrayList<>();
+            List<Type> types = new ArrayList<>();
+
+            while (type instanceof Symbol.ClassSymbol) {
+                if (isMappedClass(type)) { //ignore unmapped intervening classes
+                    AccessType accessType =
+                            getAccessType(type, defaultAccessType);
+                    for (Symbol member: type.members()
+                            .getElements(symbol
+                                    -> isPersistable(symbol, accessType))) {
+                        String name = propertyName(member);
+                        Type propertyType =
+                                createPropertyType(member, entityName, path,
+                                        defaultAccessType);
+                        if (propertyType != null) {
+                            names.add(name);
+                            types.add(propertyType);
+                        }
+                    }
                 }
-                if (isToOneAssociation(member)) {
-                    String targetEntity = getToOneTargetEntity(member);
-                    result = typeHelper.entity(targetEntity);
-                    continue;
-                }
-                if (isElementCollectionProperty(member)) {
-                    String role = entityName + '.' + currentPath;
-                    if (prefix!=null) role = prefix + '.' + role;
-                    result = collectionType(memberType, role);
-                    continue;
-                }
-                result = typeResolver.basic(qualifiedName(memberType));
-                if (result == null) {
-                    result = UNKNOWN_TYPE;
-                }
+                Symbol.ClassSymbol classSymbol =
+                        (Symbol.ClassSymbol) type;
+                com.sun.tools.javac.code.Type superclass =
+                        classSymbol.getSuperclass();
+                type = superclass == null ? null : superclass.tsym;
             }
+
+            propertyNames = names.toArray(new String[0]);
+            propertyTypes = types.toArray(new Type[0]);
         }
-        return result;
+
+        @Override
+        public String[] getPropertyNames() {
+            return propertyNames;
+        }
+
+        @Override
+        public Type[] getPropertyTypes() {
+            return propertyTypes;
+        }
+
     }
 
+    private class JavacEntityPersister extends MockEntityPersister {
+        private final Map<String,Type> properties = new HashMap<>();
+        private final Symbol.ClassSymbol type;
+        private final AccessType defaultAccessType;
+
+        private JavacEntityPersister(String entityName, Symbol.ClassSymbol type) {
+            super(entityName, JavacSessionFactory.this);
+            this.type = type;
+            defaultAccessType = getDefaultAccessType(type);
+        }
+
+        @Override
+        public Type getPropertyType(String propertyPath)
+                throws QueryException {
+            Type cached = properties.get(propertyPath);
+            if (cached!=null) return cached;
+
+            Symbol symbol =
+                    findPropertyByPath(type, propertyPath,
+                            defaultAccessType);
+            Type result = symbol == null ? null :
+                    createPropertyType(symbol, getEntityName(),
+                            propertyPath, defaultAccessType);
+
+            properties.put(propertyPath, result);
+            return result;
+        }
+
+    }
 }

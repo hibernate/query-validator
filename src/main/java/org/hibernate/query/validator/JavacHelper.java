@@ -16,44 +16,53 @@ import java.util.Map;
 
 class JavacHelper {
 
-    static Names names;
-    static Types types;
-    static Symtab syms;
+    private static Names names;
+    private static Types types;
+    private static Symtab syms;
 
-    static void init(JavacProcessingEnvironment processingEnv) {
+    static void initialize(JavacProcessingEnvironment processingEnv) {
         Context context = processingEnv.getContext();
         names = Names.instance(context);
         types = Types.instance(context);
         syms = Symtab.instance(context);
     }
 
-    private static Symbol findMember(Symbol container, String name) {
-        return container.members().lookup(names.fromString(name)).sym;
+    static Symbol.ClassSymbol findEntityClass(String entityName) {
+        for (Symbol.PackageSymbol pack:
+                new ArrayList<>(syms.packages.values())) {
+            try {
+                for (Symbol type: pack.members()
+                        .getElements(symbol -> isMatchingEntity(
+                                symbol, entityName))) {
+                    return (Symbol.ClassSymbol) type;
+                }
+            }
+            catch (Exception e) {}
+        }
+        return null;
+    }
+
+    private static boolean isMatchingEntity(Symbol symbol, String entityName) {
+        if (symbol instanceof Symbol.ClassSymbol) {
+            Symbol.ClassSymbol type = (Symbol.ClassSymbol) symbol;
+            return isEntity(type)
+                    && getEntityName(type).equals(entityName);
+        }
+        else {
+            return false;
+        }
     }
 
     static Symbol findProperty(Symbol.TypeSymbol type, String propertyName,
                                AccessType defaultAccessType) {
         //iterate up the superclass hierarchy
         while (type instanceof Symbol.ClassSymbol) {
-            if (isMappedClass(type)) {
+            if (isMappedClass(type)) { //ignore unmapped intervening classes
                 AccessType accessType =
                         getAccessType(type, defaultAccessType);
-                Symbol member = null;
-                switch (accessType) {
-                    case FIELD:
-                        member = findMember(type, propertyName);
-                        break;
-                    case PROPERTY:
-                        String capitalized =
-                                propertyName.substring(0, 1).toUpperCase()
-                                + propertyName.substring(1).toLowerCase();
-                        member = findMember(type, "get" + capitalized);
-                        if (member == null) {
-                            member = findMember(type, "is" + capitalized);
-                        }
-                        break;
-                }
-                if (member != null && isPersistent(member)) {
+                for (Symbol member: type.members()
+                        .getElements(symbol -> isMatchingProperty(
+                                symbol, propertyName, accessType))) {
                     return member;
                 }
             }
@@ -64,35 +73,20 @@ class JavacHelper {
         return null;
     }
 
-    static Symbol.PackageSymbol findPackage(String packageName) {
-        return syms.packages.get(names.fromString(packageName));
+    private static boolean isMatchingProperty(Symbol symbol, String propertyName,
+                                              AccessType accessType) {
+        return isPersistable(symbol, accessType)
+            && propertyName.equals(propertyName(symbol));
     }
 
-    static ArrayList<Symbol.PackageSymbol> allPackages() {
-        return new ArrayList<>(syms.packages.values());
-    }
-
-    static boolean isPersistent(Symbol member) {
-        if (member.isStatic() || isTransient(member)) {
+    private static boolean isGetterMethod(Symbol.MethodSymbol method) {
+        if (!method.params().isEmpty()) {
             return false;
         }
-        else if (member instanceof Symbol.VarSymbol) {
-            return true;
-        }
-        else if (member instanceof Symbol.MethodSymbol) {
-            Symbol.MethodSymbol method =
-                    (Symbol.MethodSymbol) member;
-            if (!method.params().isEmpty()) {
-                return false;
-            }
-            String methodName = method.name.toString();
-            return methodName.startsWith("get")
-                || methodName.startsWith("is")
-                    && member.type.getTag() == TypeTag.BOOLEAN;
-        }
-        else {
-            return false;
-        }
+        String methodName = method.name.toString();
+        TypeTag returnType = method.getReturnType().getTag();
+        return methodName.startsWith("get") && returnType != TypeTag.VOID
+            || methodName.startsWith("is") && returnType == TypeTag.BOOLEAN;
     }
 
     private static boolean hasAnnotation(Symbol member, String annotationName) {
@@ -119,7 +113,7 @@ class JavacHelper {
         return null;
     }
 
-    private static boolean isMappedClass(Symbol.TypeSymbol type) {
+    static boolean isMappedClass(Symbol.TypeSymbol type) {
         return hasAnnotation(type, "javax.persistence.Entity")
             || hasAnnotation(type, "javax.persistence.Embeddable")
             || hasAnnotation(type, "javax.persistence.MappedSuperclass");
@@ -179,11 +173,13 @@ class JavacHelper {
     }
 
     static String simpleName(Type type) {
-        return type==null ? null : type.tsym.name.toString();
+        return type==null ? null :
+                type.tsym.name.toString();
     }
 
     static String qualifiedName(Type type) {
-        return type==null ? null : type.tsym.flatName().toString();
+        return type==null ? null :
+                type.tsym.flatName().toString();
     }
 
     static Type memberType(Symbol property) {
@@ -192,14 +188,19 @@ class JavacHelper {
                 property.type;
     }
 
-    static AccessType getAccessType(Symbol.TypeSymbol type, AccessType defaultAccessType) {
-        AnnotationMirror annotation = getAnnotation(type, "javax.persistence.Access");
+    static AccessType getAccessType(Symbol.TypeSymbol type,
+                                    AccessType defaultAccessType) {
+        AnnotationMirror annotation =
+                getAnnotation(type, "javax.persistence.Access");
         if (annotation==null) {
             return defaultAccessType;
         }
         else {
             Symbol.VarSymbol member = (Symbol.VarSymbol)
                     getAnnotationMember(annotation, "value");
+            if (member==null) {
+                return defaultAccessType; //does not occur
+            }
             switch (member.name.toString()) {
                 case "PROPERTY":
                     return AccessType.PROPERTY;
@@ -218,7 +219,8 @@ class JavacHelper {
             //not an entity!
             return null;
         }
-        String name = (String) getAnnotationMember(entityAnnotation, "name");
+        String name = (String)
+                getAnnotationMember(entityAnnotation, "name");
         //entity names are unqualified class names
         return name==null ? type.name.toString() : name;
     }
@@ -259,40 +261,6 @@ class JavacHelper {
                 classType.tsym.flatName().toString();
     }
 
-    static Symbol.ClassSymbol findEntityClass(String entityName) {
-        //TODO: is it truly quicker to split the search up into two steps like this??
-        //first search for things with defaulted entity names
-        for (Symbol.PackageSymbol pack: allPackages()) {
-            try {
-                Symbol type = findMember(pack, entityName);
-                if (type instanceof Symbol.ClassSymbol) {
-                    Symbol.ClassSymbol current = (Symbol.ClassSymbol) type;
-                    if (isEntity(current)
-                            && getEntityName(current).equals(entityName)) {
-                        return current;
-                    }
-                }
-            }
-            catch (Exception e) {}
-        }
-        //search for things by explicit @Entity(name="...")
-        for (Symbol.PackageSymbol pack: allPackages()) {
-            try {
-                for (Symbol type: pack.members().getElements()) {
-                    if (type instanceof Symbol.ClassSymbol) {
-                        Symbol.ClassSymbol current = (Symbol.ClassSymbol) type;
-                        if (isEntity(current)
-                                && getEntityName(current).equals(entityName)) {
-                            return current;
-                        }
-                    }
-                }
-            }
-            catch (Exception e) {}
-        }
-        return null;
-    }
-
     static Symbol.ClassSymbol findClassByQualifiedName(String path) {
         return syms.classes.get(names.fromString(path));
     }
@@ -331,5 +299,29 @@ class JavacHelper {
         else {
             return name;
         }
+    }
+
+    static boolean isPersistable(Symbol member, AccessType accessType) {
+        if (member.isStatic() || isTransient(member)) {
+            return false;
+        }
+        else if (member instanceof Symbol.VarSymbol) {
+            return accessType == AccessType.FIELD
+                || hasAnnotation(member, "javax.persistence.Access");
+        }
+        else if (member instanceof Symbol.MethodSymbol) {
+            return isGetterMethod((Symbol.MethodSymbol) member)
+                && (accessType == AccessType.PROPERTY
+                    || hasAnnotation(member, "javax.persistence.Access"));
+        }
+        else {
+            return false;
+        }
+    }
+
+    static Type getMemberType(Symbol member) {
+        return member instanceof Symbol.MethodSymbol ?
+                ((Symbol.MethodSymbol) member).getReturnType() :
+                member.type;
     }
 }

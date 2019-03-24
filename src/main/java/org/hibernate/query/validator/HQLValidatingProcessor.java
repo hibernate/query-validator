@@ -59,7 +59,7 @@ public class HQLValidatingProcessor extends AbstractProcessor {
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         if (processingEnv instanceof JavacProcessingEnvironment) {
-            JavacHelper.init((JavacProcessingEnvironment) processingEnv);
+            JavacHelper.initialize((JavacProcessingEnvironment) processingEnv);
         }
     }
 

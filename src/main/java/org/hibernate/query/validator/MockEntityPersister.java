@@ -63,7 +63,7 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
 
     @Override
     public Type getIdentifierType() {
-        //TODO: getPropertyType(getIdentifierPropertyName())
+        //TODO: createPropertyType(getIdentifierPropertyName())
         return StandardBasicTypes.INTEGER;
     }
 

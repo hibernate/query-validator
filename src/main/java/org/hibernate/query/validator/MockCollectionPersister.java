@@ -13,7 +13,6 @@ import org.hibernate.id.IdentifierGenerator;
 import org.hibernate.metadata.CollectionMetadata;
 import org.hibernate.metamodel.model.domain.NavigableRole;
 import org.hibernate.persister.collection.CollectionPersister;
-import org.hibernate.persister.collection.CollectionPropertyMapping;
 import org.hibernate.persister.collection.QueryableCollection;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.Joinable;
@@ -31,6 +30,8 @@ import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
 
 class MockCollectionPersister implements QueryableCollection {
 
+    private static final Serializable[] NO_SPACES = new Serializable[0];
+
     private String role;
     private String elementClassName;
     private SessionFactoryImplementor factory;
@@ -38,20 +39,22 @@ class MockCollectionPersister implements QueryableCollection {
     private CollectionType collectionType;
     private String ownerEntityName;
 
-    private CollectionPropertyMapping collectionPropertyMapping = new CollectionPropertyMapping(this);
-
     static MockCollectionPersister createAssociationCollection(String role,
-                                                        CollectionType collectionType,
-                                                        String ownerEntityName, String elementEntityName,
-                                                        SessionFactoryImplementor factory) {
-        return new MockCollectionPersister(role, collectionType, ownerEntityName, elementEntityName, null, factory);
+                                                               CollectionType collectionType,
+                                                               String ownerEntityName,
+                                                               String elementEntityName,
+                                                               SessionFactoryImplementor factory) {
+        return new MockCollectionPersister(role, collectionType, ownerEntityName,
+                elementEntityName, null, factory);
     }
 
     static MockCollectionPersister createElementCollection(String role,
-                                                    CollectionType collectionType,
-                                                    String ownerEntityName, String elementClassName,
-                                                    SessionFactoryImplementor factory) {
-        return new MockCollectionPersister(role, collectionType, ownerEntityName, null, elementClassName, factory);
+                                                           CollectionType collectionType,
+                                                           String ownerEntityName,
+                                                           String elementClassName,
+                                                           SessionFactoryImplementor factory) {
+        return new MockCollectionPersister(role, collectionType, ownerEntityName,
+                null, elementClassName, factory);
     }
 
     private MockCollectionPersister(String role, CollectionType collectionType,
@@ -276,7 +279,7 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public Serializable[] getCollectionSpaces() {
-        return new Serializable[0];
+        return NO_SPACES;
     }
 
     @Override
