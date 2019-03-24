@@ -74,6 +74,7 @@ public class HQLValidatingProcessor extends AbstractProcessor {
 
                     @Override
                     public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
+                        super.visitApply(jcMethodInvocation); //needed!
                         Name name = getMethodName(jcMethodInvocation.getMethodSelect());
                         if (name != null && name.toString().equals("createQuery")) {
                             inCreateQueryMethod = true;
