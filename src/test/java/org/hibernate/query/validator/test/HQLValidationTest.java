@@ -110,6 +110,10 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:90:"));
         assertFalse(errors.contains("Queries.java:91:"));
 
+        assertFalse(errors.contains("Queries.java:93:"));
+        assertFalse(errors.contains("Queries.java:94:"));
+        assertFalse(errors.contains("Queries.java:95:"));
+
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
         assertTrue(errors.contains("Queries.java:14: error: unexpected token: select"));
@@ -126,7 +130,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:31: error: test.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
         assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
-        assertTrue(errors.contains("Queries.java:72: error: java.lang.String has no mapped length"));
+        assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
         assertTrue(errors.contains("Queries.java:77: error: Address has no mapped country.type"));
     }
 }

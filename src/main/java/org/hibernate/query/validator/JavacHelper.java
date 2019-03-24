@@ -133,6 +133,10 @@ class JavacHelper {
             || (member.flags() & Flags.TRANSIENT)!=0;
     }
 
+    static boolean isEmbeddableType(Symbol.TypeSymbol type) {
+        return hasAnnotation(type, "javax.persistence.Embeddable");
+    }
+
     static boolean isEmbeddedProperty(Symbol member) {
         return hasAnnotation(member, "javax.persistence.Embedded")
             || hasAnnotation(member.type.tsym, "javax.persistence.Embeddable");
@@ -237,28 +241,27 @@ class JavacHelper {
         return classType==null || classType.getKind() == TypeKind.VOID ?
                 //entity names are unqualified class names
                 simpleName(memberType(property)) :
-                classType.tsym.name.toString();
+                simpleName(classType);
     }
 
-    static String getToManyTargetEntity(Symbol property) {
+    static String getToManyTargetEntityName(Symbol property) {
         AnnotationMirror annotation = toManyAnnotation(property);
         Type.ClassType classType = (Type.ClassType)
                 getAnnotationMember(annotation, "targetEntity");
         return classType==null || classType.getKind() == TypeKind.VOID ?
                 //entity names are unqualified class names
                 simpleName(getCollectionElementType(property)) :
-                classType.tsym.name.toString();
+                simpleName(classType);
     }
 
-    static String getElementCollectionClass(Symbol property) {
+    static Type getElementCollectionElementType(Symbol property) {
         AnnotationMirror annotation = getAnnotation(property,
                 "javax.persistence.ElementCollection");
-        Type.ClassType classType = (Type.ClassType)
+        Type classType = (Type)
                 getAnnotationMember(annotation, "getElementCollectionClass");
-        return classType==null || classType.getKind() == TypeKind.VOID ?
-                //collection elements are qualified class names
-                qualifiedName(getCollectionElementType(property)) :
-                classType.tsym.flatName().toString();
+        return classType == null || classType.getKind() == TypeKind.VOID ?
+                getCollectionElementType(property) :
+                classType;
     }
 
     static Symbol.ClassSymbol findClassByQualifiedName(String path) {

@@ -26,48 +26,32 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.Set;
 
-import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
+import static org.hibernate.internal.util.StringHelper.root;
 
-class MockCollectionPersister implements QueryableCollection {
+abstract class MockCollectionPersister implements QueryableCollection {
 
     private static final Serializable[] NO_SPACES = new Serializable[0];
     private static final String[] ID_COLUMN = {"id"};
     private static final String[] INDEX_COLUMN = {"pos"};
 
     private String role;
-    private String elementClassName;
     private SessionFactoryImplementor factory;
-    private String elementEntityName;
     private CollectionType collectionType;
     private String ownerEntityName;
+    private Type elementType;
 
-    static MockCollectionPersister createAssociationCollection(String role,
-                                                               CollectionType collectionType,
-                                                               String ownerEntityName,
-                                                               String elementEntityName,
-                                                               SessionFactoryImplementor factory) {
-        return new MockCollectionPersister(role, collectionType, ownerEntityName,
-                elementEntityName, null, factory);
-    }
-
-    static MockCollectionPersister createElementCollection(String role,
-                                                           CollectionType collectionType,
-                                                           String ownerEntityName,
-                                                           String elementClassName,
-                                                           SessionFactoryImplementor factory) {
-        return new MockCollectionPersister(role, collectionType, ownerEntityName,
-                null, elementClassName, factory);
-    }
-
-    private MockCollectionPersister(String role, CollectionType collectionType,
-                            String ownerEntityName, String elementEntityName,
-                            String elementClassName, SessionFactoryImplementor factory) {
+    MockCollectionPersister(String role, CollectionType collectionType,
+                            Type elementType,
+                            SessionFactoryImplementor factory) {
         this.role = role;
         this.collectionType = collectionType;
-        this.ownerEntityName = ownerEntityName;
-        this.elementEntityName = elementEntityName;
-        this.elementClassName = elementClassName;
+        this.elementType = elementType;
         this.factory = factory;
+        this.ownerEntityName = root(role);
+    }
+
+    public String getOwnerEntityName() {
+        return ownerEntityName;
     }
 
     @Override
@@ -95,6 +79,8 @@ class MockCollectionPersister implements QueryableCollection {
         return factory.getMetamodel().entityPersister(ownerEntityName);
     }
 
+    abstract Type getElementPropertyType(String propertyPath);
+
     @Override
     public Type toType(String propertyName) throws QueryException {
         if (propertyName.equals("index")) {
@@ -103,23 +89,15 @@ class MockCollectionPersister implements QueryableCollection {
             //      the way to CollectionPropertyMapping
             return getIndexType();
         }
-        //TODO: handle collections of embeddables!!
-        Type type = elementEntityName == null ? null :
-                getElementPersister()
-                        .getPropertyType(propertyName);
+        Type type = getElementPropertyType(propertyName);
         if (type==null) {
-            if (elementEntityName==null) {
-                throw new QueryException(elementClassName
-                        + " has no mapped "
-                        + propertyName);
-            }
-            else {
-                throw new QueryException(elementEntityName
-                        + " has no mapped "
-                        + propertyName);
-            }
+            throw new QueryException(elementType.getName()
+                    + " has no mapped "
+                    + propertyName);
         }
-        return type;
+        else {
+            return type;
+        }
     }
 
     @Override
@@ -142,9 +120,7 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public Type getElementType() {
-        return elementEntityName==null ?
-                typeHelper.basic(elementClassName) :
-                typeHelper.entity(elementEntityName);
+        return elementType;
     }
 
     @Override
@@ -160,8 +136,12 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public EntityPersister getElementPersister() {
-        return elementEntityName==null ? null :
-                factory.getMetamodel().entityPersister(elementEntityName);
+        if (elementType.isEntityType()) {
+            return factory.getMetamodel()
+                    .entityPersister(elementType.getName());
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -206,7 +186,7 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public boolean isOneToMany() {
-        return elementEntityName!=null;
+        return elementType.isEntityType();
     }
 
     @Override

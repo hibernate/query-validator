@@ -3,7 +3,6 @@ package org.hibernate.query.validator;
 import com.sun.tools.javac.code.Symbol;
 import org.hibernate.QueryException;
 import org.hibernate.persister.collection.CollectionPersister;
-import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.type.*;
 
 import javax.persistence.AccessType;
@@ -14,8 +13,6 @@ import java.util.Map;
 
 import static org.hibernate.internal.util.StringHelper.*;
 import static org.hibernate.query.validator.JavacHelper.*;
-import static org.hibernate.query.validator.MockCollectionPersister.createAssociationCollection;
-import static org.hibernate.query.validator.MockCollectionPersister.createElementCollection;
 
 class JavacSessionFactory extends MockSessionFactory {
 
@@ -35,7 +32,7 @@ class JavacSessionFactory extends MockSessionFactory {
             persister = null;
         }
         else {
-            persister = new JavacEntityPersister(entityName, type);
+            persister = new EntityPersister(entityName, type);
         }
 
         entityPersisters.put(entityName, persister);
@@ -51,18 +48,19 @@ class JavacSessionFactory extends MockSessionFactory {
         String entityName = root(role); //only works because entity names don't contain dots
         String propertyPath = unroot(role);
         Symbol.ClassSymbol entityClass = findEntityClass(entityName);
+        AccessType defaultAccessType = getDefaultAccessType(entityClass);
         Symbol property =
-                findPropertyByPath(entityClass, propertyPath,
-                        getDefaultAccessType(entityClass));
+                findPropertyByPath(entityClass, propertyPath, defaultAccessType);
+        CollectionType collectionType = collectionType(memberType(property), role);
         if (isToManyAssociation(property)) {
-            persister = createAssociationCollection(role,
-                    collectionType(memberType(property), role), entityName,
-                    getToManyTargetEntity(property), this);
+            persister = new ToManyAssociationPersister(role, collectionType,
+                    getToManyTargetEntityName(property));
         }
         else if (isElementCollectionProperty(property)) {
-            persister = createElementCollection(role,
-                    collectionType(memberType(property), role), entityName,
-                    getElementCollectionClass(property), this);
+            Symbol.TypeSymbol elementType =
+                    getElementCollectionElementType(property).tsym;
+            persister = new ElementCollectionPersister(role, collectionType,
+                    elementType, propertyPath, defaultAccessType);
         }
         else {
             persister = null;
@@ -72,9 +70,9 @@ class JavacSessionFactory extends MockSessionFactory {
         return persister;
     }
 
-    static Symbol findPropertyByPath(Symbol.TypeSymbol type,
-                                     String propertyPath,
-                                     AccessType defaultAccessType) {
+    private static Symbol findPropertyByPath(Symbol.TypeSymbol type,
+                                             String propertyPath,
+                                             AccessType defaultAccessType) {
         com.sun.tools.javac.code.Type memberType = type.type;
         Symbol result = null;
         //iterate over the path segments
@@ -93,14 +91,19 @@ class JavacSessionFactory extends MockSessionFactory {
         return result;
     }
 
-    static Type createPropertyType(Symbol member,
-                                   String entityName, String path,
-                                   AccessType defaultAccessType) {
+    static Type propertyType(Symbol member,
+                             String entityName, String path,
+                             AccessType defaultAccessType) {
         com.sun.tools.javac.code.Type memberType = getMemberType(member);
         if (isEmbeddedProperty(member)) {
             return new CompositeCustomType(
-                    new JavacComponent(memberType.tsym,
-                            entityName, path, defaultAccessType));
+                    new Component(memberType.tsym,
+                            entityName, path, defaultAccessType)) {
+                @Override
+                public String getName() {
+                    return simpleName(memberType);
+                }
+            };
         }
         else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member);
@@ -118,28 +121,51 @@ class JavacSessionFactory extends MockSessionFactory {
         }
     }
 
+    private static Type elementCollectionElementType(Symbol.TypeSymbol elementType,
+                                                     String role, String path,
+                                                     AccessType defaultAccessType) {
+        if (isEmbeddableType(elementType)) {
+            return new CompositeCustomType(
+                    new Component(elementType,
+                            role, path, defaultAccessType)) {
+                @Override
+                public String getName() {
+                    return simpleName(elementType.type);
+                }
+            };
+        }
+        else {
+            return typeResolver.basic(qualifiedName(elementType.type));
+        }
+    }
+
     private static CollectionType collectionType(
             com.sun.tools.javac.code.Type type, String role) {
         TypeFactory typeFactory = typeResolver.getTypeFactory();
-        switch (type.tsym.name.toString()) {
+        switch (simpleName(type)) {
             case "Set":
+            case "SortedSet":
+                //might actually be a bag!
+                //TODO: look for @OrderColumn on the property
                 return typeFactory.set(role, null);
             case "List":
+            case "SortedList":
                 return typeFactory.list(role, null);
             case "Map":
+            case "SortedMap":
                 return typeFactory.map(role, null);
             default:
                 return typeFactory.bag(role, null);
         }
     }
 
-    private static class JavacComponent extends MockComponent {
+    private static class Component extends MockComponent {
         private String[] propertyNames;
         private Type[] propertyTypes;
 
-        JavacComponent(Symbol.TypeSymbol type,
-                       String entityName, String path,
-                       AccessType defaultAccessType) {
+        Component(Symbol.TypeSymbol type,
+                  String entityName, String path,
+                  AccessType defaultAccessType) {
             List<String> names = new ArrayList<>();
             List<Type> types = new ArrayList<>();
 
@@ -152,7 +178,7 @@ class JavacSessionFactory extends MockSessionFactory {
                                     -> isPersistable(symbol, accessType))) {
                         String name = propertyName(member);
                         Type propertyType =
-                                createPropertyType(member, entityName,
+                                propertyType(member, entityName,
                                         qualify(path, name),
                                         defaultAccessType);
                         if (propertyType != null) {
@@ -184,12 +210,12 @@ class JavacSessionFactory extends MockSessionFactory {
 
     }
 
-    private class JavacEntityPersister extends MockEntityPersister {
+    private class EntityPersister extends MockEntityPersister {
         private final Map<String,Type> properties = new HashMap<>();
         private final Symbol.ClassSymbol type;
         private final AccessType defaultAccessType;
 
-        private JavacEntityPersister(String entityName, Symbol.ClassSymbol type) {
+        private EntityPersister(String entityName, Symbol.ClassSymbol type) {
             super(entityName, JavacSessionFactory.this);
             this.type = type;
             defaultAccessType = getDefaultAccessType(type);
@@ -205,12 +231,55 @@ class JavacSessionFactory extends MockSessionFactory {
                     findPropertyByPath(type, propertyPath,
                             defaultAccessType);
             Type result = symbol == null ? null :
-                    createPropertyType(symbol, getEntityName(),
+                    propertyType(symbol, getEntityName(),
                             propertyPath, defaultAccessType);
 
             properties.put(propertyPath, result);
             return result;
         }
 
+    }
+
+    private class ToManyAssociationPersister extends MockCollectionPersister {
+        ToManyAssociationPersister(String role,
+                                   CollectionType collectionType,
+                                   String targetEntityName) {
+            super(role, collectionType,
+                    typeHelper.entity(targetEntityName),
+                    JavacSessionFactory.this);
+        }
+
+        @Override
+        Type getElementPropertyType(String propertyPath) {
+            return getElementPersister().getPropertyType(propertyPath);
+        }
+    }
+
+    private class ElementCollectionPersister extends MockCollectionPersister {
+        private final Symbol.TypeSymbol elementType;
+        private final AccessType defaultAccessType;
+
+        ElementCollectionPersister(String role,
+                                   CollectionType collectionType,
+                                   Symbol.TypeSymbol elementType,
+                                   String propertyPath,
+                                   AccessType defaultAccessType) {
+            super(role, collectionType,
+                    elementCollectionElementType(elementType, role,
+                            propertyPath, defaultAccessType),
+                    JavacSessionFactory.this);
+            this.elementType = elementType;
+            this.defaultAccessType = defaultAccessType;
+        }
+
+        @Override
+        Type getElementPropertyType(String propertyPath) {
+            Symbol symbol =
+                    findPropertyByPath(elementType, propertyPath,
+                            defaultAccessType);
+            return symbol == null ? null :
+                    propertyType(symbol, getOwnerEntityName(),
+                            propertyPath, defaultAccessType);
+        }
     }
 }

@@ -89,6 +89,10 @@ public class Queries {
         createQuery("select a, c from Address a join a.country c"); //fake join to a component
         createQuery("select p, c from Person p join p.address.country c"); //fake join to a component
         createQuery("select c.code, c.name from Address a join a.country c"); //fake join to a component
+
+        createQuery("select e from Person p join p.emails e");
+        createQuery("select e.address from Person p join p.emails e");
+        createQuery("select e from Person p join p.emails e where e.address is not null and length(e.address)>0");
     }
 
     private static void createQuery(String s) {}

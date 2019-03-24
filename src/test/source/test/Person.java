@@ -25,4 +25,6 @@ public class Person {
     public List<String> notes;
     @Access(PROPERTY)
     public String getWhatever() { return "thing"; };
+    @ElementCollection
+    public Set<Email> emails;
 }
