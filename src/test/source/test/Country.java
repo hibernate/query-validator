@@ -6,7 +6,5 @@ import javax.persistence.Embeddable;
 public class Country {
     public String code;
     public String name;
-    public Integer getThing() {
-        return 0;
-    }
+    public int thing = 0;
 }

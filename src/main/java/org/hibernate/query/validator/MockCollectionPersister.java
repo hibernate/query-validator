@@ -44,14 +44,14 @@ class MockCollectionPersister implements QueryableCollection {
                                                         CollectionType collectionType,
                                                         String ownerEntityName, String elementEntityName,
                                                         SessionFactoryImplementor factory) {
-        return  new MockCollectionPersister(role, collectionType, ownerEntityName, elementEntityName, null, factory);
+        return new MockCollectionPersister(role, collectionType, ownerEntityName, elementEntityName, null, factory);
     }
 
     static MockCollectionPersister createElementCollection(String role,
                                                     CollectionType collectionType,
                                                     String ownerEntityName, String elementClassName,
                                                     SessionFactoryImplementor factory) {
-        return  new MockCollectionPersister(role, collectionType, ownerEntityName, null, elementClassName, factory);
+        return new MockCollectionPersister(role, collectionType, ownerEntityName, null, elementClassName, factory);
     }
 
     private MockCollectionPersister(String role, CollectionType collectionType,

@@ -6,6 +6,7 @@ import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.type.Type;
 import org.hibernate.usertype.CompositeUserType;
 
+import javax.persistence.AccessType;
 import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,19 +15,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.hibernate.query.validator.JavacHelper.isPersistent;
+import static org.hibernate.query.validator.JavacHelper.propertyName;
 import static org.hibernate.query.validator.JavacSessionFactory.propertyType;
 
 class JavacComponent implements CompositeUserType {
     private String[] propertyNames;
     private Type[] propertyTypes;
 
-    JavacComponent(com.sun.tools.javac.code.Type type, String entityName, String path) {
+    JavacComponent(com.sun.tools.javac.code.Type type, String entityName, String path,
+                   AccessType defaultAccessType) {
         List<String> names = new ArrayList<>();
         List<Type> types = new ArrayList<>();
+
         for (Symbol symbol: type.tsym.members().getElements()) {
             if (isPersistent(symbol)) {
-                String name = symbol.name.toString();
-                Type propertyType = propertyType(type, entityName, name, path);
+                String name = propertyName(symbol);
+                Type propertyType =
+                        propertyType(type, entityName, name, path,
+                                defaultAccessType);
                 if (propertyType != null) {
                     names.add(name);
                     types.add(propertyType);

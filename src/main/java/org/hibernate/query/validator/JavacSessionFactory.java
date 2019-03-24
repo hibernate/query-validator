@@ -6,7 +6,7 @@ import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.type.*;
 
-import javax.lang.model.element.AnnotationMirror;
+import javax.persistence.AccessType;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,6 +19,7 @@ class JavacSessionFactory extends MockSessionFactory {
     private static final CustomType UNKNOWN_TYPE = new CustomType(new MockUserType());
 
     private Map<String, EntityPersister> cache = new HashMap<>();
+    private Map<String, CollectionPersister> collcache = new HashMap<>();
 
     @Override
     EntityPersister createMockEntityPersister(String entityName) {
@@ -32,13 +33,15 @@ class JavacSessionFactory extends MockSessionFactory {
             EntityPersister persister =
                     new MockEntityPersister(entityName, this) {
                         private Map<String,Type> cache = new HashMap<>();
+                        AccessType defaultAccessType = getDefaultAccessType(type);
                         @Override
                         public Type getPropertyType(String propertyName)
                                 throws QueryException {
                             Type cached = cache.get(propertyName);
                             if (cached!=null) return cached;
                             Type result = propertyType(type.type,
-                                    getEntityName(), propertyName);
+                                    getEntityName(), propertyName,
+                                    defaultAccessType);
                             cache.put(propertyName, result);
                             return result;
                         }
@@ -51,30 +54,27 @@ class JavacSessionFactory extends MockSessionFactory {
 
     @Override
     CollectionPersister createMockCollectionPersister(String role) {
+        CollectionPersister cached = collcache.get(role);
+        if (cached!=null) return cached;
         int index = role.lastIndexOf('.');
         String entityName = role.substring(0,index);
         String propertyName = role.substring(index+1);
-        Symbol property = findProperty(findEntityClass(entityName), propertyName);
-        AnnotationMirror toMany = toManyAnnotation(property);
-        CollectionType collectionType = collectionType(property.type, role);
-        com.sun.tools.javac.code.Type elementType = property.type.getTypeArguments().last();
-        if (elementType==null) elementType = syms.objectType;
-        if (toMany!=null) {
-            String elementEntity = targetEntity(toMany);
-            if (elementEntity==null) {
-                elementEntity = simpleName(elementType);
-            }
-            return createAssociationCollection(role, collectionType, entityName, elementEntity, this);
+        Symbol.ClassSymbol entityClass = findEntityClass(entityName);
+        Symbol property = findProperty(entityClass, propertyName,
+                getDefaultAccessType(entityClass));
+        CollectionPersister persister = null;
+        if (isToManyAssociation(property)) {
+            persister = createAssociationCollection(role,
+                    collectionType(memberType(property), role), entityName,
+                    getToManyTargetEntity(property), this);
         }
-        AnnotationMirror elementCollection = elementCollectionAnnotation(property);
-        if (elementCollection!=null) {
-            String elementClass = targetClass(elementCollection);
-            if (elementClass==null) {
-                elementClass = qualifiedName(elementType);
-            }
-            return createElementCollection(role, collectionType, entityName, elementClass, this);
+        if (isElementCollectionProperty(property)) {
+            persister = createElementCollection(role,
+                    collectionType(memberType(property), role), entityName,
+                    getElementCollectionClass(property), this);
         }
-        return null;
+        collcache.put(role, persister);
+        return persister;
     }
 
     private static CollectionType collectionType(com.sun.tools.javac.code.Type type, String role) {
@@ -92,19 +92,23 @@ class JavacSessionFactory extends MockSessionFactory {
     }
 
     static Type propertyType(com.sun.tools.javac.code.Type type,
-                             String entityName, String propertyPath) {
-        return propertyType(type, entityName, propertyPath, null);
+                             String entityName, String propertyPath,
+                             AccessType defaultAccessType) {
+        return propertyType(type, entityName, propertyPath, null,
+                defaultAccessType);
     }
     static Type propertyType(com.sun.tools.javac.code.Type type,
                              String entityName, String propertyPath,
-                             String prefix) {
+                             String prefix, AccessType defaultAccessType) {
         com.sun.tools.javac.code.Type memberType = type;
         Type result = null;
         //iterate over the path segments
         StringBuilder currentPath = new StringBuilder();
         for (String segment: propertyPath.split("\\.")) {
             currentPath.append(segment);
-            Symbol member = findProperty(memberType.tsym, segment);
+            Symbol member =
+                    findProperty(memberType.tsym, segment,
+                            defaultAccessType);
             if (member == null) {
                 result = null;
                 break;
@@ -113,32 +117,27 @@ class JavacSessionFactory extends MockSessionFactory {
                 memberType = member instanceof Symbol.MethodSymbol ?
                         ((Symbol.MethodSymbol) member).getReturnType() :
                         member.type;
-                if (hasEmbedAnnotation(member)) {
+                if (isEmbeddedProperty(member)) {
                     String path = currentPath.toString();
                     if (prefix!=null) path = prefix + '.' + path;
                     result = new CompositeCustomType(
-                            new JavacComponent(member.type, entityName, path));
+                            new JavacComponent(member.type, entityName, path,
+                                    defaultAccessType));
                     continue;
                 }
-                AnnotationMirror toMany = toManyAnnotation(member);
-                if (toMany!=null) {
+
+                if (isToManyAssociation(member)) {
                     String role = entityName + '.' + currentPath;
                     if (prefix!=null) role = prefix + '.' + role;
                     result = collectionType(memberType, role);
                     continue;
                 }
-                AnnotationMirror toOne = toOneAnnotation(member);
-                if (toOne!=null) {
-                    String targetEntity = targetEntity(toOne);
-                    if (targetEntity==null) {
-                        targetEntity = simpleName(member.type);
-                    }
+                if (isToOneAssociation(member)) {
+                    String targetEntity = getToOneTargetEntity(member);
                     result = typeHelper.entity(targetEntity);
                     continue;
                 }
-                AnnotationMirror elementCollection =
-                        elementCollectionAnnotation(member);
-                if (elementCollection!=null) {
+                if (isElementCollectionProperty(member)) {
                     String role = entityName + '.' + currentPath;
                     if (prefix!=null) role = prefix + '.' + role;
                     result = collectionType(memberType, role);
