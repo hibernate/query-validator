@@ -97,9 +97,29 @@ class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public Type toType(String propertyName) throws QueryException {
-        return elementEntityName == null ? null :
-                //this is needed, but why?
-                getElementPersister().getPropertyType(propertyName);
+        if (propertyName.equals("index")) {
+            //this is what AbstractCollectionPersister does!
+            //TODO: move it to FromElementType:626 or all
+            //      the way to CollectionPropertyMapping
+            return getIndexType();
+        }
+        //TODO: handle collections of embeddables!!
+        Type type = elementEntityName == null ? null :
+                getElementPersister()
+                        .getPropertyType(propertyName);
+        if (type==null) {
+            if (elementEntityName==null) {
+                throw new QueryException(elementClassName
+                        + " has no mapped "
+                        + propertyName);
+            }
+            else {
+                throw new QueryException(elementEntityName
+                        + " has no mapped "
+                        + propertyName);
+            }
+        }
+        return type;
     }
 
     @Override

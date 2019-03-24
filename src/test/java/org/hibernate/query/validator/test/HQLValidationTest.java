@@ -103,10 +103,12 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:83:"));
         assertFalse(errors.contains("Queries.java:84:"));
         assertFalse(errors.contains("Queries.java:85:"));
-//        assertFalse(errors.contains("Queries.java:86:"));
+        assertFalse(errors.contains("Queries.java:86:"));
+        assertFalse(errors.contains("Queries.java:87:"));
 
-        assertFalse(errors.contains("Queries.java:88:"));
         assertFalse(errors.contains("Queries.java:89:"));
+        assertFalse(errors.contains("Queries.java:90:"));
+        assertFalse(errors.contains("Queries.java:91:"));
 
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
@@ -115,16 +117,16 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:16: error: unexpected token: from"));
         assertTrue(errors.contains("Queries.java:16: error: FROM expected"));
         assertTrue(errors.contains("Queries.java:18: error: People is not mapped"));
-        assertTrue(errors.contains("Queries.java:19: error: Property firstName does not exist in class Person"));
-        assertTrue(errors.contains("Queries.java:20: error: Property addr does not exist in class Person"));
-        assertTrue(errors.contains("Queries.java:21: error: Property"));
-        assertTrue(errors.contains("Queries.java:25: error: Property name does not exist in class Address"));
-        assertTrue(errors.contains("Queries.java:29: error: Class test.Nil not found"));
-        assertTrue(errors.contains("Queries.java:30: error: No suitable constructor for class test.Pair"));
-        assertTrue(errors.contains("Queries.java:31: error: No suitable constructor for class test.Pair"));
+        assertTrue(errors.contains("Queries.java:19: error: Person has no mapped firstName"));
+        assertTrue(errors.contains("Queries.java:20: error: Person has no mapped addr"));
+        assertTrue(errors.contains("Queries.java:21: error: Address has no mapped town"));
+        assertTrue(errors.contains("Queries.java:25: error: Address has no mapped name"));
+        assertTrue(errors.contains("Queries.java:29: error: test.Nil does not exist"));
+        assertTrue(errors.contains("Queries.java:30: error: test.Pair has no suitable constructor"));
+        assertTrue(errors.contains("Queries.java:31: error: test.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
         assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
-        assertTrue(errors.contains("Queries.java:72: error: Property length does not exist in collection Person.notes"));
-        assertTrue(errors.contains("Queries.java:77: error: Property country.type does not exist in class Address"));
+        assertTrue(errors.contains("Queries.java:72: error: java.lang.String has no mapped length"));
+        assertTrue(errors.contains("Queries.java:77: error: Address has no mapped country.type"));
     }
 }

@@ -84,9 +84,11 @@ public class Queries {
         createQuery("from Person p where p.pastAddresses is empty"); //JPQL "is empty" operator for association
         createQuery("from Address a where a.country.residents is empty"); //JPQL "is empty" operator for association in embeddable
         createQuery("from Person p where p.address.country.residents is empty");
+        createQuery("from Person p where p.address.currentResidents is empty");
 
         createQuery("select a, c from Address a join a.country c"); //fake join to a component
         createQuery("select p, c from Person p join p.address.country c"); //fake join to a component
+        createQuery("select c.code, c.name from Address a join a.country c"); //fake join to a component
     }
 
     private static void createQuery(String s) {}

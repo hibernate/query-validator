@@ -76,7 +76,13 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
 
     @Override
     public Type toType(String propertyName) throws QueryException {
-        return getPropertyType(propertyName);
+        Type type = getPropertyType(propertyName);
+        if (type == null) {
+            throw new QueryException(getEntityName()
+                    + " has no mapped "
+                    + propertyName);
+        }
+        return type;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package test;
 
+import javax.persistence.Id;
 import javax.persistence.Entity;
 import javax.persistence.Access;
 import javax.persistence.ElementCollection;

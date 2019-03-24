@@ -27,7 +27,7 @@ public class WorkaroundConstructorNode extends ConstructorNode {
             String path = ((PathNode) getFirstChild()).getPath();
             ClassSymbol symbol = findClassByQualifiedName(path);
             if (symbol==null) {
-                throw new DetailedSemanticException("Class " + path + " not found");
+                throw new DetailedSemanticException(path + " does not exist");
             }
             List<Type> argumentTypeList = getConstructorArgumentTypeList();
             for (Symbol cons: symbol.members().getElements(Symbol::isConstructor)) {
@@ -65,7 +65,7 @@ public class WorkaroundConstructorNode extends ConstructorNode {
                     if (argumentsCheckOut) return; //matching constructor found!
                 }
             }
-            throw new DetailedSemanticException("No suitable constructor for class " + path);
+            throw new DetailedSemanticException(path + " has no suitable constructor");
         }
     }
 }

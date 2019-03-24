@@ -1,5 +1,6 @@
 package test;
 
+import javax.persistence.Id;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import java.util.Set;
