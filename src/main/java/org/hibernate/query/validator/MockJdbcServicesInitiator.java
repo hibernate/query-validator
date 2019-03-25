@@ -15,8 +15,6 @@ import org.hibernate.service.spi.ServiceRegistryImplementor;
 
 import java.util.Map;
 
-class GenericDialect extends Dialect {}
-
 class MockJdbcServicesInitiator extends JdbcServicesInitiator {
 
     static final JdbcServicesInitiator INSTANCE = new MockJdbcServicesInitiator();

@@ -48,6 +48,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static java.util.Collections.*;
+import static org.hibernate.internal.util.StringHelper.isEmpty;
 
 abstract class MockSessionFactory implements SessionFactoryImplementor {
 
@@ -93,6 +94,12 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                     return createMockCollectionPersister(role);
                 }
             };
+
+    private final boolean strict;
+
+    MockSessionFactory(boolean strict) {
+        this.strict = strict;
+    }
 
     /**
      * Lazily create a {@link MockEntityPersister}
@@ -283,10 +290,17 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                 MockSessionFactoryOptions.INSTANCE.getCustomSqlFunctionMap()) {
             @Override
             public SQLFunction findSQLFunction(String functionName) {
+                if (isEmpty(functionName)) {
+                    return null;
+                }
                 SQLFunction sqlFunction = super.findSQLFunction(functionName);
                 if (sqlFunction==null) {
-                    //TODO: throw error in case of "strict" mode
-                    return UNKNOWN_SQL_FUNCTION;
+                    if (strict) {
+                        throw new QueryException(functionName + " is not defined");
+                    }
+                    else {
+                        return UNKNOWN_SQL_FUNCTION;
+                    }
                 }
                 else {
                     return sqlFunction;

@@ -1,4 +1,4 @@
-package test;
+package unstricttest;
 
 public class Queries {
 
@@ -24,17 +24,17 @@ public class Queries {
         createQuery("from Person p where exists (select a from p.pastAddresses a)"); //"exists" operator with correlated subquery
         createQuery("from Person p where p.name in (select a.name from Address a)"); //error
 
-        createQuery("select new test.Pair(p,a) from Person p join p.address a"); //"select new"
-        createQuery("select new test.Pair(p,p.address) from Person p join p.address a"); //"select new"
-        createQuery("select new test.Nil(p,a) from Person p join p.address a"); //error
-        createQuery("select new test.Pair(p) from Person p"); //error
-        createQuery("select new test.Pair(p,p.name) from Person p"); //error
+        createQuery("select new unstricttest.Pair(p,a) from Person p join p.address a"); //"select new"
+        createQuery("select new unstricttest.Pair(p,p.address) from Person p join p.address a"); //"select new"
+        createQuery("select new unstricttest.Nil(p,a) from Person p join p.address a"); //error
+        createQuery("select new unstricttest.Pair(p) from Person p"); //error
+        createQuery("select new unstricttest.Pair(p,p.name) from Person p"); //error
 
         createQuery("from Person p where size(p.pastAddresses) = 0"); //JPQL "size()" function
         createQuery("from Person p where exists elements(p.pastAddresses)"); //HQL "exists" operator with "elements()" function
 
-        createQuery("from Person p where year(p.dob) > 1974"); //JPQL "year()" function
-        createQuery("select cast(p.dob as string) from Person p"); //JPQL "cast()" function
+        createQuery("from Person p where year(p.dob) > 1974"); //HQL "year()" function
+        createQuery("select cast(p.dob as string) from Person p"); //HQL "cast()" function
 
         createQuery("select e, c, key(c) from Employee e join e.contacts c where key(c) = 'boss'"); //JPQL "key()" operator for Map
         createQuery("select e, entry(c) from Employee e join e.contacts c where c.address is null"); //JPQL "entry()" operator for Map
@@ -97,7 +97,7 @@ public class Queries {
 
         createQuery("from Person p where p.name = ?1 and p.id > ?2"); //JPQL positional args
         createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
-        createQuery("from Person p where p.name = function('custom', p.id)"); //JPQL function passthrough
+        createQuery("from Person p where p.name = ? and p.id > ?"); //HQL positional args
 
         createQuery("from Person p where treat(p.emergencyContact as Employee).employeeId = 2"); //JPQL "treat as" operator
         createQuery("from Person p join treat(p.emergencyContact as Employee) c where c.employeeId = 2"); //JPQL "treat as" operator
@@ -111,6 +111,17 @@ public class Queries {
         createQuery("select p.name, n from Person p join p.notes n where index(n) = 0");
         createQuery("select p.name, n from Person p join p.notes n where key(n) = 0");
         createQuery("select p.name, n from Person p join p.notes n where value(n) = ''");
+
+        createQuery("select upper(p.name), year(current_date) from Person p");
+        createQuery("select upper(p.name), year(current_date) from Person p where year(current_date) = 2019 and upper(p.name) = 'GAVIN'");
+        createQuery("select upper(p.name), year(current_date) from Person"); //error
+
+        createQuery("select nullif(e.name, ''), coalesce(e.employeeId, e.id, e.name) from Employee e"); //JPQL "nullif()" and "coalesce()"
+        createQuery("select str(p.dob) from Person p"); //HQL "str()" function
+        createQuery("select cast(p.dob as string) from Person p"); //SQL "cast()" function
+        createQuery("select extract(month from p.dob), extract(year from p.dob) from Person p"); //SQL "extract()" function
+        createQuery("select function('bit_length', e.name) from Employee e"); //JPQL "function()" passthrough
+        createQuery("from Person p where p.name = function('custom', p.id)"); //JPQL "function()" passthrough
     }
 
     private static void createQuery(String s) {}

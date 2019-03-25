@@ -15,6 +15,7 @@ import org.hibernate.hql.internal.ast.*;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
@@ -34,11 +35,11 @@ public class HQLValidatingProcessor extends AbstractProcessor {
         for (TypeElement annotation : annotations) {
             for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
                 if (element instanceof PackageElement) {
-                    for (Element ee : element.getEnclosedElements()) {
-                        checkHQL(ee);
+                    for (Element member : element.getEnclosedElements()) {
+                        checkHQL(member, element);
                     }
                 } else {
-                    checkHQL(element);
+                    checkHQL(element, element);
                 }
             }
         }
@@ -64,7 +65,18 @@ public class HQLValidatingProcessor extends AbstractProcessor {
         }
     }
 
-    private void checkHQL(Element element) {
+    private void checkHQL(Element element, Element annotatedElement) {
+
+        AnnotationMirror checkHQL =
+                annotatedElement.getAnnotationMirrors().stream()
+                        .filter(ann -> ann.getAnnotationType().toString()
+                                .equals("org.hibernate.query.validator.CheckHQL"))
+                        .findAny().orElseThrow(null);
+        final boolean strict =
+                checkHQL.getElementValues().values().stream()
+                        .map(value -> (Boolean) value.getValue())
+                        .findAny().orElse(true);
+
         Elements elementUtils = processingEnv.getElementUtils();
         if (elementUtils instanceof JavacElements) {
             JCTree tree = ((JavacElements) elementUtils).getTree(element);
@@ -100,8 +112,7 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                                     }
                                 }
                             }
-                        }
-                        else {
+                        } else {
                             super.visitAnnotation(jcAnnotation); //needed!
                         }
                     }
@@ -121,7 +132,8 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                                 parser.statement();
 
                                 if (handler.getErrorCount()==0) {
-                                    SessionFactoryImplementor factory = new JavacSessionFactory();
+                                    SessionFactoryImplementor factory =
+                                            new JavacSessionFactory(strict);
                                     HqlSqlWalker walker = new HqlSqlWalker(
                                             new QueryTranslatorImpl("", hql, emptyMap(), factory),
                                             factory, parser, emptyMap(), null);

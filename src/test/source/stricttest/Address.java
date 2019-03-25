@@ -1,4 +1,4 @@
-package test;
+package stricttest;
 
 import javax.persistence.Id;
 import javax.persistence.Entity;

@@ -26,13 +26,24 @@ prefer.
 
 Then any static string argument of
 
-- the `createQuery()` method, or
-- the `@NamedQuery()` annotation,
+- the `createQuery()` method or
+- the `@NamedQuery()` annotation
 
-occurring in the annotated package or class will be validated, and 
-a compile-time error produced if the query has syntax errors or if 
-an entity name or member name in the query doesn't reference a 
+which occurs in the annotated package or class will be validated. 
+
+A compile-time error is produced if the query has syntax errors or 
+if an entity name or member name in the query doesn't reference a 
 persistent entity or mapped field or property.
+
+### Strict mode
+
+By default, the query validator functions in "strict" mode, and 
+produces errors for use of function names which aren't defined by the 
+JPA specification or by HQL. This means that use of a user-defined or 
+vendor-specific SQL function results in an error.
+
+Strict mode may be disabled using `@CheckHQL(strict=false)`. Then any
+unknown function will be ignored by the query validator.
 
 ### Usage from command line
 
@@ -68,17 +79,16 @@ Quieries are interpreted according to Hibernate's flavor of JPQL
 (i.e. HQL), which is a superset of the query language defined by 
 the JPA specification. 
 
-In future, an optional "strict" mode will produce errors for 
-non-spec-compliant queries.
+In future, the "strict" mode will produce errors for queries 
+which are not well-formed according to the JPA specification.
 
-### Function calls are not checked
+### Function arguments are not checked
 
-In particular, HQL does *not* typecheck function names nor 
-arguments and instead simply passes anything which looks like it 
-might be a function call through to the database. Thus, the query 
-validator similarly ignores function calls.
+Hibernate's query translater never typechecks function arguments 
+and instead simply passes anything which looks like it might be a 
+function call straight through to the database.
 
-Fixing this would require a nontrivial enhancement to Hibernate's
+Fixing this will require a nontrivial enhancement to Hibernate's
 HQL translator.
 
 ### Some ugly error messages
@@ -87,4 +97,3 @@ Sometimes Hibernate's HQL parser produces ugly error messages,
 which are passed through by the query validator.
 
 Fixing this requires a new release of Hibernate.
-

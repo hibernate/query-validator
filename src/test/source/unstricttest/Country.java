@@ -1,4 +1,4 @@
-package test;
+package unstricttest;
 
 import javax.persistence.Embeddable;
 import javax.persistence.OneToMany;
