@@ -33,7 +33,6 @@ import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
 
 abstract class MockEntityPersister implements EntityPersister, Queryable, DiscriminatorMetadata {
 
-    private static final Serializable[] NO_SPACES = new Serializable[0];
     private static final String[] ID_COLUMN = {"id"};
 
     private final String entityName;
@@ -114,12 +113,12 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
 
     @Override
     public Serializable[] getPropertySpaces() {
-        return NO_SPACES;
+        return new Serializable[] {entityName};
     }
 
     @Override
     public Serializable[] getQuerySpaces() {
-        return NO_SPACES;
+        return new Serializable[] {entityName};
     }
 
     @Override
@@ -839,7 +838,7 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
 
     @Override
     public String getTableName() {
-        return "";
+        return entityName;
     }
 
     @Override

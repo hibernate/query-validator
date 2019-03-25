@@ -30,7 +30,6 @@ import static org.hibernate.internal.util.StringHelper.root;
 
 abstract class MockCollectionPersister implements QueryableCollection {
 
-    private static final Serializable[] NO_SPACES = new Serializable[0];
     private static final String[] ID_COLUMN = {"id"};
     private static final String[] INDEX_COLUMN = {"pos"};
 
@@ -281,7 +280,7 @@ abstract class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public Serializable[] getCollectionSpaces() {
-        return NO_SPACES;
+        return new Serializable[] {role};
     }
 
     @Override
@@ -441,7 +440,7 @@ abstract class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public String getTableName() {
-        return "";
+        return role;
     }
 
     @Override
