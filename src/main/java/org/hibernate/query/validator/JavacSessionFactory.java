@@ -6,11 +6,9 @@ import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.type.*;
 
 import javax.persistence.AccessType;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import static java.util.Arrays.stream;
 import static org.hibernate.internal.util.StringHelper.*;
 import static org.hibernate.query.validator.JavacHelper.*;
 
@@ -29,7 +27,7 @@ class JavacSessionFactory extends MockSessionFactory {
         EntityPersister persister;
         Symbol.ClassSymbol type = findEntityClass(entityName);
         if (type==null) {
-            persister = null;
+            return null;
         }
         else {
             persister = new EntityPersister(entityName, type);
@@ -63,7 +61,7 @@ class JavacSessionFactory extends MockSessionFactory {
                     elementType, propertyPath, defaultAccessType);
         }
         else {
-            persister = null;
+            return null;
         }
 
         collectionPersisters.put(role, persister);
@@ -73,22 +71,12 @@ class JavacSessionFactory extends MockSessionFactory {
     private static Symbol findPropertyByPath(Symbol.TypeSymbol type,
                                              String propertyPath,
                                              AccessType defaultAccessType) {
-        com.sun.tools.javac.code.Type memberType = type.type;
-        Symbol result = null;
-        //iterate over the path segments
-        for (String segment: propertyPath.split("\\.")) {
-            Symbol member =
-                    findProperty(memberType.tsym, segment,
-                            defaultAccessType);
-            if (member == null) {
-                return null;
-            }
-            else {
-                memberType = getMemberType(member);
-                result = member;
-            }
-        }
-        return result;
+        return stream(split(".", propertyPath))
+                .reduce((Symbol) type,
+                        (symbol, segment) -> symbol==null ? null :
+                                findProperty(getMemberType(symbol).tsym,
+                                        segment, defaultAccessType),
+                        (last, current) -> current);
     }
 
     static Type propertyType(Symbol member,
@@ -141,6 +129,7 @@ class JavacSessionFactory extends MockSessionFactory {
 
     private static CollectionType collectionType(
             com.sun.tools.javac.code.Type type, String role) {
+        @SuppressWarnings("deprecation")
         TypeFactory typeFactory = typeResolver.getTypeFactory();
         switch (simpleName(type)) {
             case "Set":
@@ -212,6 +201,7 @@ class JavacSessionFactory extends MockSessionFactory {
 
     private class EntityPersister extends MockEntityPersister {
         private final Map<String,Type> properties = new HashMap<>();
+        private final List<EntityPersister> subclassPersisters = new ArrayList<>();
         private final Symbol.ClassSymbol type;
         private final AccessType defaultAccessType;
 
@@ -219,6 +209,16 @@ class JavacSessionFactory extends MockSessionFactory {
             super(entityName, JavacSessionFactory.this);
             this.type = type;
             defaultAccessType = getDefaultAccessType(type);
+            for (EntityPersister other: entityPersisters.values()) {
+                other.addPersister(this);
+                this.addPersister(other);
+            }
+        }
+
+        void addPersister(EntityPersister entityPersister) {
+            if (isSubclass(entityPersister.type,type)) {
+                subclassPersisters.add(entityPersister);
+            }
         }
 
         @Override
@@ -233,6 +233,15 @@ class JavacSessionFactory extends MockSessionFactory {
             Type result = symbol == null ? null :
                     propertyType(symbol, getEntityName(),
                             propertyPath, defaultAccessType);
+
+            if (result == null) {
+                //check subclasses, needed for treat()
+                result = subclassPersisters.stream()
+                        .map(sp -> sp.getPropertyType(propertyPath))
+                        .filter(Objects::nonNull)
+                        .findAny()
+                        .orElse(null);
+            }
 
             properties.put(propertyPath, result);
             return result;

@@ -46,7 +46,7 @@ class JavacHelper {
         if (symbol instanceof Symbol.ClassSymbol) {
             Symbol.ClassSymbol type = (Symbol.ClassSymbol) symbol;
             return isEntity(type)
-                    && getEntityName(type).equals(entityName);
+                && getEntityName(type).equals(entityName);
         }
         else {
             return false;
@@ -326,5 +326,9 @@ class JavacHelper {
         return member instanceof Symbol.MethodSymbol ?
                 ((Symbol.MethodSymbol) member).getReturnType() :
                 member.type;
+    }
+
+    static boolean isSubclass(Symbol.TypeSymbol sub, Symbol.TypeSymbol sup) {
+        return sub.isSubClass(sup, types);
     }
 }
