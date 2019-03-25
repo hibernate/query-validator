@@ -8,11 +8,13 @@ import org.hibernate.cache.internal.DisabledCaching;
 import org.hibernate.cache.spi.CacheImplementor;
 import org.hibernate.cfg.Settings;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
+import org.hibernate.dialect.function.SQLFunction;
 import org.hibernate.dialect.function.SQLFunctionRegistry;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
 import org.hibernate.engine.profile.FetchProfile;
 import org.hibernate.engine.query.spi.QueryPlanCache;
 import org.hibernate.engine.spi.FilterDefinition;
+import org.hibernate.engine.spi.Mapping;
 import org.hibernate.engine.spi.SessionBuilderImplementor;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.graph.spi.RootGraphImplementor;
@@ -29,6 +31,7 @@ import org.hibernate.proxy.EntityNotFoundDelegate;
 import org.hibernate.query.spi.NamedQueryRepository;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.stat.spi.StatisticsImplementor;
+import org.hibernate.type.FloatType;
 import org.hibernate.type.Type;
 import org.hibernate.type.TypeFactory;
 import org.hibernate.type.TypeResolver;
@@ -47,6 +50,8 @@ import java.util.Set;
 import static java.util.Collections.*;
 
 abstract class MockSessionFactory implements SessionFactoryImplementor {
+
+    private static final SQLFunction UNKNOWN_SQL_FUNCTION = new UnknownSQLFunction();
 
     private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
 
@@ -275,7 +280,19 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
     @Override
     public SQLFunctionRegistry getSqlFunctionRegistry() {
         return new SQLFunctionRegistry(getJdbcServices().getDialect(),
-                MockSessionFactoryOptions.INSTANCE.getCustomSqlFunctionMap());
+                MockSessionFactoryOptions.INSTANCE.getCustomSqlFunctionMap()) {
+            @Override
+            public SQLFunction findSQLFunction(String functionName) {
+                SQLFunction sqlFunction = super.findSQLFunction(functionName);
+                if (sqlFunction==null) {
+                    //TODO: throw error in case of "strict" mode
+                    return UNKNOWN_SQL_FUNCTION;
+                }
+                else {
+                    return sqlFunction;
+                }
+            }
+        };
     }
 
     @Override
@@ -401,4 +418,25 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
         throw new UnsupportedOperationException();
     }
 
+    private static class UnknownSQLFunction implements SQLFunction {
+        @Override
+        public boolean hasArguments() {
+            return true;
+        }
+
+        @Override
+        public boolean hasParenthesesIfNoArguments() {
+            return true;
+        }
+
+        @Override
+        public Type getReturnType(Type firstArgumentType, Mapping mapping) throws QueryException {
+            return FloatType.INSTANCE; // ¯\_(ツ)_/¯
+        }
+
+        @Override
+        public String render(Type firstArgumentType, List arguments, SessionFactoryImplementor factory) throws QueryException {
+            throw new UnsupportedOperationException();
+        }
+    }
 }

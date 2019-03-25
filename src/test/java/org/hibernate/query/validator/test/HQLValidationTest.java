@@ -84,6 +84,8 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:54:"));
         assertFalse(errors.contains("Queries.java:55:"));
 
+        assertFalse(errors.contains("Queries.java:59:"));
+
         assertFalse(errors.contains("Queries.java:61:"));
 
         assertFalse(errors.contains("Queries.java:63:"));
@@ -146,7 +148,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:30: error: test.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:31: error: test.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
-        assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
+//        assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
         assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
     }
