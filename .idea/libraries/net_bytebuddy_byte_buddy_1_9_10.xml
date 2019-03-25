@@ -2,11 +2,11 @@
   <library name="net.bytebuddy:byte-buddy:1.9.10" type="repository">
     <properties maven-id="net.bytebuddy:byte-buddy:1.9.10" />
     <CLASSES>
-      <root url="jar://$USER_HOME$/.m2/repository/net/bytebuddy/byte-buddy/1.9.10/byte-buddy-1.9.10.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/byte-buddy-1.9.10.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>
-      <root url="jar://$USER_HOME$/.m2/repository/net/bytebuddy/byte-buddy/1.9.10/byte-buddy-1.9.10-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/byte-buddy-1.9.10-sources.jar!/" />
     </SOURCES>
   </library>
 </component>

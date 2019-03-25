@@ -2,9 +2,11 @@
   <library name="org.jboss.logging:jboss-logging:3.3.2.Final" type="repository">
     <properties maven-id="org.jboss.logging:jboss-logging:3.3.2.Final" />
     <CLASSES>
-      <root url="jar://$USER_HOME$/.m2/repository/org/jboss/logging/jboss-logging/3.3.2.Final/jboss-logging-3.3.2.Final.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/jboss-logging-3.3.2.Final.jar!/" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/jboss-logging-3.3.2.Final-sources.jar!/" />
+    </SOURCES>
   </library>
 </component>
