@@ -1,5 +1,6 @@
 package org.hibernate.query.validator;
 
+import antlr.NoViableAltException;
 import antlr.RecognitionException;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
@@ -46,6 +47,10 @@ class JavacErrorReporter implements ParseErrorHandler {
 
     @Override
     public void reportError(RecognitionException e) {
+        if (errorCount>0 && e instanceof NoViableAltException) {
+            //ignore it, it's probably a useless "unexpected end of subtree"
+            return;
+        }
         errorCount++;
         log.error(jcLiteral.pos + e.column, "proc.messager", e.getMessage());
     }
