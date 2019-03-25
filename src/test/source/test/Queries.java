@@ -51,8 +51,8 @@ public class Queries {
         createQuery("from Person p where minindex(p.notes) > 1"); //HQL "minindex()" function
         createQuery("from Person p where 1 in indices(p.notes)"); //"in" operator with HQL "indices()" function
         createQuery("from Person p where '' in elements(p.notes)"); //"in" operator with HQL "elements()" function
+        createQuery("from Person p where p.notes is empty"); //JPQL "is empty" operator
         createQuery("from Person p where p.notes is not empty"); //JPQL "is not empty" operator
-        createQuery("from Person p where '' member of p.notes"); //JPQL "member of" operator
 
         createQuery("select e from Employee e join e.contacts c where entry(c).value.address is null"); //error
 
@@ -84,8 +84,8 @@ public class Queries {
         createQuery("from Person p where p.notes is empty"); //JPQL "is empty" operator for element collection
         createQuery("from Person p where p.pastAddresses is empty"); //JPQL "is empty" operator for association
         createQuery("from Address a where a.country.residents is empty"); //JPQL "is empty" operator for association in embeddable
-        createQuery("from Person p where p.address.country.residents is empty");
-        createQuery("from Person p where p.address.currentResidents is empty");
+        createQuery("from Person p where p.address.country.residents is empty"); //JPQL "is empty" operator
+        createQuery("from Person p where p.address.currentResidents is empty"); //JPQL "is empty" operator
 
         createQuery("select a, c from Address a join a.country c"); //fake join to a component
         createQuery("select p, c from Person p join p.address.country c"); //fake join to a component
@@ -99,9 +99,14 @@ public class Queries {
         createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
         createQuery("from Person p where p.name = function('custom', p.id)"); //JPQL function passthrough
 
-        createQuery("from Person p where treat(p.emergencyContact as Employee).employeeId = 2");
-        createQuery("from Person p join treat(p.emergencyContact as Employee) c where c.employeeId = 2");
-        createQuery("from Employee e join treat(e.contacts as Employee) c where c.employeeId = 2");
+        createQuery("from Person p where treat(p.emergencyContact as Employee).employeeId = 2"); //JPQL "treat as" operator
+        createQuery("from Person p join treat(p.emergencyContact as Employee) c where c.employeeId = 2"); //JPQL "treat as" operator
+        createQuery("from Employee e join treat(e.contacts as Employee) c where c.employeeId = 2"); //JPQL "treat as" operator
+
+        createQuery("from Employee e where e.emergencyContact member of e.contacts"); //JPQL "member of" operator with association
+        createQuery("from Employee e where e.emergencyContact not member of e.contacts"); //JPQL "not member of" operator with association
+        createQuery("from Person p where '' member of p.notes"); //JPQL "member of" operator with element collection
+        createQuery("from Person p where '' not member of p.notes"); //JPQL "not member of" operator with element collection
     }
 
     private static void createQuery(String s) {}

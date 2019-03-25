@@ -125,6 +125,11 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:103:"));
         assertFalse(errors.contains("Queries.java:104:"));
 
+        assertFalse(errors.contains("Queries.java:106:"));
+        assertFalse(errors.contains("Queries.java:107:"));
+        assertFalse(errors.contains("Queries.java:108:"));
+        assertFalse(errors.contains("Queries.java:109:"));
+
         assertTrue(errors.contains("Person.java:21: error: Person has no mapped x"));
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
