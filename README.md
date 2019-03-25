@@ -81,10 +81,6 @@ validator similarly ignores function calls.
 Fixing this would require a nontrivial enhancement to Hibernate's
 HQL translator.
 
-### The `treat()` operator is not understood
-
-This will be fixed very soon.
-
 ### Some ugly error messages
 
 Sometimes Hibernate's HQL parser produces ugly error messages,
