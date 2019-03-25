@@ -93,6 +93,10 @@ public class Queries {
         createQuery("select e from Person p join p.emails e");
         createQuery("select e.address from Person p join p.emails e");
         createQuery("select e from Person p join p.emails e where e.address is not null and length(e.address)>0");
+
+        createQuery("from Person p where p.name = ?1 and p.id > ?2"); //JPQL positional args
+        createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
+        createQuery("from Person p where p.name = function('custom', p.id)"); //JPQL function passthrough
     }
 
     private static void createQuery(String s) {}

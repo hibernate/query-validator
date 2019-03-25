@@ -49,6 +49,8 @@ public class HQLValidationTest {
         String errors = err.toString();
         System.out.println(errors);
 
+        assertFalse(errors.contains("Person.java:19:"));
+
         assertFalse(errors.contains("Queries.java:6:"));
         assertFalse(errors.contains("Queries.java:7:"));
         assertFalse(errors.contains("Queries.java:8:"));
@@ -114,6 +116,11 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:94:"));
         assertFalse(errors.contains("Queries.java:95:"));
 
+        assertFalse(errors.contains("Queries.java:97:"));
+        assertFalse(errors.contains("Queries.java:98:"));
+        assertFalse(errors.contains("Queries.java:99:"));
+
+        assertTrue(errors.contains("Person.java:20: error: Person has no mapped x"));
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
         assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
         assertTrue(errors.contains("Queries.java:14: error: unexpected token: select"));
