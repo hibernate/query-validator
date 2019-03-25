@@ -99,6 +99,8 @@ public class Queries {
         createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
         createQuery("from Person p where p.name = function('custom', p.id)"); //JPQL function passthrough
 
+        createQuery("from Person p where treat(p.emergencyContact as Employee).employeeId = 2");
+        createQuery("from Person p join treat(p.emergencyContact as Employee) c where c.employeeId = 2");
         createQuery("from Employee e join treat(e.contacts as Employee) c where c.employeeId = 2");
     }
 
