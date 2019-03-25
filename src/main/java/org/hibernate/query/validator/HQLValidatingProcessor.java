@@ -15,7 +15,6 @@ import org.hibernate.hql.internal.ast.*;
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
-import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
@@ -23,6 +22,7 @@ import java.lang.reflect.Field;
 import java.util.Set;
 
 import static java.util.Collections.emptyMap;
+import static org.hibernate.query.validator.JavacHelper.qualifiedName;
 
 @SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
 @AutoService(Processor.class)
@@ -74,12 +74,34 @@ public class HQLValidatingProcessor extends AbstractProcessor {
 
                     @Override
                     public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
-                        super.visitApply(jcMethodInvocation); //needed!
-                        Name name = getMethodName(jcMethodInvocation.getMethodSelect());
-                        if (name != null && name.toString().equals("createQuery")) {
+                        String name = getMethodName(jcMethodInvocation.meth);
+                        if ("createQuery".equals(name)) {
                             inCreateQueryMethod = true;
                             super.visitApply(jcMethodInvocation);
                             inCreateQueryMethod = false;
+                        }
+                        else {
+                            super.visitApply(jcMethodInvocation); //needed!
+                        }
+                    }
+
+                    @Override
+                    public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
+                        String name = qualifiedName(jcAnnotation.annotationType.type);
+                        if ("javax.persistence.NamedQuery".equals(name)) {
+                            for (JCTree.JCExpression arg: jcAnnotation.args) {
+                                if (arg instanceof JCTree.JCAssign) {
+                                    JCTree.JCAssign assign = (JCTree.JCAssign) arg;
+                                    if ("query".equals(assign.lhs.toString())) {
+                                        inCreateQueryMethod = true;
+                                        super.visitAssign(assign);
+                                        inCreateQueryMethod = false;
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            super.visitAnnotation(jcAnnotation); //needed!
                         }
                     }
 
@@ -139,13 +161,13 @@ public class HQLValidatingProcessor extends AbstractProcessor {
         }
     }
 
-    private static Name getMethodName(ExpressionTree select) {
+    private static String getMethodName(ExpressionTree select) {
         if (select instanceof MemberSelectTree) {
             MemberSelectTree ref = (MemberSelectTree) select;
-            return ref.getIdentifier();
+            return ref.getIdentifier().toString();
         } else if (select instanceof IdentifierTree) {
             IdentifierTree ref = (IdentifierTree) select;
-            return ref.getName();
+            return ref.getName().toString();
         } else {
             return null;
         }
