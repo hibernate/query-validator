@@ -34,20 +34,6 @@ a compile-time error produced if the query has syntax errors or if
 an entity name or member name in the query doesn't reference a 
 persistent entity or mapped field or property.
 
-## Caveats
-
-Note that the query is checked according to Hibernate's flavor of
-JPQL (i.e. HQL), which is a superset of the query language defined 
-by the JPA specification. 
-
-In particular, HQL does *not* typecheck function names nor 
-arguments and instead simply passes anything which looks like it 
-might be a function call through to the database. Thus, the query 
-validator similarly ignores function calls.
-
-In future, an optional "strict" mode will produce errors for 
-non-spec-compliant queries.
-
 ## Usage from command line
 
 Just compile your code with `javac` or `mvn`, with the query validator
@@ -60,4 +46,35 @@ under 'Build, Execution, Deployment > Compiler > AnnotationProcessors'.
 
 ## Usage in Eclipse
 
-The Eclipse compiler is not yet supported.
+The Eclipse compiler is not yet supported, but work will start on this 
+soon.
+
+## Caveats
+
+Please be aware of the following issues.
+
+### HQL is a superset of JPQL
+
+Quieries are interpreted according to Hibernate's flavor of JPQL 
+(i.e. HQL), which is a superset of the query language defined by 
+the JPA specification. 
+
+In future, an optional "strict" mode will produce errors for 
+non-spec-compliant queries.
+
+### function calls are not checked
+
+In particular, HQL does *not* typecheck function names nor 
+arguments and instead simply passes anything which looks like it 
+might be a function call through to the database. Thus, the query 
+validator similarly ignores function calls.
+
+### the `treat()` operator is not understood
+
+This will be fixed very soon.
+
+### some ugly error messages
+
+Sometimes Hibernate's HQL parser produces ugly error messages.
+Fixing this requires a new release of Hibernate.
+
