@@ -5,6 +5,7 @@ import javax.persistence.Entity;
 import javax.persistence.Access;
 import javax.persistence.ElementCollection;
 import javax.persistence.OneToMany;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
 import javax.persistence.NamedQuery;
 import javax.persistence.NamedQueries;
@@ -33,4 +34,6 @@ public class Person {
     public String getWhatever() { return "thing"; };
     @ElementCollection
     public Set<Email> emails;
+    @ManyToOne
+    public Person emergencyContact;
 }
