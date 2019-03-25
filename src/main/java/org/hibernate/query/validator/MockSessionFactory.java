@@ -48,8 +48,9 @@ import static java.util.Collections.*;
 
 abstract class MockSessionFactory implements SessionFactoryImplementor {
 
-    static final TypeConfiguration typeConfiguration = new TypeConfiguration();
+    private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
 
+    @SuppressWarnings("deprecation")
     static final TypeResolver typeResolver =
             new TypeResolver(typeConfiguration,
                     new TypeFactory(typeConfiguration));
@@ -98,6 +99,7 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
      */
     abstract CollectionPersister createMockCollectionPersister(String role);
 
+    @SuppressWarnings("deprecation")
     @Override
     public TypeResolver getTypeResolver() {
         return typeResolver;
@@ -154,6 +156,7 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
         return MockSessionFactoryOptions.INSTANCE;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public Settings getSettings() {
         return new Settings(MockSessionFactoryOptions.INSTANCE);

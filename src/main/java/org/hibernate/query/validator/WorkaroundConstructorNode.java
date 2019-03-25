@@ -29,6 +29,7 @@ public class WorkaroundConstructorNode extends ConstructorNode {
             if (symbol==null) {
                 throw new DetailedSemanticException(path + " does not exist");
             }
+            @SuppressWarnings("unchecked")
             List<Type> argumentTypeList = getConstructorArgumentTypeList();
             for (Symbol cons: symbol.members().getElements(Symbol::isConstructor)) {
                 MethodSymbol constructor = (MethodSymbol) cons;

@@ -49,7 +49,7 @@ abstract class MockCollectionPersister implements QueryableCollection {
         this.ownerEntityName = root(role);
     }
 
-    public String getOwnerEntityName() {
+    String getOwnerEntityName() {
         return ownerEntityName;
     }
 
