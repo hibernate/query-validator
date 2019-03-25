@@ -12,7 +12,7 @@ public class Employee extends Person {
     private Integer id;
     private Map<String, Person> contacts;
 
-    public Integer getId() { return id; }
+    public Integer getEmployeeId() { return id; }
 
     @ManyToMany
     Map<String, Person> getContacts() { return contacts; }

@@ -4,7 +4,7 @@ public class Queries {
 
     public void run() {
         createQuery("from Person p where lower(p.name)='gavin'");
-        createQuery("from Employee p where p.name='gavin' and p.id=111");
+        createQuery("from Employee p where p.name='gavin' and p.employeeId=111");
         createQuery("from Person p join p.address a where a.city='barcelona'");
         createQuery("from Person p where p.address.city='barcelona'");
         createQuery("from Person p join p.pastAddresses a where a.city='barcelona'");
@@ -97,6 +97,8 @@ public class Queries {
         createQuery("from Person p where p.name = ?1 and p.id > ?2"); //JPQL positional args
         createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
         createQuery("from Person p where p.name = function('custom', p.id)"); //JPQL function passthrough
+
+//        createQuery("from Employee e join e.contacts c where treat(c as Employee).employeeId = 2");
     }
 
     private static void createQuery(String s) {}
