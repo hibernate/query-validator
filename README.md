@@ -69,12 +69,17 @@ arguments and instead simply passes anything which looks like it
 might be a function call through to the database. Thus, the query 
 validator similarly ignores function calls.
 
+Fixing this would require a nontrivial enhancement to Hibernate's
+HQL translator.
+
 ### The `treat()` operator is not understood
 
 This will be fixed very soon.
 
 ### Some ugly error messages
 
-Sometimes Hibernate's HQL parser produces ugly error messages.
+Sometimes Hibernate's HQL parser produces ugly error messages,
+which are passed through by the query validator.
+
 Fixing this requires a new release of Hibernate.
 
