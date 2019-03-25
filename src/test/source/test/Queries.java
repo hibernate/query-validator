@@ -107,6 +107,10 @@ public class Queries {
         createQuery("from Employee e where e.emergencyContact not member of e.contacts"); //JPQL "not member of" operator with association
         createQuery("from Person p where '' member of p.notes"); //JPQL "member of" operator with element collection
         createQuery("from Person p where '' not member of p.notes"); //JPQL "not member of" operator with element collection
+
+        createQuery("select p.name, n from Person p join p.notes n where index(n) = 0");
+        createQuery("select p.name, n from Person p join p.notes n where key(n) = 0");
+        createQuery("select p.name, n from Person p join p.notes n where value(n) = ''");
     }
 
     private static void createQuery(String s) {}

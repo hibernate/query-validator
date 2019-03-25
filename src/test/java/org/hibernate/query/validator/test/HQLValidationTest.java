@@ -151,5 +151,7 @@ public class HQLValidationTest {
 //        assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
         assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
+        assertTrue(errors.contains("Queries.java:112: error: node did not reference a map"));
+        assertTrue(errors.contains("Queries.java:113: error: node did not reference a map"));
     }
 }
