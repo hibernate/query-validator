@@ -71,7 +71,8 @@ public class Queries {
         createQuery("select p.name, n from Person p join p.notes n where length(n)>0"); //join an element collection
         createQuery("select p.name, n from Person p join p.notes n where n.length>0"); //error
         createQuery("from Person p where p.notes[0] is not null"); //HQL list indexing operator
-        createQuery("from Employee e where e.contacts['boss'] is not null"); //HQL list indexing operator
+        createQuery("from Employee e where e.contacts['boss'] is not null"); //HQL map indexing operator
+        createQuery("from Employee e where e.contacts['boss'].id = 222"); //HQL map indexing operator
 
         createQuery("from Address add where add.country.code='au'");
         createQuery("from Address add where add.country.type='au'"); //error
@@ -98,7 +99,7 @@ public class Queries {
         createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
         createQuery("from Person p where p.name = function('custom', p.id)"); //JPQL function passthrough
 
-//        createQuery("from Employee e join e.contacts c where treat(c as Employee).employeeId = 2");
+        createQuery("from Employee e join treat(e.contacts as Employee) c where c.employeeId = 2");
     }
 
     private static void createQuery(String s) {}

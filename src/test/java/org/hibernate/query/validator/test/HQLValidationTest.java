@@ -95,30 +95,31 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:71:"));
         assertFalse(errors.contains("Queries.java:73:"));
         assertFalse(errors.contains("Queries.java:74:"));
+        assertFalse(errors.contains("Queries.java:75:"));
 
-        assertFalse(errors.contains("Queries.java:76:"));
+        assertFalse(errors.contains("Queries.java:77:"));
 
-        assertFalse(errors.contains("Queries.java:79:"));
         assertFalse(errors.contains("Queries.java:80:"));
+        assertFalse(errors.contains("Queries.java:81:"));
 
-        assertFalse(errors.contains("Queries.java:82:"));
         assertFalse(errors.contains("Queries.java:83:"));
         assertFalse(errors.contains("Queries.java:84:"));
         assertFalse(errors.contains("Queries.java:85:"));
         assertFalse(errors.contains("Queries.java:86:"));
         assertFalse(errors.contains("Queries.java:87:"));
+        assertFalse(errors.contains("Queries.java:88:"));
 
-        assertFalse(errors.contains("Queries.java:89:"));
         assertFalse(errors.contains("Queries.java:90:"));
         assertFalse(errors.contains("Queries.java:91:"));
+        assertFalse(errors.contains("Queries.java:92:"));
 
-        assertFalse(errors.contains("Queries.java:93:"));
         assertFalse(errors.contains("Queries.java:94:"));
         assertFalse(errors.contains("Queries.java:95:"));
+        assertFalse(errors.contains("Queries.java:96:"));
 
-        assertFalse(errors.contains("Queries.java:97:"));
         assertFalse(errors.contains("Queries.java:98:"));
         assertFalse(errors.contains("Queries.java:99:"));
+        assertFalse(errors.contains("Queries.java:100:"));
 
         assertTrue(errors.contains("Person.java:20: error: Person has no mapped x"));
         assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
@@ -138,6 +139,6 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
         assertTrue(errors.contains("Queries.java:59: error: No data type for node:"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
-        assertTrue(errors.contains("Queries.java:77: error: Address has no mapped country.type"));
+        assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
     }
 }
