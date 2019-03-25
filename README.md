@@ -49,6 +49,15 @@ under 'Build, Execution, Deployment > Compiler > AnnotationProcessors'.
 The Eclipse compiler is not yet supported, but work will start on this 
 soon.
 
+## Compatibility
+
+The query validator was developed and tested with:
+
+- JDK 1.8.0_92
+- Hibernate 5.4.2.Final
+
+Other versions of `javac` and Hibernate may or may not work.
+
 ## Caveats
 
 Please be aware of the following issues.
