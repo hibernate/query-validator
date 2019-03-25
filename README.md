@@ -34,22 +34,22 @@ a compile-time error produced if the query has syntax errors or if
 an entity name or member name in the query doesn't reference a 
 persistent entity or mapped field or property.
 
-## Usage from command line
+### Usage from command line
 
 Just compile your code with `javac` or `mvn`, with the query validator
 and its dependencies in the compile-time classpath.
 
-## Usage in IntelliJ
+### Usage in IntelliJ
 
 Select 'Enable annotation processing' in IntelliJ IDEA preferences 
 under 'Build, Execution, Deployment > Compiler > AnnotationProcessors'. 
 
-## Usage in Eclipse
+### Usage in Eclipse
 
 The Eclipse compiler is not yet supported, but work will start on this 
 soon.
 
-## Caveats
+### Caveats
 
 Please be aware of the following issues.
 
@@ -62,18 +62,18 @@ the JPA specification.
 In future, an optional "strict" mode will produce errors for 
 non-spec-compliant queries.
 
-### function calls are not checked
+### Function calls are not checked
 
 In particular, HQL does *not* typecheck function names nor 
 arguments and instead simply passes anything which looks like it 
 might be a function call through to the database. Thus, the query 
 validator similarly ignores function calls.
 
-### the `treat()` operator is not understood
+### The `treat()` operator is not understood
 
 This will be fixed very soon.
 
-### some ugly error messages
+### Some ugly error messages
 
 Sometimes Hibernate's HQL parser produces ugly error messages.
 Fixing this requires a new release of Hibernate.
