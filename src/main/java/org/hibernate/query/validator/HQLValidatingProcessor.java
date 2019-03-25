@@ -8,6 +8,7 @@ import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeScanner;
+import org.hibernate.HibernateException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.hql.internal.antlr.HqlSqlTokenTypes;
 import org.hibernate.hql.internal.ast.*;
@@ -136,11 +137,15 @@ public class HQLValidatingProcessor extends AbstractProcessor {
                                     try {
                                         walker.statement(parser.getAST());
                                     }
-                                    catch (Exception e) {
+                                    catch (HibernateException e) {
                                         String message = e.getMessage();
-                                        handler.reportError(message == null ?
-                                                e.getClass().getName() :
-                                                message);
+                                        if (message!=null) {
+                                            handler.reportError(message);
+                                        }
+                                    }
+                                    catch (Exception e) {
+                                        //throw away NullPointerExceptions and the like
+                                        //since I guess they represent bugs in Hibernate
 //                                        e.printStackTrace();
                                     }
 
