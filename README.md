@@ -49,7 +49,7 @@ under 'Build, Execution, Deployment > Compiler > AnnotationProcessors'.
 The Eclipse compiler is not yet supported, but work will start on this 
 soon.
 
-### Caveats
+## Caveats
 
 Please be aware of the following issues.
 
