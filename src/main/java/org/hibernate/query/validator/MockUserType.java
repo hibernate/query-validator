@@ -9,7 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class MockUserType implements UserType {
+class MockUserType implements UserType {
     @Override
     public int[] sqlTypes() {
         return new int[0];
