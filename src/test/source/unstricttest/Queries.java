@@ -53,9 +53,9 @@ public class Queries {
         createQuery("from Person p where '' in elements(p.notes)"); //"in" operator with HQL "elements()" function
         createQuery("from Person p where p.notes is empty"); //JPQL "is empty" operator
         createQuery("from Person p where p.notes is not empty"); //JPQL "is not empty" operator
-
+        createQuery("select e from Employee e join e.contacts c where key(c).length > 0"); //error
         createQuery("select e from Employee e join e.contacts c where entry(c).value.address is null"); //error
-
+        createQuery("select e from Employee e join e.contacts c where value(c).address is null");
         createQuery("select xxx from Person"); //error
 
         createQuery("from Person p where type(p) = Employee");  //JPQL "type()" function
@@ -109,9 +109,9 @@ public class Queries {
         createQuery("from Person p where '' not member of p.notes"); //JPQL "not member of" operator with element collection
 
         createQuery("select p.name, n from Person p join p.notes n where index(n) = 0");
-        createQuery("select p.name, n from Person p join p.notes n where key(n) = 0");
-        createQuery("select p.name, n from Person p join p.notes n where value(n) = ''");
-
+        createQuery("select p.name, n from Person p join p.notes n where key(n) = 0"); //error
+        createQuery("select p.name, n from Person p join p.notes n where value(n) = ''"); //error
+        createQuery("select p.name, n from Person p join p.notes n where entry(n) is not null"); //error
         createQuery("select upper(p.name), year(current_date) from Person p");
         createQuery("select upper(p.name), year(current_date) from Person p where year(current_date) = 2019 and upper(p.name) = 'GAVIN'");
         createQuery("select upper(p.name), year(current_date) from Person"); //error

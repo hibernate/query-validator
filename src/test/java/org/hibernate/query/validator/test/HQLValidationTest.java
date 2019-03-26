@@ -56,6 +56,7 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:54:"));
         assertFalse(errors.contains("Queries.java:55:"));
 
+        assertFalse(errors.contains("Queries.java:58:"));
 //        assertFalse(errors.contains("Queries.java:59:"));
 
         assertFalse(errors.contains("Queries.java:61:"));
@@ -130,6 +131,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:29: error: stricttest.Nil does not exist"));
         assertTrue(errors.contains("Queries.java:30: error: stricttest.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:31: error: stricttest.Pair has no suitable constructor"));
+        assertTrue(errors.contains("Queries.java:56: error: "));
         assertTrue(errors.contains("Queries.java:57: error: entry() has no members"));
         assertTrue(errors.contains("Queries.java:59: warning: xxx is not defined"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
@@ -137,6 +139,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:100: error: illegal token: ?"));
         assertTrue(errors.contains("Queries.java:112: error: key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("Queries.java:113: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("Queries.java:114: error: key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("Queries.java:117: warning: p is not defined"));
         assertTrue(errors.contains("Queries.java:117: error: p.name is not defined"));
         assertTrue(errors.contains("Queries.java:124: warning: custom is not defined"));
@@ -181,6 +184,7 @@ public class HQLValidationTest {
         assertFalse(errors.contains("Queries.java:54:"));
         assertFalse(errors.contains("Queries.java:55:"));
 
+        assertFalse(errors.contains("Queries.java:58:"));
         assertFalse(errors.contains("Queries.java:59:"));
 
         assertFalse(errors.contains("Queries.java:61:"));
@@ -255,6 +259,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:29: error: unstricttest.Nil does not exist"));
         assertTrue(errors.contains("Queries.java:30: error: unstricttest.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:31: error: unstricttest.Pair has no suitable constructor"));
+        assertTrue(errors.contains("Queries.java:56: error: "));
         assertTrue(errors.contains("Queries.java:57: error: entry() has no members"));
 //        assertTrue(errors.contains("Queries.java:59: warning: xxx is not defined"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
@@ -262,6 +267,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:100: error: illegal token: ?"));
         assertTrue(errors.contains("Queries.java:112: error: key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("Queries.java:113: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("Queries.java:114: error: key(), value(), or entry() argument must be map element"));
         assertFalse(errors.contains("Queries.java:117: warning: p is not defined"));
         assertTrue(errors.contains("Queries.java:117: error: p.name is not defined"));
 //        assertTrue(errors.contains("Queries.java:124: warning: custom is not defined"));
