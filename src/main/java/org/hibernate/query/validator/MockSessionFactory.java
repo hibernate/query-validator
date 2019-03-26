@@ -19,6 +19,7 @@ import org.hibernate.engine.spi.Mapping;
 import org.hibernate.engine.spi.SessionBuilderImplementor;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.graph.spi.RootGraphImplementor;
+import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.id.IdentifierGenerator;
 import org.hibernate.id.factory.IdentifierGeneratorFactory;
 import org.hibernate.internal.TypeLocatorImpl;
@@ -41,10 +42,7 @@ import javax.persistence.*;
 import javax.persistence.Query;
 import javax.persistence.criteria.CriteriaBuilder;
 import java.sql.Connection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static java.util.Collections.*;
 import static org.hibernate.internal.util.StringHelper.isEmpty;
@@ -57,6 +55,7 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     final Map<String,MockEntityPersister> entityPersisters = new HashMap<>();
     final Map<String,MockCollectionPersister> collectionPersisters = new HashMap<>();
+    private Set<String> unknownFunctions = new HashSet<>();
 
     private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
 
@@ -98,6 +97,12 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                     return createMockCollectionPersister(role);
                 }
             };
+
+    private ParseErrorHandler handler;
+
+    MockSessionFactory(ParseErrorHandler handler) {
+        this.handler = handler;
+    }
 
     static CollectionType createCollectionType(String role, String name) {
         @SuppressWarnings("deprecation")
@@ -323,7 +328,11 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
         };
     }
 
-    void unknownSqlFunction(String functionName) {}
+    void unknownSqlFunction(String functionName) {
+        if (unknownFunctions.add(functionName)) {
+            handler.reportWarning(functionName + " is not defined");
+        }
+    }
 
     @Override
     public ClassMetadata getClassMetadata(Class aClass) {

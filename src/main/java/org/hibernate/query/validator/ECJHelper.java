@@ -13,7 +13,7 @@ import java.beans.Introspector;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 
 class ECJHelper {
-    private static Compiler compiler;
+    static Compiler compiler;
 
     static void initialize(BaseProcessingEnvImpl processingEnv) {
         compiler = processingEnv.getCompiler();

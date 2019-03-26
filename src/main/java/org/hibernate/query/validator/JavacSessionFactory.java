@@ -2,6 +2,7 @@ package org.hibernate.query.validator;
 
 import com.sun.tools.javac.code.Symbol;
 import org.hibernate.QueryException;
+import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.type.CollectionType;
 import org.hibernate.type.CompositeCustomType;
 import org.hibernate.type.Type;
@@ -15,6 +16,10 @@ import static org.hibernate.internal.util.StringHelper.*;
 import static org.hibernate.query.validator.JavacHelper.*;
 
 class JavacSessionFactory extends MockSessionFactory {
+
+    JavacSessionFactory(ParseErrorHandler handler) {
+        super(handler);
+    }
 
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {

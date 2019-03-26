@@ -3,6 +3,7 @@ package org.hibernate.query.validator;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.lookup.*;
 import org.hibernate.QueryException;
+import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.type.CollectionType;
 import org.hibernate.type.CompositeCustomType;
 import org.hibernate.type.Type;
@@ -16,6 +17,10 @@ import static org.hibernate.internal.util.StringHelper.*;
 import static org.hibernate.query.validator.ECJHelper.*;
 
 class ECJSessionFactory extends MockSessionFactory {
+
+    ECJSessionFactory(ParseErrorHandler handler) {
+        super(handler);
+    }
 
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {

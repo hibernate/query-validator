@@ -71,42 +71,43 @@ public class HQLValidationTest {
     public void testECJ() throws Exception {
         String errors = compileWithECJ("test");
 
-        assertTrue(errors.contains("ERROR: unexpected token: do"));
-        assertTrue(errors.contains("ERROR: unexpected token"));
-        assertTrue(errors.contains("ERROR: unexpected token: select"));
-        assertTrue(errors.contains("ERROR: unexpected token: ="));
-        assertTrue(errors.contains("ERROR: unexpected token: from"));
-        assertTrue(errors.contains("ERROR: missing from clause or select list"));
+        assertTrue(errors.contains("unexpected token: do") && errors.contains("BadQueries.java (at line 6)"));
+        assertTrue(errors.contains("unexpected token"));
+        assertTrue(errors.contains("unexpected token: select") && errors.contains("BadQueries.java (at line 8)"));
+        assertTrue(errors.contains("unexpected token: =") && errors.contains("BadQueries.java (at line 9)"));
+        assertTrue(errors.contains("unexpected token: from") && errors.contains("BadQueries.java (at line 10)"));
+        assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 10)"));
 
         //TODO: reenable once WorkaroundConstructorNode is fixed!
-//        assertTrue(errors.contains("ERROR: test.Nil does not exist"));
-//        assertTrue(errors.contains("ERROR: test.Pair has no suitable constructor"));
-//        assertTrue(errors.contains("ERROR: test.Pair has no suitable constructor"));
+//        assertTrue(errors.contains("test.Nil does not exist"));
+//        assertTrue(errors.contains("test.Pair has no suitable constructor"));
+//        assertTrue(errors.contains("test.Pair has no suitable constructor"));
 
-        assertTrue(errors.contains("ERROR: People is not mapped"));
-        assertTrue(errors.contains("ERROR: Person has no mapped firstName"));
-        assertTrue(errors.contains("ERROR: Person has no mapped addr"));
-        assertTrue(errors.contains("ERROR: Address has no mapped town"));
-        assertTrue(errors.contains("ERROR: Address has no mapped name"));
-        assertTrue(errors.contains("ERROR: Address has no mapped country.type"));
+        assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 16)"));
+        assertTrue(errors.contains("Person has no mapped firstName") && errors.contains("BadQueries.java (at line 17)"));
+        assertTrue(errors.contains("Person has no mapped addr") && errors.contains("BadQueries.java (at line 18)"));
+        assertTrue(errors.contains("Address has no mapped town") && errors.contains("BadQueries.java (at line 19)"));
+        assertTrue(errors.contains("Address has no mapped name") && errors.contains("BadQueries.java (at line 10)"));
+        assertTrue(errors.contains("Address has no mapped country.type") && errors.contains("BadQueries.java (at line 21)"));
 
-        assertTrue(errors.contains("ERROR: ")); //should be: "string has no mapped length"
-        assertTrue(errors.contains("ERROR: string has no mapped length"));
+        assertTrue(errors.contains("") && errors.contains("BadQueries.java (at line 23)")); //should be: "string has no mapped length"
+        assertTrue(errors.contains("string has no mapped length") && errors.contains("BadQueries.java (at line 24)"));
 
-//        assertTrue(errors.contains("BadQueries.java:26: warning: xxx is not defined"));
-//        assertTrue(errors.contains("BadQueries.java:27: warning: func is not defined"));
-//        assertTrue(errors.contains("BadQueries.java:28: warning: custom is not defined"));
-//        assertTrue(errors.contains("BadQueries.java:29: warning: p is not defined"));
-        assertTrue(errors.contains("ERROR: p.name is not defined"));
+        assertTrue(errors.contains("xxx is not defined") && errors.contains("BadQueries.java (at line 26)"));
+        assertTrue(errors.contains("func is not defined") && errors.contains("BadQueries.java (at line 27)"));
+        assertTrue(errors.contains("custom is not defined") && errors.contains("BadQueries.java (at line 28)"));
+        assertTrue(errors.contains("p is not defined") && errors.contains("BadQueries.java (at line 29)"));
+        assertTrue(errors.contains("p.name is not defined") && errors.contains("BadQueries.java (at line 29)"));
 
-        assertTrue(errors.contains("ERROR: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("ERROR: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("ERROR: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
+//        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
+//        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
 
-        assertTrue(errors.contains("ERROR: entry() has no members"));
+        assertTrue(errors.contains("entry() has no members") && errors.contains("BadQueries.java (at line 36)"));
 
-        assertTrue(errors.contains("ERROR: illegal token: ?"));
+        assertTrue(errors.contains("illegal token: ?") && errors.contains("BadQueries.java (at line 38)"));
 
+        assertTrue(errors.contains("Person has no mapped x")&& errors.contains("Person.java (at line 21)"));
 
     }
 

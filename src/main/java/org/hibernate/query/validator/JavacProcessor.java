@@ -14,7 +14,6 @@ import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Log;
 import com.sun.tools.javac.util.Pair;
 import org.hibernate.QueryException;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 
 import javax.annotation.processing.*;
@@ -22,7 +21,6 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -146,22 +144,17 @@ public class JavacProcessor extends AbstractProcessor {
                         if (inCreateQueryMethod && literalValue instanceof String) {
                             String hql = (String) literalValue;
 
-                            ParseErrorHandler handler =
-                                    new JavacErrorReporter(jcLiteral, element);
+                            ErrorReporter handler = new ErrorReporter(jcLiteral, element);
 
-                            SessionFactoryImplementor factory =
-                                    new JavacSessionFactory() {
-                                        private Set<String> unknowns = new HashSet<>();
+                            validate(hql, handler,
+                                    new JavacSessionFactory(handler) {
                                         @Override
                                         void unknownSqlFunction(String functionName) {
-                                            if (strict && unknowns.add(functionName)) {
-                                                handler.reportWarning(functionName
-                                                        + " is not defined");
+                                            if (strict) {
+                                                super.unknownSqlFunction(functionName);
                                             }
                                         }
-                                    };
-
-                            validate(hql, handler, factory);
+                                    });
                         }
                     }
                 });
@@ -186,13 +179,13 @@ public class JavacProcessor extends AbstractProcessor {
         return SourceVersion.latestSupported();
     }
 
-    class JavacErrorReporter implements ParseErrorHandler {
+    class ErrorReporter implements ParseErrorHandler {
 
         private Log log;
-        private JCTree.JCLiteral jcLiteral;
+        private JCTree.JCLiteral literal;
 
-        JavacErrorReporter(JCTree.JCLiteral jcLiteral, Element element) {
-            this.jcLiteral = jcLiteral;
+        ErrorReporter(JCTree.JCLiteral literal, Element element) {
+            this.literal = literal;
 
             Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
             log = Log.instance(context);
@@ -215,18 +208,18 @@ public class JavacProcessor extends AbstractProcessor {
 
         @Override
         public void reportError(RecognitionException e) {
-            log.error(jcLiteral.pos + e.column, "proc.messager",
+            log.error(literal.pos + e.column, "proc.messager",
                     e.getMessage());
         }
 
         @Override
         public void reportError(String text) {
-            log.error(jcLiteral, "proc.messager", text);
+            log.error(literal, "proc.messager", text);
         }
 
         @Override
         public void reportWarning(String text) {
-            log.warning(jcLiteral, "proc.messager", text);
+            log.warning(literal, "proc.messager", text);
         }
 
     }
