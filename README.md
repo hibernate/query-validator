@@ -31,11 +31,13 @@ Then the validator with check any static string argument of
 
 which occurs in the annotated package, class, or method. 
 
-A compile-time error is produced
+A compile-time error is produced if
 
-- if the query has syntax errors or 
-- if an entity name or member name in the query doesn't 
-  reference a persistent entity or mapped field or property.
+- the query has syntax errors,
+- an entity name in the query doesn't reference a persistent 
+  entity class, or
+- a member name in the query doesn't reference a mapped field 
+  or property of the entity.
 
 A compile-time warning is produced if
 
