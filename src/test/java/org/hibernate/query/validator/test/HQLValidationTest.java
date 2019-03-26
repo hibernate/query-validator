@@ -1,11 +1,13 @@
 package org.hibernate.query.validator.test;
 
+import org.eclipse.jdt.core.compiler.batch.BatchCompiler;
 import org.junit.Test;
 
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -19,7 +21,7 @@ public class HQLValidationTest {
 
     @Test
     public void run() throws Exception {
-        String errors = compile("test");
+        String errors = compileWithJavac("test");
 
         assertFalse(errors.contains("GoodQueries.java:"));
 
@@ -64,9 +66,12 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("Person.java:21: error: Person has no mapped x"));
 
+        errors = compileWithEJC("test");
+
+
     }
 
-    private String compile(String pack) throws IOException {
+    private String compileWithJavac(String pack) throws IOException {
         Path tempDir = Files.createTempDirectory("validator-test-out");
 
         List<String> files = new ArrayList<>();
@@ -91,13 +96,56 @@ public class HQLValidationTest {
                 .filter(s->s.endsWith(".java"))
                 .forEach(files::add);
 
-        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
+        String[] args = files.toArray(new String[0]);
         ByteArrayOutputStream err = new ByteArrayOutputStream();
-        int rc = javac.run(null, null, err, files.toArray(new String[0]));
+
+        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
+        int rc = javac.run(null, System.out, err, args);
         assert rc!=0;
+
         String errors = err.toString();
         System.out.println(errors);
         return errors;
     }
 
+    private String compileWithEJC(String pack) throws IOException {
+        Path tempDir = Files.createTempDirectory("validator-test-out");
+
+        List<String> files = new ArrayList<>();
+
+//        files.add("-verbose");
+
+        files.add("-1.8");
+
+        files.add("-d");
+        files.add(tempDir.toString());
+
+        files.add("-classpath");
+        StringBuilder cp = new StringBuilder();
+//        cp.append("target/query-validator-1.0-SNAPSHOT.jar");
+        cp.append(":target/classes");
+        Files.list(Paths.get("lib"))
+                .map(Path::toString)
+                .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
+                .forEach(s->cp.append(":").append(s));
+        files.add(cp.toString());
+
+        Files.list(Paths.get("src/test/source").resolve(pack))
+                .map(Path::toString)
+                .filter(s->s.endsWith(".java"))
+                .forEach(files::add);
+
+        String[] args = files.toArray(new String[0]);
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+
+        boolean success =
+                BatchCompiler.compile(args,
+                        new PrintWriter(System.out),
+                        new PrintWriter(err), null);
+        assert !success;
+
+        String errors = err.toString();
+        System.out.println(errors);
+        return errors;
+    }
 }

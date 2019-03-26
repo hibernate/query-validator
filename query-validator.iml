@@ -18,5 +18,6 @@
     <orderEntry type="library" name="net.bytebuddy:byte-buddy:1.9.10" level="project" />
     <orderEntry type="library" name="org.jboss.logging:jboss-logging:3.3.2.Final" level="project" />
     <orderEntry type="library" name="org.hibernate:hibernate-core:5.4.2.Final" level="project" />
+    <orderEntry type="library" name="org.eclipse.jdt.core.compiler:ecj:4.6.1" level="project" />
   </component>
 </module>

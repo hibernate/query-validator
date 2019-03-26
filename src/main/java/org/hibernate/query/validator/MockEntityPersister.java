@@ -22,12 +22,11 @@ import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
 
+import javax.persistence.AccessType;
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
 
@@ -36,12 +35,42 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
     private static final String[] ID_COLUMN = {"id"};
 
     private final String entityName;
-    private SessionFactoryImplementor factory;
+    private final MockSessionFactory factory;
+    private final List<MockEntityPersister> subclassPersisters = new ArrayList<>();
+    final AccessType defaultAccessType;
+    final Map<String,Type> properties = new HashMap<>();
 
-    MockEntityPersister(String entityName, SessionFactoryImplementor factory) {
+    MockEntityPersister(String entityName,
+                        AccessType defaultAccessType,
+                        MockSessionFactory factory) {
         this.entityName = entityName;
         this.factory = factory;
+        this.defaultAccessType = defaultAccessType;
     }
+
+    void initSubclassPersisters() {
+        for (MockEntityPersister other:
+                factory.entityPersisters.values()) {
+            other.addPersister(this);
+            this.addPersister(other);
+        }
+    }
+
+    private void addPersister(MockEntityPersister entityPersister) {
+        if (isSubclassPersister(entityPersister)) {
+            subclassPersisters.add(entityPersister);
+        }
+    }
+
+    Type getSubclassPropertyType(String propertyPath) {
+        return subclassPersisters.stream()
+                .map(sp -> sp.getPropertyType(propertyPath))
+                .filter(Objects::nonNull)
+                .findAny()
+                .orElse(null);
+    }
+
+    abstract boolean isSubclassPersister(MockEntityPersister entityPersister);
 
     @Override
     public SessionFactoryImplementor getFactory() {
@@ -905,4 +934,5 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
     public String toString() {
         return "MockEntityPersister[" + entityName + "]";
     }
+
 }

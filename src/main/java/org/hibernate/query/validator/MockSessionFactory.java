@@ -1,6 +1,7 @@
 package org.hibernate.query.validator;
 
 import org.hibernate.*;
+import org.hibernate.TypeHelper;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.internal.StandardServiceRegistryImpl;
 import org.hibernate.boot.spi.SessionFactoryOptions;
@@ -31,10 +32,7 @@ import org.hibernate.proxy.EntityNotFoundDelegate;
 import org.hibernate.query.spi.NamedQueryRepository;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.stat.spi.StatisticsImplementor;
-import org.hibernate.type.FloatType;
-import org.hibernate.type.Type;
-import org.hibernate.type.TypeFactory;
-import org.hibernate.type.TypeResolver;
+import org.hibernate.type.*;
 import org.hibernate.type.spi.TypeConfiguration;
 
 import javax.naming.NamingException;
@@ -43,6 +41,7 @@ import javax.persistence.*;
 import javax.persistence.Query;
 import javax.persistence.criteria.CriteriaBuilder;
 import java.sql.Connection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +52,11 @@ import static org.hibernate.internal.util.StringHelper.isEmpty;
 abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     private static final SQLFunction UNKNOWN_SQL_FUNCTION = new UnknownSQLFunction();
+
+    static final CustomType UNKNOWN_TYPE = new CustomType(new MockUserType());
+
+    final Map<String,MockEntityPersister> entityPersisters = new HashMap<>();
+    final Map<String,MockCollectionPersister> collectionPersisters = new HashMap<>();
 
     private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
 
@@ -94,6 +98,26 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                     return createMockCollectionPersister(role);
                 }
             };
+
+    static CollectionType createCollectionType(String role, String name) {
+        @SuppressWarnings("deprecation")
+        TypeFactory typeFactory = typeResolver.getTypeFactory();
+        switch (name) {
+            case "Set":
+            case "SortedSet":
+                //might actually be a bag!
+                //TODO: look for @OrderColumn on the property
+                return typeFactory.set(role, null);
+            case "List":
+            case "SortedList":
+                return typeFactory.list(role, null);
+            case "Map":
+            case "SortedMap":
+                return typeFactory.map(role, null);
+            default:
+                return typeFactory.bag(role, null);
+        }
+    }
 
     /**
      * Lazily create a {@link MockEntityPersister}

@@ -67,6 +67,14 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- ejc dependency -->
+        <dependency>
+            <groupId>org.eclipse.jdt.core.compiler</groupId>
+            <artifactId>ecj</artifactId>
+            <version>4.6.1</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- auto-generation of META-INF/services entry -->
         <dependency>
             <groupId>com.google.auto.service</groupId>
