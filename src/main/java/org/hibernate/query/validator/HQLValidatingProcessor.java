@@ -25,6 +25,11 @@ import java.util.Set;
 
 import static java.util.Collections.emptyMap;
 
+/**
+ * Annotation processor that validates HQL and JPQL queries.
+ *
+ * @see CheckHQL
+ */
 @SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
 @AutoService(Processor.class)
 public class HQLValidatingProcessor extends AbstractProcessor {
