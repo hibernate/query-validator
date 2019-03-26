@@ -56,9 +56,9 @@ validator and its dependencies in the compile-time classpath.
 
 ### Usage in IntelliJ
 
-Select 'Enable annotation processing' in IntelliJ IDEA 
-preferences under 'Build, Execution, Deployment > Compiler > 
-AnnotationProcessors'. 
+Select **Enable annotation processing** in IntelliJ IDEA 
+preferences under **Build, Execution, Deployment > Compiler > 
+AnnotationProcessors**. 
 
 ### Usage in Eclipse
 
