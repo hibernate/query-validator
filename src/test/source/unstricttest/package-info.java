@@ -1,4 +1,4 @@
-@CheckHQL(strict=false)
+@CheckHQL
 package unstricttest;
 
 import org.hibernate.query.validator.CheckHQL;

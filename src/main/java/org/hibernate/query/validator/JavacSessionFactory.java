@@ -19,10 +19,6 @@ class JavacSessionFactory extends MockSessionFactory {
     private final Map<String,EntityPersister> entityPersisters = new HashMap<>();
     private final Map<String,CollectionPersister> collectionPersisters = new HashMap<>();
 
-    JavacSessionFactory(boolean strict) {
-        super(strict);
-    }
-
     @Override
     EntityPersister createMockEntityPersister(String entityName) {
         EntityPersister cached = entityPersisters.get(entityName);

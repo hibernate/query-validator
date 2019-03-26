@@ -4,6 +4,7 @@ import com.google.auto.service.AutoService;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.MemberSelectTree;
+import com.sun.tools.javac.code.Attribute;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
@@ -15,16 +16,14 @@ import org.hibernate.hql.internal.ast.*;
 
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.AnnotationMirror;
-import javax.lang.model.element.Element;
-import javax.lang.model.element.PackageElement;
-import javax.lang.model.element.TypeElement;
+import javax.lang.model.element.*;
 import javax.lang.model.util.Elements;
 import java.lang.reflect.Field;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static java.util.Collections.emptyMap;
-import static org.hibernate.query.validator.JavacHelper.qualifiedName;
 
 @SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
 @AutoService(Processor.class)
@@ -36,25 +35,14 @@ public class HQLValidatingProcessor extends AbstractProcessor {
             for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
                 if (element instanceof PackageElement) {
                     for (Element member : element.getEnclosedElements()) {
-                        checkHQL(member, element);
+                        checkHQL(member);
                     }
                 } else {
-                    checkHQL(element, element);
+                    checkHQL(element);
                 }
             }
         }
         return true;
-    }
-
-    private static void setHandler(Object object, ParseErrorHandler handler) {
-        try {
-            Field field = object.getClass().getDeclaredField("parseErrorHandler");
-            field.setAccessible(true);
-            field.set(object, handler);
-        }
-        catch (Exception e){
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -65,25 +53,30 @@ public class HQLValidatingProcessor extends AbstractProcessor {
         }
     }
 
-    private void checkHQL(Element element, Element annotatedElement) {
-
-        AnnotationMirror checkHQL =
-                annotatedElement.getAnnotationMirrors().stream()
-                        .filter(ann -> ann.getAnnotationType().toString()
-                                .equals("org.hibernate.query.validator.CheckHQL"))
-                        .findAny().orElseThrow(null);
-        final boolean strict =
-                checkHQL.getElementValues().values().stream()
-                        .map(value -> (Boolean) value.getValue())
-                        .findAny().orElse(true);
+    private void checkHQL(Element element) {
 
         Elements elementUtils = processingEnv.getElementUtils();
         if (elementUtils instanceof JavacElements) {
             JCTree tree = ((JavacElements) elementUtils).getTree(element);
             if (tree != null) {
                 tree.accept(new TreeScanner() {
+                    boolean inCreateQueryMethod = false;
+                    boolean strict = true;
 
-                    boolean inCreateQueryMethod;
+                    private void setStrictFromSuppressWarnings(
+                            AnnotationMirror annotation) {
+                        for (AnnotationValue value:
+                                annotation.getElementValues().values()) {
+                            @SuppressWarnings("unchecked")
+                            List<Attribute> list = (List) value.getValue();
+                            for (Attribute val: list) {
+                                if (val.getValue().toString()
+                                        .equals("hql.unknown-function")) {
+                                    strict = false;
+                                }
+                            }
+                        }
+                    }
 
                     @Override
                     public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
@@ -100,21 +93,40 @@ public class HQLValidatingProcessor extends AbstractProcessor {
 
                     @Override
                     public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
-                        String name = qualifiedName(jcAnnotation.annotationType.type);
-                        if ("javax.persistence.NamedQuery".equals(name)) {
-                            for (JCTree.JCExpression arg: jcAnnotation.args) {
-                                if (arg instanceof JCTree.JCAssign) {
-                                    JCTree.JCAssign assign = (JCTree.JCAssign) arg;
-                                    if ("query".equals(assign.lhs.toString())) {
-                                        inCreateQueryMethod = true;
-                                        super.visitAssign(assign);
-                                        inCreateQueryMethod = false;
+                        AnnotationMirror annotation = jcAnnotation.attribute;
+                        switch (annotation.getAnnotationType().toString()) {
+                            case "java.lang.SuppressWarnings":
+                                setStrictFromSuppressWarnings(annotation);
+                                break;
+                            case "javax.persistence.NamedQuery":
+                                for (JCTree.JCExpression arg: jcAnnotation.args) {
+                                    if (arg instanceof JCTree.JCAssign) {
+                                        JCTree.JCAssign assign = (JCTree.JCAssign) arg;
+                                        if ("query".equals(assign.lhs.toString())) {
+                                            inCreateQueryMethod = true;
+                                            super.visitAssign(assign);
+                                            inCreateQueryMethod = false;
+                                        }
                                     }
                                 }
-                            }
-                        } else {
-                            super.visitAnnotation(jcAnnotation); //needed!
+                                break;
+                            default:
+                                super.visitAnnotation(jcAnnotation); //needed!
                         }
+                    }
+
+                    @Override
+                    public void visitClassDef(JCTree.JCClassDecl jcClassDecl) {
+                        boolean s = strict;
+                        super.visitClassDef(jcClassDecl);
+                        strict = s;
+                    }
+
+                    @Override
+                    public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
+                        boolean s = strict;
+                        super.visitMethodDef(jcMethodDecl);
+                        strict = s;
                     }
 
                     @Override
@@ -133,7 +145,16 @@ public class HQLValidatingProcessor extends AbstractProcessor {
 
                                 if (handler.getErrorCount()==0) {
                                     SessionFactoryImplementor factory =
-                                            new JavacSessionFactory(strict);
+                                            new JavacSessionFactory() {
+                                                private Set<String> unknowns = new HashSet<>();
+                                                @Override
+                                                void unknownSqlFunction(String functionName) {
+                                                    if (strict && unknowns.add(functionName)) {
+                                                        handler.reportWarning(functionName
+                                                                + " is not defined");
+                                                    }
+                                                }
+                                            };
                                     HqlSqlWalker walker = new HqlSqlWalker(
                                             new QueryTranslatorImpl("", hql, emptyMap(), factory),
                                             factory, parser, emptyMap(), null);
@@ -193,6 +214,17 @@ public class HQLValidatingProcessor extends AbstractProcessor {
     @Override
     public SourceVersion getSupportedSourceVersion() {
         return SourceVersion.latestSupported();
+    }
+
+    private static void setHandler(Object object, ParseErrorHandler handler) {
+        try {
+            Field field = object.getClass().getDeclaredField("parseErrorHandler");
+            field.setAccessible(true);
+            field.set(object, handler);
+        }
+        catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
 }

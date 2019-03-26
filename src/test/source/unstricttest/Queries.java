@@ -1,7 +1,7 @@
 package unstricttest;
 
+@SuppressWarnings("hql.unknown-function")
 public class Queries {
-
     public void run() {
         createQuery("from Person p where lower(p.name)='gavin'");
         createQuery("from Employee p where p.name='gavin' and p.employeeId=111");

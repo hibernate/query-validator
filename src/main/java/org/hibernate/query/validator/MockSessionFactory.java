@@ -95,12 +95,6 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                 }
             };
 
-    private final boolean strict;
-
-    MockSessionFactory(boolean strict) {
-        this.strict = strict;
-    }
-
     /**
      * Lazily create a {@link MockEntityPersister}
      */
@@ -295,12 +289,8 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                 }
                 SQLFunction sqlFunction = super.findSQLFunction(functionName);
                 if (sqlFunction==null) {
-                    if (strict) {
-                        throw new QueryException(functionName + " is not defined");
-                    }
-                    else {
-                        return UNKNOWN_SQL_FUNCTION;
-                    }
+                    unknownSqlFunction(functionName);
+                    return UNKNOWN_SQL_FUNCTION;
                 }
                 else {
                     return sqlFunction;
@@ -308,6 +298,8 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
             }
         };
     }
+
+    void unknownSqlFunction(String functionName) {}
 
     @Override
     public ClassMetadata getClassMetadata(Class aClass) {

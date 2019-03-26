@@ -159,14 +159,14 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:30: error: stricttest.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:31: error: stricttest.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
-        assertTrue(errors.contains("Queries.java:59: error: xxx is not defined"));
+        assertTrue(errors.contains("Queries.java:59: warning: xxx is not defined"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
         assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
         assertTrue(errors.contains("Queries.java:100: error: Legacy-style query parameters (`?`) are no longer supported"));
         assertTrue(errors.contains("Queries.java:112: error: node did not reference a map"));
         assertTrue(errors.contains("Queries.java:113: error: node did not reference a map"));
-        assertTrue(errors.contains("Queries.java:117: error: p is not defined"));
-        assertTrue(errors.contains("Queries.java:124: error: custom is not defined"));
+        assertTrue(errors.contains("Queries.java:117: warning: p is not defined"));
+        assertTrue(errors.contains("Queries.java:124: warning: custom is not defined"));
     }
 
     @Test
@@ -312,13 +312,14 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:30: error: unstricttest.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:31: error: unstricttest.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
-//        assertTrue(errors.contains("Queries.java:59: error: xxx is not defined"));
+//        assertTrue(errors.contains("Queries.java:59: warning: xxx is not defined"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
         assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
         assertTrue(errors.contains("Queries.java:100: error: Legacy-style query parameters (`?`) are no longer supported"));
         assertTrue(errors.contains("Queries.java:112: error: node did not reference a map"));
         assertTrue(errors.contains("Queries.java:113: error: node did not reference a map"));
         assertTrue(errors.contains("Queries.java:117: error: Unable to resolve path [p.name], unexpected token [p]"));
-//        assertTrue(errors.contains("Queries.java:124: error: custom is not defined"));
+//        assertTrue(errors.contains("Queries.java:117: warning: p is not defined"));
+//        assertTrue(errors.contains("Queries.java:124: warning: custom is not defined"));
     }
 }
