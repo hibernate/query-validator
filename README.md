@@ -62,8 +62,8 @@ AnnotationProcessors**.
 
 ### Usage in Eclipse
 
-The Eclipse compiler is not yet supported, but work will start 
-on this soon.
+Initial support for the Eclipse compiler (ECJ) is already 
+available!
 
 ## Compatibility
 
@@ -71,6 +71,7 @@ The query validator was developed and tested with:
 
 - JDK 1.8.0_92
 - Hibernate 5.4.2.Final
+- ECJ 4.6.1
 
 Other versions of `javac` and Hibernate may or may not work.
 
