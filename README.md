@@ -80,7 +80,7 @@ Please be aware of the following issues.
 
 ### HQL is a superset of JPQL
 
-Quieries are interpreted according to Hibernate's flavor of JPQL 
+Queries are interpreted according to Hibernate's flavor of JPQL 
 (i.e. HQL), which is a superset of the query language defined by 
 the JPA specification. 
 
