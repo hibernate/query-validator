@@ -20,7 +20,7 @@ import static org.junit.Assert.assertTrue;
 public class HQLValidationTest {
 
     @Test
-    public void run() throws Exception {
+    public void testJavac() throws Exception {
         String errors = compileWithJavac("test");
 
         assertFalse(errors.contains("GoodQueries.java:"));
@@ -65,8 +65,47 @@ public class HQLValidationTest {
 //        assertTrue(errors.contains("BadQueries.java:41:"));
 
         assertTrue(errors.contains("Person.java:21: error: Person has no mapped x"));
+    }
 
-        errors = compileWithEJC("test");
+    @Test
+    public void testECJ() throws Exception {
+        String errors = compileWithECJ("test");
+
+        assertTrue(errors.contains("ERROR: unexpected token: do"));
+        assertTrue(errors.contains("ERROR: unexpected token"));
+        assertTrue(errors.contains("ERROR: unexpected token: select"));
+        assertTrue(errors.contains("ERROR: unexpected token: ="));
+        assertTrue(errors.contains("ERROR: unexpected token: from"));
+        assertTrue(errors.contains("ERROR: missing from clause or select list"));
+
+        //TODO: reenable once WorkaroundConstructorNode is fixed!
+//        assertTrue(errors.contains("ERROR: test.Nil does not exist"));
+//        assertTrue(errors.contains("ERROR: test.Pair has no suitable constructor"));
+//        assertTrue(errors.contains("ERROR: test.Pair has no suitable constructor"));
+
+        assertTrue(errors.contains("ERROR: People is not mapped"));
+        assertTrue(errors.contains("ERROR: Person has no mapped firstName"));
+        assertTrue(errors.contains("ERROR: Person has no mapped addr"));
+        assertTrue(errors.contains("ERROR: Address has no mapped town"));
+        assertTrue(errors.contains("ERROR: Address has no mapped name"));
+        assertTrue(errors.contains("ERROR: Address has no mapped country.type"));
+
+        assertTrue(errors.contains("ERROR: ")); //should be: "string has no mapped length"
+        assertTrue(errors.contains("ERROR: string has no mapped length"));
+
+//        assertTrue(errors.contains("BadQueries.java:26: warning: xxx is not defined"));
+//        assertTrue(errors.contains("BadQueries.java:27: warning: func is not defined"));
+//        assertTrue(errors.contains("BadQueries.java:28: warning: custom is not defined"));
+//        assertTrue(errors.contains("BadQueries.java:29: warning: p is not defined"));
+        assertTrue(errors.contains("ERROR: p.name is not defined"));
+
+        assertTrue(errors.contains("ERROR: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("ERROR: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("ERROR: key(), value(), or entry() argument must be map element"));
+
+        assertTrue(errors.contains("ERROR: entry() has no members"));
+
+        assertTrue(errors.contains("ERROR: illegal token: ?"));
 
 
     }
@@ -108,7 +147,7 @@ public class HQLValidationTest {
         return errors;
     }
 
-    private String compileWithEJC(String pack) throws IOException {
+    private String compileWithECJ(String pack) throws IOException {
         Path tempDir = Files.createTempDirectory("validator-test-out");
 
         List<String> files = new ArrayList<>();

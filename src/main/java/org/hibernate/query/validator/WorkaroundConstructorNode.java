@@ -24,6 +24,7 @@ public class WorkaroundConstructorNode extends ConstructorNode {
         catch (DetailedSemanticException dse) {
             //Ugh, ConstructorNode throws an exception when
             //it tries to load the class and can't!
+            //TODO: make this code work on ecj!!!!!
             String path = ((PathNode) getFirstChild()).getPath();
             ClassSymbol symbol = findClassByQualifiedName(path);
             if (symbol==null) {
