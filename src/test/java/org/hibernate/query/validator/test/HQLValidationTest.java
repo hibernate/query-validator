@@ -86,7 +86,7 @@ public class HQLValidationTest {
                 .forEach(s->cp.append(":").append(s));
         files.add(cp.toString());
 
-        Files.list(Paths.get("src/test/source/" + pack))
+        Files.list(Paths.get("src/test/source").resolve(pack))
                 .map(Path::toString)
                 .filter(s->s.endsWith(".java"))
                 .forEach(files::add);
