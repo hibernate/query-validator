@@ -5,6 +5,7 @@ import org.junit.Test;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -18,36 +19,7 @@ public class HQLValidationTest {
 
     @Test
     public void strict() throws Exception {
-        Path tempDir = Files.createTempDirectory("validator-test-out");
-
-        List<String> files = new ArrayList<>();
-
-//        files.add("-verbose");
-
-        files.add("-d");
-        files.add(tempDir.toString());
-
-        files.add("-classpath");
-        StringBuilder cp = new StringBuilder();
-//        cp.append("target/query-validator-1.0-SNAPSHOT.jar");
-        cp.append(":target/classes");
-        Files.list(Paths.get("lib"))
-                .map(Path::toString)
-                .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
-                .forEach(s->cp.append(":").append(s));
-        files.add(cp.toString());
-
-        Files.list(Paths.get("src/test/source/stricttest"))
-                .map(Path::toString)
-                .filter(s->s.endsWith(".java"))
-                .forEach(files::add);
-
-        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
-        ByteArrayOutputStream err = new ByteArrayOutputStream();
-        int rc = javac.run(null, null, err, files.toArray(new String[0]));
-        assert rc!=0;
-        String errors = err.toString();
-        System.out.println(errors);
+        String errors = compile("stricttest");
 
         assertFalse(errors.contains("Person.java:19:"));
 
@@ -149,7 +121,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:14: error: unexpected token: select"));
         assertTrue(errors.contains("Queries.java:15: error: unexpected token: ="));
         assertTrue(errors.contains("Queries.java:16: error: unexpected token: from"));
-        assertTrue(errors.contains("Queries.java:16: error: FROM expected"));
+        assertTrue(errors.contains("Queries.java:16: error: missing from clause or select list"));
         assertTrue(errors.contains("Queries.java:18: error: People is not mapped"));
         assertTrue(errors.contains("Queries.java:19: error: Person has no mapped firstName"));
         assertTrue(errors.contains("Queries.java:20: error: Person has no mapped addr"));
@@ -158,49 +130,21 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:29: error: stricttest.Nil does not exist"));
         assertTrue(errors.contains("Queries.java:30: error: stricttest.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:31: error: stricttest.Pair has no suitable constructor"));
-        assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
+        assertTrue(errors.contains("Queries.java:57: error: entry() has no members"));
         assertTrue(errors.contains("Queries.java:59: warning: xxx is not defined"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
         assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
-        assertTrue(errors.contains("Queries.java:100: error: Legacy-style query parameters (`?`) are no longer supported"));
-        assertTrue(errors.contains("Queries.java:112: error: node did not reference a map"));
-        assertTrue(errors.contains("Queries.java:113: error: node did not reference a map"));
+        assertTrue(errors.contains("Queries.java:100: error: illegal token: ?"));
+        assertTrue(errors.contains("Queries.java:112: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("Queries.java:113: error: key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("Queries.java:117: warning: p is not defined"));
+        assertTrue(errors.contains("Queries.java:117: error: p.name is not defined"));
         assertTrue(errors.contains("Queries.java:124: warning: custom is not defined"));
     }
 
     @Test
     public void unstrict() throws Exception {
-        Path tempDir = Files.createTempDirectory("validator-test-out");
-
-        List<String> files = new ArrayList<>();
-
-//        files.add("-verbose");
-
-        files.add("-d");
-        files.add(tempDir.toString());
-
-        files.add("-classpath");
-        StringBuilder cp = new StringBuilder();
-//        cp.append("target/query-validator-1.0-SNAPSHOT.jar");
-        cp.append(":target/classes");
-        Files.list(Paths.get("lib"))
-                .map(Path::toString)
-                .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
-                .forEach(s->cp.append(":").append(s));
-        files.add(cp.toString());
-
-        Files.list(Paths.get("src/test/source/unstricttest"))
-                .map(Path::toString)
-                .filter(s->s.endsWith(".java"))
-                .forEach(files::add);
-
-        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
-        ByteArrayOutputStream err = new ByteArrayOutputStream();
-        int rc = javac.run(null, null, err, files.toArray(new String[0]));
-        assert rc!=0;
-        String errors = err.toString();
-        System.out.println(errors);
+        String errors = compile("unstricttest");
 
         assertFalse(errors.contains("Person.java:19:"));
 
@@ -302,7 +246,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:14: error: unexpected token: select"));
         assertTrue(errors.contains("Queries.java:15: error: unexpected token: ="));
         assertTrue(errors.contains("Queries.java:16: error: unexpected token: from"));
-        assertTrue(errors.contains("Queries.java:16: error: FROM expected"));
+        assertTrue(errors.contains("Queries.java:16: error: missing from clause or select list"));
         assertTrue(errors.contains("Queries.java:18: error: People is not mapped"));
         assertTrue(errors.contains("Queries.java:19: error: Person has no mapped firstName"));
         assertTrue(errors.contains("Queries.java:20: error: Person has no mapped addr"));
@@ -311,15 +255,50 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Queries.java:29: error: unstricttest.Nil does not exist"));
         assertTrue(errors.contains("Queries.java:30: error: unstricttest.Pair has no suitable constructor"));
         assertTrue(errors.contains("Queries.java:31: error: unstricttest.Pair has no suitable constructor"));
-        assertTrue(errors.contains("Queries.java:57: error: entry(*) expression cannot be further de-referenced"));
+        assertTrue(errors.contains("Queries.java:57: error: entry() has no members"));
 //        assertTrue(errors.contains("Queries.java:59: warning: xxx is not defined"));
         assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
         assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
-        assertTrue(errors.contains("Queries.java:100: error: Legacy-style query parameters (`?`) are no longer supported"));
-        assertTrue(errors.contains("Queries.java:112: error: node did not reference a map"));
-        assertTrue(errors.contains("Queries.java:113: error: node did not reference a map"));
-        assertTrue(errors.contains("Queries.java:117: error: Unable to resolve path [p.name], unexpected token [p]"));
-//        assertTrue(errors.contains("Queries.java:117: warning: p is not defined"));
+        assertTrue(errors.contains("Queries.java:100: error: illegal token: ?"));
+        assertTrue(errors.contains("Queries.java:112: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("Queries.java:113: error: key(), value(), or entry() argument must be map element"));
+        assertFalse(errors.contains("Queries.java:117: warning: p is not defined"));
+        assertTrue(errors.contains("Queries.java:117: error: p.name is not defined"));
 //        assertTrue(errors.contains("Queries.java:124: warning: custom is not defined"));
     }
+
+    private String compile(String pack) throws IOException {
+        Path tempDir = Files.createTempDirectory("validator-test-out");
+
+        List<String> files = new ArrayList<>();
+
+//        files.add("-verbose");
+
+        files.add("-d");
+        files.add(tempDir.toString());
+
+        files.add("-classpath");
+        StringBuilder cp = new StringBuilder();
+//        cp.append("target/query-validator-1.0-SNAPSHOT.jar");
+        cp.append(":target/classes");
+        Files.list(Paths.get("lib"))
+                .map(Path::toString)
+                .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
+                .forEach(s->cp.append(":").append(s));
+        files.add(cp.toString());
+
+        Files.list(Paths.get("src/test/source/" + pack))
+                .map(Path::toString)
+                .filter(s->s.endsWith(".java"))
+                .forEach(files::add);
+
+        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
+        ByteArrayOutputStream err = new ByteArrayOutputStream();
+        int rc = javac.run(null, null, err, files.toArray(new String[0]));
+        assert rc!=0;
+        String errors = err.toString();
+        System.out.println(errors);
+        return errors;
+    }
+
 }
