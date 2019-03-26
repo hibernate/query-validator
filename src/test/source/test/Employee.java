@@ -1,4 +1,4 @@
-package stricttest;
+package test;
 
 import java.util.Map;
 import javax.persistence.Entity;

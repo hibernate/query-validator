@@ -1,4 +1,4 @@
-package unstricttest;
+package test;
 
 import javax.persistence.Embeddable;
 

@@ -1,34 +1,19 @@
-package unstricttest;
+package test;
 
-@SuppressWarnings("hql.unknown-function")
-public class Queries {
-    public void run() {
+public class GoodQueries {
+
+    public void goodQueries() {
         createQuery("from Person p where lower(p.name)='gavin'");
         createQuery("from Employee p where p.name='gavin' and p.employeeId=111");
         createQuery("from Person p join p.address a where a.city='barcelona'");
         createQuery("from Person p where p.address.city='barcelona'");
         createQuery("from Person p join p.pastAddresses a where a.city='barcelona'");
 
-        createQuery("do"); //syntax error
-        createQuery("from"); //syntax error
-        createQuery("from Person where p.name='gavin' select"); //syntax error
-        createQuery("from Person p where p.name+='gavin'"); //syntax error
-        createQuery("select from Person where p.name='gavin'"); //syntax error
-
-        createQuery("from People p where p.name='gavin'"); //error
-        createQuery("from Person p where p.firstName='gavin'"); //error
-        createQuery("from Person p join p.addr a"); //error
-        createQuery("from Person p where p.address.town='barcelona'"); //error
-
         createQuery("from Person p where p.name in (select p.name from Person p)"); //"in" operator with subquery
         createQuery("from Person p where exists (select a from p.pastAddresses a)"); //"exists" operator with correlated subquery
-        createQuery("from Person p where p.name in (select a.name from Address a)"); //error
 
-        createQuery("select new unstricttest.Pair(p,a) from Person p join p.address a"); //"select new"
-        createQuery("select new unstricttest.Pair(p,p.address) from Person p join p.address a"); //"select new"
-        createQuery("select new unstricttest.Nil(p,a) from Person p join p.address a"); //error
-        createQuery("select new unstricttest.Pair(p) from Person p"); //error
-        createQuery("select new unstricttest.Pair(p,p.name) from Person p"); //error
+        createQuery("select new test.Pair(p,a) from Person p join p.address a"); //"select new"
+        createQuery("select new test.Pair(p,p.address) from Person p join p.address a"); //"select new"
 
         createQuery("from Person p where size(p.pastAddresses) = 0"); //JPQL "size()" function
         createQuery("from Person p where exists elements(p.pastAddresses)"); //HQL "exists" operator with "elements()" function
@@ -53,10 +38,7 @@ public class Queries {
         createQuery("from Person p where '' in elements(p.notes)"); //"in" operator with HQL "elements()" function
         createQuery("from Person p where p.notes is empty"); //JPQL "is empty" operator
         createQuery("from Person p where p.notes is not empty"); //JPQL "is not empty" operator
-        createQuery("select e from Employee e join e.contacts c where key(c).length > 0"); //error
-        createQuery("select e from Employee e join e.contacts c where entry(c).value.address is null"); //error
         createQuery("select e from Employee e join e.contacts c where value(c).address is null");
-        createQuery("select xxx from Person"); //error
 
         createQuery("from Person p where type(p) = Employee");  //JPQL "type()" function
 
@@ -65,17 +47,13 @@ public class Queries {
         createQuery("from Person p where '' = all elements(p.notes)"); //"all" operator with correlated HQL "elements()" function
         createQuery("from Person p where 1 < any indices(p.notes)"); //"any" operator with correlated HQL "indices()" function
         createQuery("from Employee e where 'boss' = some indices(e.contacts)"); //"some" operator with correlated HQL "indices()" function
-        createQuery("from Person p where max(indices(p.notes)) > 1"); //error!
-        createQuery("from Person p where sum(elements(p.notes)) = ''"); //error!
 
         createQuery("select p.name, n from Person p join p.notes n where length(n)>0"); //join an element collection
-        createQuery("select p.name, n from Person p join p.notes n where n.length>0"); //error
         createQuery("from Person p where p.notes[0] is not null"); //HQL list indexing operator
         createQuery("from Employee e where e.contacts['boss'] is not null"); //HQL map indexing operator
         createQuery("from Employee e where e.contacts['boss'].id = 222"); //HQL map indexing operator
 
         createQuery("from Address add where add.country.code='au'");
-        createQuery("from Address add where add.country.type='au'"); //error
 
         createQuery("select p.whatever from Person p where p.whatever is not null");
         createQuery("select p.address.country.thing from Person p where p.address.country.thing is null");
@@ -97,7 +75,6 @@ public class Queries {
 
         createQuery("from Person p where p.name = ?1 and p.id > ?2"); //JPQL positional args
         createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
-        createQuery("from Person p where p.name = ? and p.id > ?"); //HQL positional args
 
         createQuery("from Person p where treat(p.emergencyContact as Employee).employeeId = 2"); //JPQL "treat as" operator
         createQuery("from Person p join treat(p.emergencyContact as Employee) c where c.employeeId = 2"); //JPQL "treat as" operator
@@ -108,20 +85,21 @@ public class Queries {
         createQuery("from Person p where '' member of p.notes"); //JPQL "member of" operator with element collection
         createQuery("from Person p where '' not member of p.notes"); //JPQL "not member of" operator with element collection
 
-        createQuery("select p.name, n from Person p join p.notes n where index(n) = 0");
-        createQuery("select p.name, n from Person p join p.notes n where key(n) = 0"); //error
-        createQuery("select p.name, n from Person p join p.notes n where value(n) = ''"); //error
-        createQuery("select p.name, n from Person p join p.notes n where entry(n) is not null"); //error
         createQuery("select upper(p.name), year(current_date) from Person p");
         createQuery("select upper(p.name), year(current_date) from Person p where year(current_date) = 2019 and upper(p.name) = 'GAVIN'");
-        createQuery("select upper(p.name), year(current_date) from Person"); //error
 
         createQuery("select nullif(e.name, ''), coalesce(e.employeeId, e.id, e.name) from Employee e"); //JPQL "nullif()" and "coalesce()"
         createQuery("select str(p.dob) from Person p"); //HQL "str()" function
         createQuery("select cast(p.dob as string) from Person p"); //SQL "cast()" function
         createQuery("select extract(month from p.dob), extract(year from p.dob) from Person p"); //SQL "extract()" function
         createQuery("select function('bit_length', e.name) from Employee e"); //JPQL "function()" passthrough
-        createQuery("from Person p where p.name = function('custom', p.id)"); //JPQL "function()" passthrough
+    }
+
+    @SuppressWarnings("hql.unknown-function")
+    public void okQueries() {
+        createQuery("select xxx from Person"); //warning
+        createQuery("select func(p.name), year(current_date) from Person p"); //warning
+        createQuery("from Person p where p.name = function('custom', p.id)"); //warning
     }
 
     private static void createQuery(String s) {}

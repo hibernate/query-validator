@@ -18,259 +18,52 @@ import static org.junit.Assert.assertTrue;
 public class HQLValidationTest {
 
     @Test
-    public void strict() throws Exception {
-        String errors = compile("stricttest");
+    public void run() throws Exception {
+        String errors = compile("test");
 
-        assertFalse(errors.contains("Person.java:19:"));
+        assertFalse(errors.contains("GoodQueries.java:"));
 
-        assertFalse(errors.contains("Queries.java:6:"));
-        assertFalse(errors.contains("Queries.java:7:"));
-        assertFalse(errors.contains("Queries.java:8:"));
-        assertFalse(errors.contains("Queries.java:9:"));
-        assertFalse(errors.contains("Queries.java:10:"));
+        assertTrue(errors.contains("BadQueries.java:6: error: unexpected token: do"));
+        assertTrue(errors.contains("BadQueries.java:7: error: unexpected token"));
+        assertTrue(errors.contains("BadQueries.java:8: error: unexpected token: select"));
+        assertTrue(errors.contains("BadQueries.java:9: error: unexpected token: ="));
+        assertTrue(errors.contains("BadQueries.java:10: error: unexpected token: from"));
+        assertTrue(errors.contains("BadQueries.java:10: error: missing from clause or select list"));
 
-        assertFalse(errors.contains("Queries.java:23:"));
-        assertFalse(errors.contains("Queries.java:24:"));
+        assertTrue(errors.contains("BadQueries.java:12: error: test.Nil does not exist"));
+        assertTrue(errors.contains("BadQueries.java:13: error: test.Pair has no suitable constructor"));
+        assertTrue(errors.contains("BadQueries.java:14: error: test.Pair has no suitable constructor"));
 
-        assertFalse(errors.contains("Queries.java:27:"));
-        assertFalse(errors.contains("Queries.java:28:"));
+        assertTrue(errors.contains("BadQueries.java:16: error: People is not mapped"));
+        assertTrue(errors.contains("BadQueries.java:17: error: Person has no mapped firstName"));
+        assertTrue(errors.contains("BadQueries.java:18: error: Person has no mapped addr"));
+        assertTrue(errors.contains("BadQueries.java:19: error: Address has no mapped town"));
+        assertTrue(errors.contains("BadQueries.java:20: error: Address has no mapped name"));
+        assertTrue(errors.contains("BadQueries.java:21: error: Address has no mapped country.type"));
 
-        assertFalse(errors.contains("Queries.java:36:"));
-        assertFalse(errors.contains("Queries.java:37:"));
+        assertTrue(errors.contains("BadQueries.java:23: error: ")); //should be: "string has no mapped length"
+        assertTrue(errors.contains("BadQueries.java:24: error: string has no mapped length"));
 
-        assertFalse(errors.contains("Queries.java:39:"));
-        assertFalse(errors.contains("Queries.java:40:"));
-        assertFalse(errors.contains("Queries.java:41:"));
-        assertFalse(errors.contains("Queries.java:42:"));
+        assertTrue(errors.contains("BadQueries.java:26: warning: xxx is not defined"));
+        assertTrue(errors.contains("BadQueries.java:27: warning: func is not defined"));
+        assertTrue(errors.contains("BadQueries.java:28: warning: custom is not defined"));
+        assertTrue(errors.contains("BadQueries.java:29: warning: p is not defined"));
+        assertTrue(errors.contains("BadQueries.java:29: error: p.name is not defined"));
 
-        assertFalse(errors.contains("Queries.java:44:"));
-        assertFalse(errors.contains("Queries.java:45:"));
-        assertFalse(errors.contains("Queries.java:46:"));
+        assertTrue(errors.contains("BadQueries.java:31: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("BadQueries.java:32: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("BadQueries.java:33: error: key(), value(), or entry() argument must be map element"));
 
-        assertFalse(errors.contains("Queries.java:48:"));
-        assertFalse(errors.contains("Queries.java:49:"));
-        assertFalse(errors.contains("Queries.java:50:"));
-        assertFalse(errors.contains("Queries.java:51:"));
-        assertFalse(errors.contains("Queries.java:52:"));
-        assertFalse(errors.contains("Queries.java:53:"));
-        assertFalse(errors.contains("Queries.java:54:"));
-        assertFalse(errors.contains("Queries.java:55:"));
+        assertTrue(errors.contains("BadQueries.java:36: error: entry() has no members"));
 
-        assertFalse(errors.contains("Queries.java:58:"));
-//        assertFalse(errors.contains("Queries.java:59:"));
+        assertTrue(errors.contains("BadQueries.java:38: error: illegal token: ?"));
 
-        assertFalse(errors.contains("Queries.java:61:"));
-
-        assertFalse(errors.contains("Queries.java:63:"));
-        assertFalse(errors.contains("Queries.java:64:"));
-        assertFalse(errors.contains("Queries.java:65:"));
-        assertFalse(errors.contains("Queries.java:66:"));
-        assertFalse(errors.contains("Queries.java:67:"));
-
-        assertFalse(errors.contains("Queries.java:71:"));
-        assertFalse(errors.contains("Queries.java:73:"));
-        assertFalse(errors.contains("Queries.java:74:"));
-        assertFalse(errors.contains("Queries.java:75:"));
-
-        assertFalse(errors.contains("Queries.java:77:"));
-
-        assertFalse(errors.contains("Queries.java:80:"));
-        assertFalse(errors.contains("Queries.java:81:"));
-
-        assertFalse(errors.contains("Queries.java:83:"));
-        assertFalse(errors.contains("Queries.java:84:"));
-        assertFalse(errors.contains("Queries.java:85:"));
-        assertFalse(errors.contains("Queries.java:86:"));
-        assertFalse(errors.contains("Queries.java:87:"));
-        assertFalse(errors.contains("Queries.java:88:"));
-
-        assertFalse(errors.contains("Queries.java:90:"));
-        assertFalse(errors.contains("Queries.java:91:"));
-        assertFalse(errors.contains("Queries.java:92:"));
-
-        assertFalse(errors.contains("Queries.java:94:"));
-        assertFalse(errors.contains("Queries.java:95:"));
-        assertFalse(errors.contains("Queries.java:96:"));
-
-        assertFalse(errors.contains("Queries.java:98:"));
-        assertFalse(errors.contains("Queries.java:99:"));
-
-        assertFalse(errors.contains("Queries.java:102:"));
-        assertFalse(errors.contains("Queries.java:103:"));
-        assertFalse(errors.contains("Queries.java:104:"));
-
-        assertFalse(errors.contains("Queries.java:106:"));
-        assertFalse(errors.contains("Queries.java:107:"));
-        assertFalse(errors.contains("Queries.java:108:"));
-        assertFalse(errors.contains("Queries.java:109:"));
-
-        assertFalse(errors.contains("Queries.java:111:"));
-
-        assertFalse(errors.contains("Queries.java:115:"));
-        assertFalse(errors.contains("Queries.java:116:"));
-
-        assertFalse(errors.contains("Queries.java:119:"));
-        assertFalse(errors.contains("Queries.java:120:"));
-        assertFalse(errors.contains("Queries.java:121:"));
-        assertFalse(errors.contains("Queries.java:122:"));
-        assertFalse(errors.contains("Queries.java:123:"));
-//        assertFalse(errors.contains("Queries.java:124:"));
+        //should be errors:
+//        assertTrue(errors.contains("BadQueries.java:40:"));
+//        assertTrue(errors.contains("BadQueries.java:41:"));
 
         assertTrue(errors.contains("Person.java:21: error: Person has no mapped x"));
-        assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
-        assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
-        assertTrue(errors.contains("Queries.java:14: error: unexpected token: select"));
-        assertTrue(errors.contains("Queries.java:15: error: unexpected token: ="));
-        assertTrue(errors.contains("Queries.java:16: error: unexpected token: from"));
-        assertTrue(errors.contains("Queries.java:16: error: missing from clause or select list"));
-        assertTrue(errors.contains("Queries.java:18: error: People is not mapped"));
-        assertTrue(errors.contains("Queries.java:19: error: Person has no mapped firstName"));
-        assertTrue(errors.contains("Queries.java:20: error: Person has no mapped addr"));
-        assertTrue(errors.contains("Queries.java:21: error: Address has no mapped town"));
-        assertTrue(errors.contains("Queries.java:25: error: Address has no mapped name"));
-        assertTrue(errors.contains("Queries.java:29: error: stricttest.Nil does not exist"));
-        assertTrue(errors.contains("Queries.java:30: error: stricttest.Pair has no suitable constructor"));
-        assertTrue(errors.contains("Queries.java:31: error: stricttest.Pair has no suitable constructor"));
-        assertTrue(errors.contains("Queries.java:56: error: "));
-        assertTrue(errors.contains("Queries.java:57: error: entry() has no members"));
-        assertTrue(errors.contains("Queries.java:59: warning: xxx is not defined"));
-        assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
-        assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
-        assertTrue(errors.contains("Queries.java:100: error: illegal token: ?"));
-        assertTrue(errors.contains("Queries.java:112: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("Queries.java:113: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("Queries.java:114: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("Queries.java:117: warning: p is not defined"));
-        assertTrue(errors.contains("Queries.java:117: error: p.name is not defined"));
-        assertTrue(errors.contains("Queries.java:124: warning: custom is not defined"));
-    }
 
-    @Test
-    public void unstrict() throws Exception {
-        String errors = compile("unstricttest");
-
-        assertFalse(errors.contains("Person.java:19:"));
-
-        assertFalse(errors.contains("Queries.java:6:"));
-        assertFalse(errors.contains("Queries.java:7:"));
-        assertFalse(errors.contains("Queries.java:8:"));
-        assertFalse(errors.contains("Queries.java:9:"));
-        assertFalse(errors.contains("Queries.java:10:"));
-
-        assertFalse(errors.contains("Queries.java:23:"));
-        assertFalse(errors.contains("Queries.java:24:"));
-
-        assertFalse(errors.contains("Queries.java:27:"));
-        assertFalse(errors.contains("Queries.java:28:"));
-
-        assertFalse(errors.contains("Queries.java:36:"));
-        assertFalse(errors.contains("Queries.java:37:"));
-
-        assertFalse(errors.contains("Queries.java:39:"));
-        assertFalse(errors.contains("Queries.java:40:"));
-        assertFalse(errors.contains("Queries.java:41:"));
-        assertFalse(errors.contains("Queries.java:42:"));
-
-        assertFalse(errors.contains("Queries.java:44:"));
-        assertFalse(errors.contains("Queries.java:45:"));
-        assertFalse(errors.contains("Queries.java:46:"));
-
-        assertFalse(errors.contains("Queries.java:48:"));
-        assertFalse(errors.contains("Queries.java:49:"));
-        assertFalse(errors.contains("Queries.java:50:"));
-        assertFalse(errors.contains("Queries.java:51:"));
-        assertFalse(errors.contains("Queries.java:52:"));
-        assertFalse(errors.contains("Queries.java:53:"));
-        assertFalse(errors.contains("Queries.java:54:"));
-        assertFalse(errors.contains("Queries.java:55:"));
-
-        assertFalse(errors.contains("Queries.java:58:"));
-        assertFalse(errors.contains("Queries.java:59:"));
-
-        assertFalse(errors.contains("Queries.java:61:"));
-
-        assertFalse(errors.contains("Queries.java:63:"));
-        assertFalse(errors.contains("Queries.java:64:"));
-        assertFalse(errors.contains("Queries.java:65:"));
-        assertFalse(errors.contains("Queries.java:66:"));
-        assertFalse(errors.contains("Queries.java:67:"));
-
-        assertFalse(errors.contains("Queries.java:71:"));
-        assertFalse(errors.contains("Queries.java:73:"));
-        assertFalse(errors.contains("Queries.java:74:"));
-        assertFalse(errors.contains("Queries.java:75:"));
-
-        assertFalse(errors.contains("Queries.java:77:"));
-
-        assertFalse(errors.contains("Queries.java:80:"));
-        assertFalse(errors.contains("Queries.java:81:"));
-
-        assertFalse(errors.contains("Queries.java:83:"));
-        assertFalse(errors.contains("Queries.java:84:"));
-        assertFalse(errors.contains("Queries.java:85:"));
-        assertFalse(errors.contains("Queries.java:86:"));
-        assertFalse(errors.contains("Queries.java:87:"));
-        assertFalse(errors.contains("Queries.java:88:"));
-
-        assertFalse(errors.contains("Queries.java:90:"));
-        assertFalse(errors.contains("Queries.java:91:"));
-        assertFalse(errors.contains("Queries.java:92:"));
-
-        assertFalse(errors.contains("Queries.java:94:"));
-        assertFalse(errors.contains("Queries.java:95:"));
-        assertFalse(errors.contains("Queries.java:96:"));
-
-        assertFalse(errors.contains("Queries.java:98:"));
-        assertFalse(errors.contains("Queries.java:99:"));
-
-        assertFalse(errors.contains("Queries.java:102:"));
-        assertFalse(errors.contains("Queries.java:103:"));
-        assertFalse(errors.contains("Queries.java:104:"));
-
-        assertFalse(errors.contains("Queries.java:106:"));
-        assertFalse(errors.contains("Queries.java:107:"));
-        assertFalse(errors.contains("Queries.java:108:"));
-        assertFalse(errors.contains("Queries.java:109:"));
-
-        assertFalse(errors.contains("Queries.java:111:"));
-
-        assertFalse(errors.contains("Queries.java:115:"));
-        assertFalse(errors.contains("Queries.java:116:"));
-
-        assertFalse(errors.contains("Queries.java:119:"));
-        assertFalse(errors.contains("Queries.java:120:"));
-        assertFalse(errors.contains("Queries.java:121:"));
-        assertFalse(errors.contains("Queries.java:122:"));
-        assertFalse(errors.contains("Queries.java:123:"));
-        assertFalse(errors.contains("Queries.java:124:"));
-
-        assertTrue(errors.contains("Person.java:21: error: Person has no mapped x"));
-        assertTrue(errors.contains("Queries.java:12: error: unexpected token: do"));
-        assertTrue(errors.contains("Queries.java:13: error: unexpected token"));
-        assertTrue(errors.contains("Queries.java:14: error: unexpected token: select"));
-        assertTrue(errors.contains("Queries.java:15: error: unexpected token: ="));
-        assertTrue(errors.contains("Queries.java:16: error: unexpected token: from"));
-        assertTrue(errors.contains("Queries.java:16: error: missing from clause or select list"));
-        assertTrue(errors.contains("Queries.java:18: error: People is not mapped"));
-        assertTrue(errors.contains("Queries.java:19: error: Person has no mapped firstName"));
-        assertTrue(errors.contains("Queries.java:20: error: Person has no mapped addr"));
-        assertTrue(errors.contains("Queries.java:21: error: Address has no mapped town"));
-        assertTrue(errors.contains("Queries.java:25: error: Address has no mapped name"));
-        assertTrue(errors.contains("Queries.java:29: error: unstricttest.Nil does not exist"));
-        assertTrue(errors.contains("Queries.java:30: error: unstricttest.Pair has no suitable constructor"));
-        assertTrue(errors.contains("Queries.java:31: error: unstricttest.Pair has no suitable constructor"));
-        assertTrue(errors.contains("Queries.java:56: error: "));
-        assertTrue(errors.contains("Queries.java:57: error: entry() has no members"));
-//        assertTrue(errors.contains("Queries.java:59: warning: xxx is not defined"));
-        assertTrue(errors.contains("Queries.java:72: error: string has no mapped length"));
-        assertTrue(errors.contains("Queries.java:78: error: Address has no mapped country.type"));
-        assertTrue(errors.contains("Queries.java:100: error: illegal token: ?"));
-        assertTrue(errors.contains("Queries.java:112: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("Queries.java:113: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("Queries.java:114: error: key(), value(), or entry() argument must be map element"));
-        assertFalse(errors.contains("Queries.java:117: warning: p is not defined"));
-        assertTrue(errors.contains("Queries.java:117: error: p.name is not defined"));
-//        assertTrue(errors.contains("Queries.java:124: warning: custom is not defined"));
     }
 
     private String compile(String pack) throws IOException {
