@@ -11,7 +11,7 @@ import java.util.Set;
 @AutoService(Processor.class)
 public class HQLProcessor extends AbstractProcessor {
 
-    AbstractProcessor delegate;
+    private AbstractProcessor delegate;
 
     @Override
     public SourceVersion getSupportedSourceVersion() {

@@ -275,7 +275,7 @@ class JavacSessionFactory extends MockSessionFactory {
         if (symbol instanceof Symbol.ClassSymbol) {
             Symbol.ClassSymbol type = (Symbol.ClassSymbol) symbol;
             return isEntity(type)
-                    && getEntityName(type).equals(entityName);
+                && getEntityName(type).equals(entityName);
         }
         else {
             return false;
