@@ -24,8 +24,8 @@ import java.util.Set;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
-import static org.hibernate.query.validator.ECJHelper.compiler;
-import static org.hibernate.query.validator.ECJHelper.qualifiedName;
+import static org.hibernate.query.validator.ECJSessionFactory.compiler;
+import static org.hibernate.query.validator.ECJSessionFactory.qualifiedName;
 import static org.hibernate.query.validator.Validation.validate;
 
 /**
@@ -61,7 +61,7 @@ public class ECJProcessor extends AbstractProcessor {
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        ECJHelper.initialize((BaseProcessingEnvImpl) processingEnv);
+        ECJSessionFactory.initialize((BaseProcessingEnvImpl) processingEnv);
     }
 
     private void checkHQL(Element element) {

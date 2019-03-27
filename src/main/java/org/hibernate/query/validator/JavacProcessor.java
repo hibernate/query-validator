@@ -56,7 +56,7 @@ public class JavacProcessor extends AbstractProcessor {
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        JavacHelper.initialize((JavacProcessingEnvironment) processingEnv);
+        JavacSessionFactory.initialize((JavacProcessingEnvironment) processingEnv);
     }
 
     private void checkHQL(Element element) {

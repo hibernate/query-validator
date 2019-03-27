@@ -1,21 +1,40 @@
 package org.hibernate.query.validator;
 
-import com.sun.tools.javac.code.Symbol;
+import com.sun.tools.javac.code.*;
+import com.sun.tools.javac.processing.JavacProcessingEnvironment;
+import com.sun.tools.javac.util.Context;
+import com.sun.tools.javac.util.Names;
 import org.hibernate.QueryException;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.type.CollectionType;
 import org.hibernate.type.CompositeCustomType;
 import org.hibernate.type.Type;
 
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.AnnotationValue;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.type.TypeKind;
 import javax.persistence.AccessType;
+import java.beans.Introspector;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static java.util.Arrays.stream;
 import static org.hibernate.internal.util.StringHelper.*;
-import static org.hibernate.query.validator.JavacHelper.*;
 
 class JavacSessionFactory extends MockSessionFactory {
+
+    private static Names names;
+    private static Types types;
+    private static Symtab syms;
+
+    static void initialize(JavacProcessingEnvironment processingEnv) {
+        Context context = processingEnv.getContext();
+        names = Names.instance(context);
+        types = Types.instance(context);
+        syms = Symtab.instance(context);
+    }
 
     JavacSessionFactory(ParseErrorHandler handler) {
         super(handler);
@@ -265,5 +284,310 @@ class JavacSessionFactory extends MockSessionFactory {
                     propertyType(symbol, getOwnerEntityName(),
                             propertyPath, defaultAccessType);
         }
+    }
+
+    static Symbol.ClassSymbol findEntityClass(String entityName) {
+        for (Symbol.PackageSymbol pack:
+                new ArrayList<>(syms.packages.values())) {
+            try {
+                for (Symbol type: pack.members()
+                        .getElements(symbol -> isMatchingEntity(
+                                symbol, entityName))) {
+                    return (Symbol.ClassSymbol) type;
+                }
+            }
+            catch (Exception e) {}
+        }
+        return null;
+    }
+
+    private static boolean isMatchingEntity(Symbol symbol, String entityName) {
+        if (symbol instanceof Symbol.ClassSymbol) {
+            Symbol.ClassSymbol type = (Symbol.ClassSymbol) symbol;
+            return isEntity(type)
+                    && getEntityName(type).equals(entityName);
+        }
+        else {
+            return false;
+        }
+    }
+
+    private static Symbol findProperty(Symbol.TypeSymbol type, String propertyName,
+                               AccessType defaultAccessType) {
+        //iterate up the superclass hierarchy
+        while (type instanceof Symbol.ClassSymbol) {
+            if (isMappedClass(type)) { //ignore unmapped intervening classes
+                AccessType accessType =
+                        getAccessType(type, defaultAccessType);
+                for (Symbol member: type.members()
+                        .getElements(symbol -> isMatchingProperty(
+                                symbol, propertyName, accessType))) {
+                    return member;
+                }
+            }
+            Symbol.ClassSymbol classSymbol = (Symbol.ClassSymbol) type;
+            com.sun.tools.javac.code.Type superclass = classSymbol.getSuperclass();
+            type = superclass == null ? null : superclass.tsym;
+        }
+        return null;
+    }
+
+    private static boolean isMatchingProperty(Symbol symbol, String propertyName,
+                                              AccessType accessType) {
+        return isPersistable(symbol, accessType)
+                && propertyName.equals(propertyName(symbol));
+    }
+
+    private static boolean isGetterMethod(Symbol.MethodSymbol method) {
+        if (!method.params().isEmpty()) {
+            return false;
+        }
+        String methodName = method.name.toString();
+        TypeTag returnType = method.getReturnType().getTag();
+        return methodName.startsWith("get") && returnType != TypeTag.VOID
+                || methodName.startsWith("is") && returnType == TypeTag.BOOLEAN;
+    }
+
+    private static boolean hasAnnotation(Symbol member, String annotationName) {
+        return getAnnotation(member, annotationName)!=null;
+    }
+
+    private static AnnotationMirror getAnnotation(Symbol member, String annotationName) {
+        for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
+            if (qualifiedName((com.sun.tools.javac.code.Type.ClassType) mirror.getAnnotationType())
+                    .equals(annotationName)) {
+                return mirror;
+            }
+        }
+        return null;
+    }
+
+    private static Object getAnnotationMember(AnnotationMirror annotation, String memberName) {
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry :
+                annotation.getElementValues().entrySet()) {
+            if (entry.getKey().getSimpleName().toString().equals(memberName)) {
+                return entry.getValue().getValue();
+            }
+        }
+        return null;
+    }
+
+    static boolean isMappedClass(Symbol.TypeSymbol type) {
+        return hasAnnotation(type, "javax.persistence.Entity")
+                || hasAnnotation(type, "javax.persistence.Embeddable")
+                || hasAnnotation(type, "javax.persistence.MappedSuperclass");
+    }
+
+    private static boolean isEntity(Symbol.TypeSymbol member) {
+        return member instanceof Symbol.ClassSymbol
+                && hasAnnotation(member, "javax.persistence.Entity");
+    }
+
+    private static boolean isId(Symbol member) {
+        return hasAnnotation(member, "javax.persistence.Id");
+    }
+
+    private static boolean isTransient(Symbol member) {
+        return hasAnnotation(member, "javax.persistence.Transient")
+                || (member.flags() & Flags.TRANSIENT)!=0;
+    }
+
+    private static boolean isEmbeddableType(Symbol.TypeSymbol type) {
+        return hasAnnotation(type, "javax.persistence.Embeddable");
+    }
+
+    private static boolean isEmbeddedProperty(Symbol member) {
+        return hasAnnotation(member, "javax.persistence.Embedded")
+                || hasAnnotation(member.type.tsym, "javax.persistence.Embeddable");
+    }
+
+    private static boolean isElementCollectionProperty(Symbol member) {
+        return hasAnnotation(member, "javax.persistence.ElementCollection");
+    }
+
+    private static boolean isToOneAssociation(Symbol member) {
+        return hasAnnotation(member, "javax.persistence.ManyToOne")
+                || hasAnnotation(member, "javax.persistence.OneToOne");
+    }
+
+    private static boolean isToManyAssociation(Symbol member) {
+        return hasAnnotation(member, "javax.persistence.ManyToMany")
+                || hasAnnotation(member, "javax.persistence.OneToMany");
+    }
+
+    private static AnnotationMirror toOneAnnotation(Symbol member) {
+        AnnotationMirror manyToOne =
+                getAnnotation(member, "javax.persistence.ManyToOne");
+        if (manyToOne!=null) return manyToOne;
+        AnnotationMirror oneToOne =
+                getAnnotation(member, "javax.persistence.OneToOne");
+        if (oneToOne!=null) return oneToOne;
+        return null;
+    }
+
+    private static AnnotationMirror toManyAnnotation(Symbol member) {
+        AnnotationMirror manyToMany =
+                getAnnotation(member, "javax.persistence.ManyToMany");
+        if (manyToMany!=null) return manyToMany;
+        AnnotationMirror oneToMany =
+                getAnnotation(member, "javax.persistence.OneToMany");
+        if (oneToMany!=null) return oneToMany;
+        return null;
+    }
+
+    private static String simpleName(com.sun.tools.javac.code.Type type) {
+        return type==null ? null :
+                type.tsym.name.toString();
+    }
+
+    private static String qualifiedName(com.sun.tools.javac.code.Type type) {
+        return type==null ? null :
+                type.tsym.flatName().toString();
+    }
+
+    private static com.sun.tools.javac.code.Type memberType(Symbol property) {
+        return property instanceof Symbol.MethodSymbol ?
+                ((Symbol.MethodSymbol) property).getReturnType() :
+                property.type;
+    }
+
+    private static AccessType getAccessType(Symbol.TypeSymbol type,
+                                    AccessType defaultAccessType) {
+        AnnotationMirror annotation =
+                getAnnotation(type, "javax.persistence.Access");
+        if (annotation==null) {
+            return defaultAccessType;
+        }
+        else {
+            Symbol.VarSymbol member = (Symbol.VarSymbol)
+                    getAnnotationMember(annotation, "value");
+            if (member==null) {
+                return defaultAccessType; //does not occur
+            }
+            switch (member.name.toString()) {
+                case "PROPERTY":
+                    return AccessType.PROPERTY;
+                case "FIELD":
+                    return AccessType.FIELD;
+                default:
+                    throw new IllegalStateException();
+            }
+        }
+    }
+
+    private static String getEntityName(Symbol.TypeSymbol type) {
+        AnnotationMirror entityAnnotation =
+                getAnnotation(type, "javax.persistence.Entity");
+        if (entityAnnotation==null) {
+            //not an entity!
+            return null;
+        }
+        String name = (String)
+                getAnnotationMember(entityAnnotation, "name");
+        //entity names are unqualified class names
+        return name==null ? type.name.toString() : name;
+    }
+
+    private static com.sun.tools.javac.code.Type getCollectionElementType(Symbol property) {
+        com.sun.tools.javac.code.Type elementType = memberType(property).getTypeArguments().last();
+        return elementType==null ? syms.objectType : elementType;
+    }
+
+    private static String getToOneTargetEntity(Symbol property) {
+        AnnotationMirror annotation = toOneAnnotation(property);
+        com.sun.tools.javac.code.Type.ClassType classType = (com.sun.tools.javac.code.Type.ClassType)
+                getAnnotationMember(annotation, "targetEntity");
+        return classType==null || classType.getKind() == TypeKind.VOID ?
+                //entity names are unqualified class names
+                simpleName(memberType(property)) :
+                simpleName(classType);
+    }
+
+    private static String getToManyTargetEntityName(Symbol property) {
+        AnnotationMirror annotation = toManyAnnotation(property);
+        com.sun.tools.javac.code.Type.ClassType classType = (com.sun.tools.javac.code.Type.ClassType)
+                getAnnotationMember(annotation, "targetEntity");
+        return classType==null || classType.getKind() == TypeKind.VOID ?
+                //entity names are unqualified class names
+                simpleName(getCollectionElementType(property)) :
+                simpleName(classType);
+    }
+
+    private static com.sun.tools.javac.code.Type getElementCollectionElementType(Symbol property) {
+        AnnotationMirror annotation = getAnnotation(property,
+                "javax.persistence.ElementCollection");
+        com.sun.tools.javac.code.Type classType = (com.sun.tools.javac.code.Type)
+                getAnnotationMember(annotation, "getElementCollectionClass");
+        return classType == null || classType.getKind() == TypeKind.VOID ?
+                getCollectionElementType(property) :
+                classType;
+    }
+
+    static Symbol.ClassSymbol findClassByQualifiedName(String path) {
+        return syms.classes.get(names.fromString(path));
+    }
+
+    static boolean isAssignable(Symbol.VarSymbol param, Symbol.ClassSymbol typeClass) {
+        return !typeClass.isSubClass(param.type.tsym, types);
+    }
+
+    private static AccessType getDefaultAccessType(Symbol.TypeSymbol type) {
+        //iterate up the superclass hierarchy
+        while (type instanceof Symbol.ClassSymbol) {
+            for (Symbol member: type.members().getElements()) {
+                if (isId(member)) {
+                    return member instanceof Symbol.MethodSymbol ?
+                            AccessType.PROPERTY : AccessType.FIELD;
+                }
+            }
+            Symbol.ClassSymbol classSymbol = (Symbol.ClassSymbol) type;
+            com.sun.tools.javac.code.Type superclass = classSymbol.getSuperclass();
+            type = superclass == null ? null : superclass.tsym;
+        }
+        return AccessType.FIELD;
+    }
+
+    private static String propertyName(Symbol symbol) {
+        String name = symbol.name.toString();
+        if (symbol instanceof Symbol.MethodSymbol) {
+            if (name.startsWith("get")) {
+                name = name.substring(3);
+            }
+            else if (name.startsWith("is")) {
+                name = name.substring(2);
+            }
+            return Introspector.decapitalize(name);
+        }
+        else {
+            return name;
+        }
+    }
+
+    private static boolean isPersistable(Symbol member, AccessType accessType) {
+        if (member.isStatic() || isTransient(member)) {
+            return false;
+        }
+        else if (member instanceof Symbol.VarSymbol) {
+            return accessType == AccessType.FIELD
+                    || hasAnnotation(member, "javax.persistence.Access");
+        }
+        else if (member instanceof Symbol.MethodSymbol) {
+            return isGetterMethod((Symbol.MethodSymbol) member)
+                    && (accessType == AccessType.PROPERTY
+                    || hasAnnotation(member, "javax.persistence.Access"));
+        }
+        else {
+            return false;
+        }
+    }
+
+    private static com.sun.tools.javac.code.Type getMemberType(Symbol member) {
+        return member instanceof Symbol.MethodSymbol ?
+                ((Symbol.MethodSymbol) member).getReturnType() :
+                member.type;
+    }
+
+    private static boolean isSubclass(Symbol.TypeSymbol sub, Symbol.TypeSymbol sup) {
+        return sub.isSubClass(sup, types);
     }
 }

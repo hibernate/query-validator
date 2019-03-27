@@ -13,7 +13,7 @@ import org.hibernate.type.Type;
 
 import java.util.List;
 
-import static org.hibernate.query.validator.JavacHelper.*;
+import static org.hibernate.query.validator.JavacSessionFactory.*;
 
 public class WorkaroundConstructorNode extends ConstructorNode {
     @Override
