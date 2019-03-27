@@ -1,27 +1,18 @@
 package org.hibernate.query.validator
 
-import org.eclipse.jdt.internal.compiler.Compiler
-import org.eclipse.jdt.internal.compiler.apt.dispatch.BaseProcessingEnvImpl
-import org.eclipse.jdt.internal.compiler.ast.*
-import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants
-import org.eclipse.jdt.internal.compiler.lookup.*
 import org.hibernate.hql.internal.ast.ParseErrorHandler
 import org.hibernate.type.*
 
 import javax.persistence.AccessType
 import java.beans.Introspector
-import java.util.function.BiFunction
-import java.util.function.BinaryOperator
 
-import static java.util.Arrays.stream
-import static org.eclipse.jdt.core.compiler.CharOperation.charToString
 import static org.hibernate.internal.util.StringHelper.*
 
 class EclipseSessionFactory extends MockSessionFactory {
 
-    public static Compiler compiler
+    public static def compiler
 
-    static void initialize(BaseProcessingEnvImpl processingEnv) {
+    static void initialize(processingEnv) {
         compiler = processingEnv.getCompiler()
     }
 
@@ -31,116 +22,108 @@ class EclipseSessionFactory extends MockSessionFactory {
 
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {
-        TypeDeclaration type = findEntityClass(entityName)
-        return type==null ? null : new EntityPersister(entityName, type)
+        def type = findEntityClass(entityName)
+        return type == null ? null : new EntityPersister(entityName, type)
     }
 
     @Override
     MockCollectionPersister createMockCollectionPersister(String role) {
         String entityName = root(role) //only works because entity names don't contain dots
         String propertyPath = unroot(role)
-        TypeBinding entityClass = findEntityClass(entityName).binding
+        def entityClass = findEntityClass(entityName).binding
         AccessType defaultAccessType = getDefaultAccessType(entityClass)
-        Binding property =
+        def property =
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType)
         CollectionType collectionType = collectionType(getMemberType(property), role)
         if (isToManyAssociation(property)) {
             return new ToManyAssociationPersister(role, collectionType,
                     getToManyTargetEntityName(property))
-        }
-        else if (isElementCollectionProperty(property)) {
-            TypeBinding elementType =
+        } else if (isElementCollectionProperty(property)) {
+            def elementType =
                     getElementCollectionElementType(property)
             return new ElementCollectionPersister(role, collectionType,
                     elementType, propertyPath, defaultAccessType)
-        }
-        else {
+        } else {
             return null
         }
     }
 
-    private static Binding findPropertyByPath(TypeBinding type,
-                                              String propertyPath,
-                                              AccessType defaultAccessType) {
-        Binding result = stream(split(".", propertyPath))
-                .<Binding>reduce((Binding) type,
-                { symbol, segment -> symbol==null ? null :
-                        findProperty(getMemberType(symbol),
-                                segment, defaultAccessType) } as BiFunction,
-                { last, current -> current } as BinaryOperator)
-        return result;
+    private static def findPropertyByPath(type,
+                                          String propertyPath,
+                                          AccessType defaultAccessType) {
+        return split(".", propertyPath).inject(type) {
+            current, segment ->
+                current == null ? null :
+                        findProperty(getMemberType(current),
+                                segment, defaultAccessType)
+        }
     }
 
-    static Type propertyType(Binding member,
+    static Type propertyType(member,
                              String entityName, String path,
                              AccessType defaultAccessType) {
-        TypeBinding memberType = getMemberType(member)
+        def memberType = getMemberType(member)
         if (isEmbeddedProperty(member)) {
             return new CompositeCustomType(
                     new Component(memberType, entityName,
                             path, defaultAccessType)) {
-                @Override String getName() {
-                    return simpleName(memberType)
+                @Override
+                String getName() {
+                    return simpleTypeName(memberType)
                 }
             }
-        }
-        else if (isToOneAssociation(member)) {
+        } else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member)
             return typeHelper.entity(targetEntity)
-        }
-        else if (isToManyAssociation(member)) {
+        } else if (isToManyAssociation(member)) {
             return collectionType(memberType, qualify(entityName, path))
-        }
-        else if (isElementCollectionProperty(member)) {
-            return collectionType(memberType, qualify(entityName,path))
-        }
-        else {
-            Type result = typeResolver.basic(qualifiedName(memberType))
+        } else if (isElementCollectionProperty(member)) {
+            return collectionType(memberType, qualify(entityName, path))
+        } else {
+            Type result = typeResolver.basic(qualifiedTypeName(memberType))
             return result == null ? UNKNOWN_TYPE : result
         }
     }
 
-    private static Type elementCollectionElementType(TypeBinding elementType,
+    private static Type elementCollectionElementType(elementType,
                                                      String role, String path,
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
             return new CompositeCustomType(
                     new Component(elementType,
                             role, path, defaultAccessType)) {
-                @Override String getName() {
-                    return simpleName(elementType)
+                @Override
+                String getName() {
+                    return simpleTypeName(elementType)
                 }
             }
-        }
-        else {
-            return typeResolver.basic(qualifiedName(elementType))
+        } else {
+            return typeResolver.basic(qualifiedTypeName(elementType))
         }
     }
 
-    private static CollectionType collectionType(
-            TypeBinding type, String role) {
-        return createCollectionType(role, simpleName(type.actualType()))
+    private static CollectionType collectionType(type, String role) {
+        return MockSessionFactory.createCollectionType(role, simpleTypeName(type.actualType()))
     }
 
     private static class Component extends MockComponent {
         private String[] propertyNames
         private Type[] propertyTypes
-        TypeBinding type
+        def type
 
-        Component(TypeBinding type,
-                  String entityName, String path,
+        Component(type, String entityName, String path,
                   AccessType defaultAccessType) {
             this.type = type
 
             List<String> names = []
             List<Type> types = []
 
-            while (type instanceof SourceTypeBinding) {
-                SourceTypeBinding classSymbol = (SourceTypeBinding) type
+            while (type != null && type.metaClass.hasProperty(type, "superclass")) {
+                def classSymbol = type
                 if (isMappedClass(type)) { //ignore unmapped intervening classes
                     AccessType accessType =
                             getAccessType(type, defaultAccessType)
-                    for (MethodBinding member: classSymbol.methods()) {
+                    for (member in classSymbol.methods()) {
                         if (isPersistable(member, accessType)) {
                             String name = propertyName(member)
                             Type propertyType =
@@ -153,7 +136,7 @@ class EclipseSessionFactory extends MockSessionFactory {
                             }
                         }
                     }
-                    for (FieldBinding member: classSymbol.fields()) {
+                    for (member in classSymbol.fields()) {
                         if (isPersistable(member, accessType)) {
                             String name = propertyName(member)
                             Type propertyType =
@@ -187,9 +170,9 @@ class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private class EntityPersister extends MockEntityPersister {
-        private final TypeDeclaration typeDeclaration
+        private final def typeDeclaration
 
-        private EntityPersister(String entityName, TypeDeclaration type) {
+        private EntityPersister(String entityName, type) {
             super(entityName, getDefaultAccessType(type.binding),
                     EclipseSessionFactory.this)
             this.typeDeclaration = type
@@ -205,7 +188,7 @@ class EclipseSessionFactory extends MockSessionFactory {
 
         @Override
         Type createPropertyType(String propertyPath) {
-            Binding symbol =
+            def symbol =
                     findPropertyByPath(typeDeclaration.binding, propertyPath,
                             defaultAccessType)
             return symbol == null ? null :
@@ -231,12 +214,12 @@ class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private class ElementCollectionPersister extends MockCollectionPersister {
-        private final TypeBinding elementType
+        private final def elementType
         private final AccessType defaultAccessType
 
         ElementCollectionPersister(String role,
                                    CollectionType collectionType,
-                                   TypeBinding elementType,
+                                   elementType,
                                    String propertyPath,
                                    AccessType defaultAccessType) {
             super(role, collectionType,
@@ -249,7 +232,7 @@ class EclipseSessionFactory extends MockSessionFactory {
 
         @Override
         Type getElementPropertyType(String propertyPath) {
-            Binding symbol =
+            def symbol =
                     findPropertyByPath(elementType, propertyPath,
                             defaultAccessType)
             return symbol == null ? null :
@@ -258,40 +241,40 @@ class EclipseSessionFactory extends MockSessionFactory {
         }
     }
 
-    private static String simpleName(TypeBinding type) {
-        return charToString(type.sourceName())
+    private static String simpleTypeName(type) {
+        return new String((char[]) type.sourceName())
     }
 
-    private static String simpleName(MethodBinding binding) {
-        return charToString(binding.selector)
+    static String simpleMethodName(binding) {
+        return new String((char[]) binding.selector)
     }
 
-    private static String simpleName(VariableBinding binding) {
-        return charToString(binding.name)
+    static String simpleVariableName(binding) {
+        return new String((char[]) binding.name)
     }
 
-    static String qualifiedName(TypeBinding type) {
-        return charToString(type.qualifiedPackageName()) +
-                "." + charToString(type.qualifiedSourceName())
+    static String qualifiedTypeName(type) {
+        return new String((char[]) type.qualifiedPackageName()) +
+                "." + new String((char[]) type.qualifiedSourceName())
     }
 
-    static String qualifiedName(MethodBinding binding) {
-        return qualifiedName(binding.declaringClass) +
-                "." + charToString(binding.selector)
+    static String qualifiedMethodName(binding) {
+        return qualifiedTypeName(binding.declaringClass) +
+                "." + new String((char[]) binding.selector)
     }
 
-    private static boolean hasAnnotation(Binding annotations, String name) {
-        for (AnnotationBinding ann: annotations.getAnnotations()) {
-            if (qualifiedName(ann.getAnnotationType()) == name) {
+    private static boolean hasAnnotation(annotations, String name) {
+        for (ann in annotations.getAnnotations()) {
+            if (qualifiedTypeName(ann.getAnnotationType()) == name) {
                 return true
             }
         }
         return false
     }
 
-    private static AnnotationBinding getAnnotation(Binding annotations, String name) {
-        for (AnnotationBinding ann: annotations.getAnnotations()) {
-            if (qualifiedName(ann.getAnnotationType()) == name) {
+    private static def getAnnotation(annotations, String name) {
+        for (ann in annotations.getAnnotations()) {
+            if (qualifiedTypeName(ann.getAnnotationType()) == name) {
                 return ann
             }
         }
@@ -299,15 +282,15 @@ class EclipseSessionFactory extends MockSessionFactory {
     }
 
 
-    private static AccessType getDefaultAccessType(TypeBinding type) {
-        while (type instanceof SourceTypeBinding) {
-            SourceTypeBinding classSymbol = (SourceTypeBinding) type
-            for (Binding member: classSymbol.methods()) {
+    private static AccessType getDefaultAccessType(type) {
+        while (type != null && type.metaClass.hasProperty(type, "superclass")) {
+            def classSymbol = type
+            for (member in classSymbol.methods()) {
                 if (isId(member)) {
                     return AccessType.PROPERTY
                 }
             }
-            for (Binding member: classSymbol.fields()) {
+            for (member in classSymbol.fields()) {
                 if (isId(member)) {
                     return AccessType.FIELD
                 }
@@ -317,9 +300,9 @@ class EclipseSessionFactory extends MockSessionFactory {
         return AccessType.FIELD
     }
 
-    private static TypeDeclaration findEntityClass(String entityName) {
-        for (CompilationUnitDeclaration unit: compiler.unitsToProcess) {
-            for (TypeDeclaration type: unit.types) {
+    private static def findEntityClass(String entityName) {
+        for (unit in compiler.unitsToProcess) {
+            for (type in unit.types) {
                 if (isEntity(type.binding) &&
                         getEntityName(type.binding) == entityName) {
                     return type
@@ -329,23 +312,23 @@ class EclipseSessionFactory extends MockSessionFactory {
         return null
     }
 
-    private static Binding findProperty(TypeBinding type, String property,
-                                        AccessType defaultAccessType) {
+    private static def findProperty(type, String property,
+                                    AccessType defaultAccessType) {
         //iterate up the superclass hierarchy
-        while (type instanceof SourceTypeBinding) {
-            SourceTypeBinding classSymbol = (SourceTypeBinding) type
+        while (type != null && type.metaClass.hasProperty(type, "superclass")) {
+            def classSymbol = type
             if (isMappedClass(type)) { //ignore unmapped intervening classes
                 AccessType accessType =
                         getAccessType(type, defaultAccessType)
-                for (MethodBinding member: classSymbol.methods()) {
+                for (member in classSymbol.methods()) {
                     if (isPersistable(member, accessType) &&
-                            property==propertyName(member)) {
+                            property == propertyName(member)) {
                         return member
                     }
                 }
-                for (FieldBinding member: classSymbol.fields()) {
+                for (member in classSymbol.fields()) {
                     if (isPersistable(member, accessType) &&
-                            property==propertyName(member)) {
+                            property == propertyName(member)) {
                         return member
                     }
                 }
@@ -355,220 +338,194 @@ class EclipseSessionFactory extends MockSessionFactory {
         return null
     }
 
-    private static String propertyName(Binding symbol) {
-        if (symbol instanceof MethodBinding) {
-            String name = simpleName((MethodBinding) symbol)
+    private static String propertyName(def symbol) {
+        if (symbol.class.simpleName == "MethodBinding") {
+            String name = simpleMethodName(symbol)
             if (name.startsWith("get")) {
                 name = name.substring(3)
-            }
-            else if (name.startsWith("is")) {
+            } else if (name.startsWith("is")) {
                 name = name.substring(2)
             }
             return Introspector.decapitalize(name)
-        }
-        else if (symbol instanceof FieldBinding) {
-            return simpleName((FieldBinding) symbol)
-        }
-        else {
-            return null
+        } else if (symbol.class.simpleName == "FieldBinding") {
+            return simpleVariableName(symbol)
+        } else {
+            return null;
         }
     }
 
-    private static boolean isPersistable(Binding member, AccessType accessType) {
+    private static boolean isPersistable(member, AccessType accessType) {
         if (isStatic(member) || isTransient(member)) {
             return false
-        }
-        else if (member instanceof FieldBinding) {
+        } else if (member.class.simpleName == "FieldBinding") {
             return accessType == AccessType.FIELD ||
                     hasAnnotation(member, "javax.persistence.Access")
-        }
-        else if (member instanceof MethodBinding) {
-            return isGetterMethod((MethodBinding) member) &&
+        } else if (member.class.simpleName == "MethodBinding") {
+            return isGetterMethod(member) &&
                     (accessType == AccessType.PROPERTY ||
                             hasAnnotation(member, "javax.persistence.Access"))
-        }
-        else {
+        } else {
             return false
         }
     }
 
-    private static boolean isGetterMethod(MethodBinding method) {
-        if (method.parameters.length!=0) {
+    private static boolean isGetterMethod(method) {
+        if (method.parameters.length != 0) {
             return false
         }
-        String methodName = simpleName(method)
-        TypeBinding returnType = method.returnType
-        return methodName.startsWith("get") && returnType.id != TypeIds.T_void ||
-                methodName.startsWith("is") && returnType.id == TypeIds.T_boolean
+        String methodName = simpleMethodName(method)
+        def returnType = method.returnType
+        return methodName.startsWith("get") && returnType.id != 6 ||
+                methodName.startsWith("is") && returnType.id == 5
     }
 
-    private static TypeBinding getMemberType(Binding binding) {
-        if (binding instanceof MethodBinding) {
-            return ((MethodBinding) binding).returnType
-        }
-        else if (binding instanceof VariableBinding) {
-            return ((VariableBinding) binding).type
-        }
-        else {
-            return (TypeBinding) binding
+    private static def getMemberType(binding) {
+        if (binding.class.simpleName == "MethodBinding") {
+            return binding.returnType
+        } else if (binding.class.simpleName == "FieldBinding") {
+            return binding.type
+        } else {
+            return binding
         }
     }
 
-    private static boolean isStatic(Binding member) {
-        if (member instanceof FieldBinding) {
-            if ((((FieldBinding) member).modifiers & ClassFileConstants.AccStatic) != 0) {
-                return true
-            }
-        }
-        else if (member instanceof MethodBinding) {
-            if ((((MethodBinding) member).modifiers & ClassFileConstants.AccStatic) != 0) {
-                return false
-            }
+    private static boolean isStatic(member) {
+        if ((member.modifiers & 0x0008) != 0) {
+            return true
         }
         return false
     }
 
-    private static boolean isTransient(Binding member) {
-        if (member instanceof FieldBinding) {
-            if ((((FieldBinding) member).modifiers & ClassFileConstants.AccTransient) != 0) {
-                return true
-            }
+    private static boolean isTransient(member) {
+        if ((member.modifiers & 0x0080) != 0) {
+            return true
         }
         return hasAnnotation(member, "javax.persistence.Transient")
     }
 
-    private static boolean isEmbeddableType(TypeBinding type) {
+    private static boolean isEmbeddableType(type) {
         return hasAnnotation(type, "javax.persistence.Embeddable")
     }
 
-    private static boolean isEmbeddedProperty(Binding member) {
+    private static boolean isEmbeddedProperty(member) {
         return hasAnnotation(member, "javax.persistence.Embedded") ||
                 hasAnnotation(getMemberType(member), "javax.persistence.Embeddable")
     }
 
-    private static boolean isElementCollectionProperty(Binding member) {
+    private static boolean isElementCollectionProperty(member) {
         return hasAnnotation(member, "javax.persistence.ElementCollection")
     }
 
-    private static boolean isToOneAssociation(Binding member) {
+    private static boolean isToOneAssociation(member) {
         return hasAnnotation(member, "javax.persistence.ManyToOne") ||
                 hasAnnotation(member, "javax.persistence.OneToOne")
     }
 
-    private static boolean isToManyAssociation(Binding member) {
+    private static boolean isToManyAssociation(member) {
         return hasAnnotation(member, "javax.persistence.ManyToMany") ||
                 hasAnnotation(member, "javax.persistence.OneToMany")
     }
 
-    private static AnnotationBinding toOneAnnotation(Binding member) {
-        AnnotationBinding manyToOne =
-                getAnnotation(member, "javax.persistence.ManyToOne")
-        if (manyToOne!=null) return manyToOne
-        AnnotationBinding oneToOne =
-                getAnnotation(member, "javax.persistence.OneToOne")
-        if (oneToOne!=null) return oneToOne
+    private static def toOneAnnotation(member) {
+        def manyToOne = getAnnotation(member, "javax.persistence.ManyToOne")
+        if (manyToOne != null) return manyToOne
+        def oneToOne = getAnnotation(member, "javax.persistence.OneToOne")
+        if (oneToOne != null) return oneToOne
         return null
     }
 
-    private static AnnotationBinding toManyAnnotation(Binding member) {
-        AnnotationBinding manyToMany =
-                getAnnotation(member, "javax.persistence.ManyToMany")
-        if (manyToMany!=null) return manyToMany
-        AnnotationBinding oneToMany =
-                getAnnotation(member, "javax.persistence.OneToMany")
-        if (oneToMany!=null) return oneToMany
+    private static def toManyAnnotation(member) {
+        def manyToMany = getAnnotation(member, "javax.persistence.ManyToMany")
+        if (manyToMany != null) return manyToMany
+        def oneToMany = getAnnotation(member, "javax.persistence.OneToMany")
+        if (oneToMany != null) return oneToMany
         return null
     }
 
-    private static TypeBinding getCollectionElementType(Binding property) {
-        TypeBinding memberType = getMemberType(property)
-        if (memberType instanceof ParameterizedTypeBinding) {
-            TypeBinding[] args = ((ParameterizedTypeBinding) memberType).arguments
-            return args.length>0 ? args[args.length-1] : null
+    private static def getCollectionElementType(property) {
+        def memberType = getMemberType(property)
+        if (memberType.metaClass.hasProperty(memberType, "arguments")) {
+            def args = memberType.arguments
+            return args.length > 0 ? args[args.length - 1] : null
         }
         return null
     }
 
-    private static Object getAnnotationMember(AnnotationBinding annotation,
+    private static Object getAnnotationMember(annotation,
                                               String memberName) {
-        for (ElementValuePair pair: annotation.getElementValuePairs()) {
-            if (simpleName(pair.binding) == memberName) {
+        for (pair in annotation.getElementValuePairs()) {
+            if (simpleMethodName(pair.binding) == memberName) {
                 return pair.value
             }
         }
         return null
     }
 
-    static String getToOneTargetEntity(Binding property) {
-        AnnotationBinding annotation = toOneAnnotation(property)
-        TypeBinding classType =
-                (TypeBinding) getAnnotationMember(annotation, "targetEntity")
-        return classType==null || classType.id == TypeIds.T_void ?
+    static String getToOneTargetEntity(property) {
+        def annotation = toOneAnnotation(property)
+        def classType = getAnnotationMember(annotation, "targetEntity")
+        return classType == null || classType.id == 6 ?
                 //entity names are unqualified class names
-                simpleName(getMemberType(property)) :
-                simpleName(classType)
+                simpleTypeName(getMemberType(property)) :
+                simpleTypeName(classType)
     }
 
-    private static String getToManyTargetEntityName(Binding property) {
-        AnnotationBinding annotation = toManyAnnotation(property)
-        TypeBinding classType =
-                (TypeBinding) getAnnotationMember(annotation, "targetEntity")
-        return classType==null || classType.id == TypeIds.T_void ?
+    private static String getToManyTargetEntityName(property) {
+        def annotation = toManyAnnotation(property)
+        def classType = getAnnotationMember(annotation, "targetEntity")
+        return classType == null || classType.id == 6 ?
                 //entity names are unqualified class names
-                simpleName(getCollectionElementType(property)) :
-                simpleName(classType)
+                simpleTypeName(getCollectionElementType(property)) :
+                simpleTypeName(classType)
     }
 
-    private static TypeBinding getElementCollectionElementType(Binding property) {
-        AnnotationBinding annotation = getAnnotation(property,
+    private static def getElementCollectionElementType(property) {
+        def annotation = getAnnotation(property,
                 "javax.persistence.ElementCollection")
-        TypeBinding classType =
-                (TypeBinding) getAnnotationMember(annotation, "getElementCollectionClass")
-        return classType == null || classType.id == TypeIds.T_void ?
+        def classType = getAnnotationMember(annotation, "getElementCollectionClass")
+        return classType == null || classType.id == 6 ?
                 getCollectionElementType(property) :
                 classType
     }
 
-    private static boolean isMappedClass(TypeBinding type) {
+    private static boolean isMappedClass(type) {
         return hasAnnotation(type, "javax.persistence.Entity") ||
                 hasAnnotation(type, "javax.persistence.Embeddable") ||
                 hasAnnotation(type, "javax.persistence.MappedSuperclass")
     }
 
-    private static boolean isEntity(TypeBinding member) {
+    private static boolean isEntity(member) {
         return hasAnnotation(member, "javax.persistence.Entity")
     }
 
-    private static boolean isId(Binding member) {
+    private static boolean isId(member) {
         return hasAnnotation(member, "javax.persistence.Id")
     }
 
-    private static String getEntityName(TypeBinding type) {
-        AnnotationBinding entityAnnotation =
+    private static String getEntityName(type) {
+        def entityAnnotation =
                 getAnnotation(type, "javax.persistence.Entity")
-        if (entityAnnotation==null) {
+        if (entityAnnotation == null) {
             //not an entity!
             return null
         }
-        String name = (String) getAnnotationMember(entityAnnotation, "name")
+        String name = getAnnotationMember(entityAnnotation, "name")
         //entity names are unqualified class names
-        return name==null ? simpleName(type) : name
+        return name == null ? simpleTypeName(type) : name
     }
 
-    private static AccessType getAccessType(TypeBinding type,
+    private static AccessType getAccessType(type,
                                             AccessType defaultAccessType) {
-        AnnotationBinding annotation =
+        def annotation =
                 getAnnotation(type, "javax.persistence.Access")
-        if (annotation==null) {
+        if (annotation == null) {
             return defaultAccessType
-        }
-        else {
-            VariableBinding member =
-                    (VariableBinding) getAnnotationMember(annotation, "value")
-            if (member==null) {
+        } else {
+            def member = getAnnotationMember(annotation, "value")
+            if (member == null) {
                 return defaultAccessType //does not occur
             }
-            switch (simpleName(member)) {
+            switch (simpleVariableName(member)) {
                 case "PROPERTY":
                     return AccessType.PROPERTY
                 case "FIELD":
@@ -581,15 +538,15 @@ class EclipseSessionFactory extends MockSessionFactory {
 
     @Override
     boolean isClassDefined(String qualifiedName) {
-        return findClassByQualifiedName(qualifiedName)!=null
+        return findClassByQualifiedName(qualifiedName) != null
     }
 
     @Override
     boolean isFieldDefined(String qualifiedClassName, String fieldName) {
-        TypeDeclaration type = findClassByQualifiedName(qualifiedClassName)
-        if (type==null) return false
-        for (FieldDeclaration field: type.fields) {
-            if (simpleName(field.binding) == fieldName) {
+        def type = findClassByQualifiedName(qualifiedClassName)
+        if (type == null) return false
+        for (field in type.fields) {
+            if (simpleVariableName(field.binding) == fieldName) {
                 return true
             }
         }
@@ -599,59 +556,53 @@ class EclipseSessionFactory extends MockSessionFactory {
     @Override
     boolean isConstructorDefined(String qualifiedClassName,
                                  List<Type> argumentTypes) {
-        TypeDeclaration symbol = findClassByQualifiedName(qualifiedClassName)
-        if (symbol==null) return false
-        for (AbstractMethodDeclaration cons : symbol.methods) {
-            if (cons instanceof ConstructorDeclaration) {
-                ConstructorDeclaration constructor = (ConstructorDeclaration) cons
-                if (constructor.arguments.length == argumentTypes.size()) {
-                    boolean argumentsCheckOut = true
-                    for (int i = 0; i < argumentTypes.size(); i++) {
-                        Type type = argumentTypes.get(i)
-                        Argument param = constructor.arguments[i]
-                        TypeBinding typeClass
-                        if (type instanceof EntityType) {
-                            String entityName = ((EntityType) type).getAssociatedEntityName()
-                            typeClass = findEntityClass(entityName).binding
-                        }
-                        else if (type instanceof CompositeCustomType) {
-                            typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type
-                        }
-                        else if (type instanceof BasicType) {
-                            String className
-                            //sadly there is no way to get the classname
-                            //from a Hibernate Type without trying to load
-                            //the class!
-                            try {
-                                className = type.getReturnedClass().getName()
-                            } catch (Exception e) {
-                                continue
-                            }
-                            typeClass = findClassByQualifiedName(className).binding
-                        }
-                        else {
-                            //TODO: what other Hibernate Types do we
-                            //      need to consider here?
+        def symbol = findClassByQualifiedName(qualifiedClassName)
+        if (symbol == null) return false
+        for (method in symbol.methods) {
+            if (method.isConstructor() &&
+                    method.arguments.length == argumentTypes.size()) {
+                boolean argumentsCheckOut = true
+                for (int i = 0; i < argumentTypes.size(); i++) {
+                    Type type = argumentTypes.get(i)
+                    def typeClass
+                    if (type instanceof EntityType) {
+                        String entityName = type.getAssociatedEntityName()
+                        typeClass = findEntityClass(entityName).binding
+                    } else if (type instanceof CompositeCustomType) {
+                        typeClass = type.getUserType().type
+                    } else if (type instanceof BasicType) {
+                        String className
+                        //sadly there is no way to get the classname
+                        //from a Hibernate Type without trying to load
+                        //the class!
+                        try {
+                            className = type.getReturnedClass().getName()
+                        } catch (Exception e) {
                             continue
                         }
-                        if (typeClass != null &&
-                                param.type.resolvedType.isSubtypeOf(typeClass)) {
-                            argumentsCheckOut = false
-                            break
-                        }
+                        typeClass = findClassByQualifiedName(className).binding
+                    } else {
+                        //TODO: what other Hibernate Types do we
+                        //      need to consider here?
+                        continue
                     }
-                    if (argumentsCheckOut) return true //matching constructor found!
+                    if (typeClass != null &&
+                            method.arguments[i].type.resolvedType.isSubtypeOf(typeClass)) {
+                        argumentsCheckOut = false
+                        break
+                    }
                 }
+                if (argumentsCheckOut) return true //matching constructor found!
             }
         }
         return false
     }
 
-    static TypeDeclaration findClassByQualifiedName(String path) {
-        for (CompilationUnitDeclaration unit: compiler.unitsToProcess) {
-            for (TypeDeclaration type: unit.types) {
+    static def findClassByQualifiedName(String path) {
+        for (unit in compiler.unitsToProcess) {
+            for (type in unit.types) {
                 if (isEntity(type.binding) &&
-                        qualifiedName(type.binding)==path) {
+                        qualifiedTypeName(type.binding) == path) {
                     return type
                 }
             }

@@ -1,14 +1,6 @@
 package org.hibernate.query.validator
 
 import antlr.RecognitionException
-import org.eclipse.jdt.core.compiler.CategorizedProblem
-import org.eclipse.jdt.internal.compiler.ASTVisitor
-import org.eclipse.jdt.internal.compiler.CompilationResult
-import org.eclipse.jdt.internal.compiler.Compiler
-import org.eclipse.jdt.internal.compiler.apt.dispatch.BaseProcessingEnvImpl
-import org.eclipse.jdt.internal.compiler.ast.*
-import org.eclipse.jdt.internal.compiler.lookup.BlockScope
-import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities
 import org.hibernate.QueryException
 import org.hibernate.hql.internal.ast.ParseErrorHandler
 
@@ -20,11 +12,7 @@ import javax.lang.model.element.Element
 import javax.lang.model.element.PackageElement
 import javax.lang.model.element.TypeElement
 
-import static org.eclipse.jdt.core.compiler.CharOperation.charToString
-import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber
-import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber
-import static org.hibernate.query.validator.EclipseSessionFactory.compiler
-import static org.hibernate.query.validator.EclipseSessionFactory.qualifiedName
+import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.Validation.validate
 
 /**
@@ -39,17 +27,16 @@ class EclipseProcessor extends AbstractProcessor {
 
     @Override
     boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        for (TypeElement annotation : annotations) {
-            for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
+        for (TypeElement annotation in annotations) {
+            for (Element element in roundEnv.getElementsAnnotatedWith(annotation)) {
                 if (element instanceof PackageElement) {
-                    for (Element root : roundEnv.getRootElements()) {
+                    for (Element root in roundEnv.getRootElements()) {
                         Element enclosing = root.getEnclosingElement()
-                        if (enclosing!=null && enclosing==element) {
+                        if (enclosing != null && enclosing == element) {
                             checkHQL(root)
                         }
                     }
-                }
-                else {
+                } else {
                     checkHQL(element)
                 }
             }
@@ -60,64 +47,145 @@ class EclipseProcessor extends AbstractProcessor {
     @Override
     synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv)
-        EclipseSessionFactory.initialize((BaseProcessingEnvImpl) processingEnv)
+        EclipseSessionFactory.initialize(processingEnv)
     }
 
     private void checkHQL(Element element) {
-        if (processingEnv instanceof BaseProcessingEnvImpl) {
-            Compiler compiler =
-                    ((BaseProcessingEnvImpl) processingEnv)
-                            .getCompiler()
-            for (CompilationUnitDeclaration unit: compiler.unitsToProcess) {
-                compiler.parser.getMethodBodies(unit)
-                for (TypeDeclaration type: unit.types) {
-                    if (qualifiedName(type.binding) == element.toString()) {
-                        type.traverse(new ASTVisitor() {
-                            boolean inCreateQueryMethod = false
-
-                            @Override
-                            boolean visit(MessageSend messageSend, BlockScope scope) {
-                                inCreateQueryMethod =
-                                        charToString(messageSend.selector) == "createQuery"
-                                return true
-                            }
-
-                            @Override
-                            void endVisit(MessageSend messageSend, BlockScope scope) {
-                                inCreateQueryMethod = false
-                            }
-
-                            @Override
-                            boolean visit(MemberValuePair pair, BlockScope scope) {
-                                if (qualifiedName(pair.binding)
-                                        == "javax.persistence.NamedQuery.query") {
-                                    inCreateQueryMethod = true
+        def compiler = processingEnv.compiler
+        compiler.unitsToProcess.each { unit ->
+            compiler.parser.getMethodBodies(unit)
+            unit.types.each { type ->
+                if (qualifiedTypeName(type.binding) == element.toString()) {
+                    type.methods.each { method ->
+                        validateStatements(method.statements, unit)
+                    }
+                    type.annotations.each { annotation ->
+                        switch (qualifiedTypeName(annotation.resolvedType)) {
+                            case "javax.persistence.NamedQuery":
+                                annotation.memberValuePairs.each { pair ->
+                                    if (simpleVariableName(pair) == "query") {
+                                        validateArgument(pair.value, unit)
+                                    }
                                 }
-                                return true
-                            }
-
-                            @Override
-                            void endVisit(MemberValuePair pair, BlockScope scope) {
-                                inCreateQueryMethod = false
-                            }
-
-                            @Override
-                            void endVisit(StringLiteral stringLiteral, BlockScope scope) {
-                                if (inCreateQueryMethod) {
-                                    String hql = charToString(stringLiteral.source())
-
-                                    ErrorReporter handler = new ErrorReporter(stringLiteral, unit)
-
-                                    validate(hql, handler, new EclipseSessionFactory(handler))
+                                break
+                            case "javax.persistence.NamedQueries":
+                                annotation.memberValue.expressions.each { ann ->
+                                    ann.memberValuePairs.each { pair ->
+                                        if (simpleVariableName(pair) == "query") {
+                                            validateArgument(pair.value, unit)
+                                        }
+                                    }
                                 }
-
-                            }
-                        }, unit.scope)
+                                break
+                        }
                     }
                 }
             }
-
         }
+    }
+
+    private void validateStatements(statements, unit) {
+        statements.each { statement -> validateStatement(statement, unit) }
+    }
+
+    private void validateStatement(statement, unit) {
+        if (statement != null) switch (statement.class.simpleName) {
+            case "MessageSend":
+                if (simpleMethodName(statement) == "createQuery") {
+                    statement.arguments.each { arg ->
+                        if (arg.class.simpleName == "StringLiteral") {
+                            validateArgument(arg, unit)
+                        }
+                    }
+                }
+                validateStatement(statement.receiver, unit)
+                validateStatements(statement.arguments, unit)
+                break
+            case "AbstractVariableDeclaration":
+                validateStatement(statement.initialization, unit)
+                break;
+            case "AssertStatement":
+                validateStatement(statement.assertExpression, unit)
+                break;
+            case "Block":
+                validateStatements(statement.statements, unit)
+                break
+            case "SwitchStatement":
+                validateStatement(statement.expression, unit)
+                validateStatements(statement.statements, unit)
+                break
+            case "ForStatement":
+                validateStatement(statement.action, unit)
+                break;
+            case "ForeachStatement":
+                validateStatement(statement.collection, unit)
+                validateStatement(statement.action, unit)
+                break;
+            case "DoStatement":
+            case "WhileStatement":
+                validateStatement(statement.condition, unit)
+                validateStatement(statement.action, unit)
+                break
+            case "IfStatement":
+                validateStatement(statement.condition, unit)
+                validateStatement(statement.thenStatement, unit)
+                validateStatement(statement.elseStatement, unit)
+                break
+            case "TryStatement":
+                validateStatement(statement.tryBlock, unit)
+                validateStatements(statement.catchBlocks, unit)
+                validateStatement(statement.finallyBlock, unit)
+                break
+            case "SynchronizedStatement":
+                validateStatement(statement.expression, unit)
+                validateStatement(statement.block, unit)
+                break
+            case "BinaryExpression":
+                validateStatement(statement.left, unit)
+                validateStatement(statement.right, unit)
+                break
+            case "UnaryExpression":
+            case "CastExpression":
+            case "InstanceOfExpression":
+                validateStatement(statement.expression, unit)
+                break
+            case "ConditionalExpression":
+                validateStatement(statement.condition, unit)
+                validateStatement(statement.valueIfTrue, unit)
+                validateStatement(statement.valueIfFalse, unit)
+                break
+            case "LambdaExpression":
+                validateStatement(statement.body, unit)
+                break
+            case "ArrayInitializer":
+                validateStatements(statement.expressions, unit)
+                break
+            case "ArrayAllocationExpression":
+                validateStatements(statement.initializer, unit)
+                break
+            case "Assignment":
+                validateStatement(statement.lhs, unit)
+                validateStatement(statement.expression, unit)
+                break
+            case "AllocationExpression":
+                validateStatements(statement.arguments, unit)
+                break
+            case "ReturnStatement":
+                validateStatement(statement.expression, unit);
+                break
+            case "ThrowStatement":
+                validateStatement(statement.exception, unit);
+                break
+            case "LabeledStatement":
+                validateStatement(statement.statement, unit);
+                break
+        }
+    }
+
+    void validateArgument(arg, unit) {
+        String hql = new String((char[]) arg.source())
+        ErrorReporter handler = new ErrorReporter(arg, unit)
+        validate(hql, handler, new EclipseSessionFactory(handler))
     }
 
     @Override
@@ -127,11 +195,10 @@ class EclipseProcessor extends AbstractProcessor {
 
     class ErrorReporter implements ParseErrorHandler {
 
-        private StringLiteral literal
-        private CompilationUnitDeclaration unit
+        private def literal
+        private def unit
 
-        ErrorReporter(StringLiteral literal,
-                      CompilationUnitDeclaration unit) {
+        ErrorReporter(literal, unit) {
             this.literal = literal
             this.unit = unit
         }
@@ -145,21 +212,20 @@ class EclipseProcessor extends AbstractProcessor {
         void throwQueryException() throws QueryException {}
 
         private void report(int severity, String message, int offset) {
-            CompilationResult result = unit.compilationResult()
+            def result = unit.compilationResult()
             char[] fileName = result.fileName
             int[] lineEnds = result.getLineSeparatorPositions()
             int startPosition = literal.sourceStart + offset + 1
             int endPosition = literal.sourceEnd - 1 //search for the end of the token!
             int lineNumber = startPosition >= 0 ?
-                    getLineNumber(startPosition, lineEnds, 0, lineEnds.length-1) : 0
+                    getLineNumber(startPosition, lineEnds, 0, lineEnds.length - 1) : 0
             int columnNumber = startPosition >= 0 ?
                     searchColumnNumber(lineEnds, lineNumber, startPosition) : 0
             String[] args = [message]
-            CategorizedProblem problem =
-                    compiler.problemReporter.problemFactory
-                            .createProblem(fileName, 0,
-                            args, args,
-                            severity,
+            def problem =
+                    compiler.problemReporter.problemFactory.createProblem(
+                            fileName, 0,
+                            args, args, severity,
                             startPosition, endPosition,
                             lineNumber, columnNumber)
             compiler.problemReporter.record(problem, result, unit, true)
@@ -167,17 +233,55 @@ class EclipseProcessor extends AbstractProcessor {
 
         @Override
         void reportError(RecognitionException e) {
-            report(ProblemSeverities.Error, e.getMessage(), e.getColumn()-1)
+            report(1, e.getMessage(), e.getColumn() - 1)
         }
 
         @Override
         void reportError(String text) {
-            report(ProblemSeverities.Error, text, 0)
+            report(1, text, 0)
         }
 
         @Override
         void reportWarning(String text) {
-            report(ProblemSeverities.Warning, text, 0)
+            report(0, text, 0)
+        }
+
+        int getLineNumber(int position, int[] lineEnds, int g, int d) {
+            if (lineEnds == null)
+                return 1
+            if (d == -1)
+                return 1
+            int m = g, start
+            while (g <= d) {
+                m = g + (d - g) / 2
+                if (position < (start = lineEnds[m])) {
+                    d = m - 1
+                } else if (position > start) {
+                    g = m + 1
+                } else {
+                    return m + 1
+                }
+            }
+            if (position < lineEnds[m]) {
+                return m + 1
+            }
+            return m + 2
+        }
+
+        int searchColumnNumber(int[] startLineIndexes, int lineNumber, int position) {
+            switch (lineNumber) {
+                case 1:
+                    return position + 1
+                case 2:
+                    return position - startLineIndexes[0]
+                default:
+                    int line = lineNumber - 2
+                    int length = startLineIndexes.length
+                    if (line >= length) {
+                        return position - startLineIndexes[length - 1]
+                    }
+                    return position - startLineIndexes[line]
+            }
         }
 
     }
