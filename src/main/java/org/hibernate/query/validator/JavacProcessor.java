@@ -1,7 +1,6 @@
 package org.hibernate.query.validator;
 
 import antlr.RecognitionException;
-import com.google.auto.service.AutoService;
 import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.MemberSelectTree;
@@ -16,7 +15,9 @@ import com.sun.tools.javac.util.Pair;
 import org.hibernate.QueryException;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 
-import javax.annotation.processing.*;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.lang.model.util.Elements;
@@ -32,15 +33,12 @@ import static org.hibernate.query.validator.Validation.validate;
  *
  * @see CheckHQL
  */
-@SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
-@AutoService(Processor.class)
+//@SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
+//@AutoService(Processor.class)
 public class JavacProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        if (!(processingEnv instanceof JavacProcessingEnvironment)) {
-            return false;
-        }
         for (TypeElement annotation : annotations) {
             for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
                 if (element instanceof PackageElement) {
@@ -52,15 +50,13 @@ public class JavacProcessor extends AbstractProcessor {
                 }
             }
         }
-        return true;
+        return false;
     }
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        if (processingEnv instanceof JavacProcessingEnvironment) {
-            JavacHelper.initialize((JavacProcessingEnvironment) processingEnv);
-        }
+        JavacHelper.initialize((JavacProcessingEnvironment) processingEnv);
     }
 
     private void checkHQL(Element element) {

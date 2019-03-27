@@ -1,7 +1,6 @@
 package org.hibernate.query.validator;
 
 import antlr.RecognitionException;
-import com.google.auto.service.AutoService;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
@@ -13,7 +12,9 @@ import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
 import org.hibernate.QueryException;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 
-import javax.annotation.processing.*;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
@@ -33,15 +34,12 @@ import static org.hibernate.query.validator.Validation.validate;
  *
  * @see CheckHQL
  */
-@SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
-@AutoService(Processor.class)
+//@SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
+//@AutoService(Processor.class)
 public class ECJProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        if (!(processingEnv instanceof BaseProcessingEnvImpl)) {
-            return false;
-        }
         for (TypeElement annotation : annotations) {
             for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
                 if (element instanceof PackageElement) {
@@ -57,16 +55,13 @@ public class ECJProcessor extends AbstractProcessor {
                 }
             }
         }
-        return true;
+        return false;
     }
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
-        if (processingEnv instanceof BaseProcessingEnvImpl) {
-            ECJHelper.initialize((BaseProcessingEnvImpl) processingEnv);
-        }
-
+        ECJHelper.initialize((BaseProcessingEnvImpl) processingEnv);
     }
 
     private void checkHQL(Element element) {
