@@ -130,26 +130,26 @@
                             <relocations>
                                 <relocation>
                                     <pattern>org.hibernate</pattern>
-                                    <shadedPattern>org.hibernate.query.shaded.hibernate</shadedPattern>
+                                    <shadedPattern>org.hibernate.query.validator.hibernate</shadedPattern>
                                     <excludes>
                                         <exclude>org.hibernate.query.validator.*</exclude>
                                     </excludes>
                                 </relocation>
                                 <relocation>
                                     <pattern>org.jboss</pattern>
-                                    <shadedPattern>org.hibernate.query.shaded</shadedPattern>
+                                    <shadedPattern>org.hibernate.query.validator</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>net</pattern>
-                                    <shadedPattern>org.hibernate.query.shaded</shadedPattern>
+                                    <shadedPattern>org.hibernate.query.validator</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>javax</pattern>
-                                    <shadedPattern>org.hibernate.query.shaded</shadedPattern>
+                                    <shadedPattern>org.hibernate.query.validator</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>antlr</pattern>
-                                    <shadedPattern>org.hibernate.query.shaded.antlr</shadedPattern>
+                                    <shadedPattern>org.hibernate.query.validator.antlr</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
