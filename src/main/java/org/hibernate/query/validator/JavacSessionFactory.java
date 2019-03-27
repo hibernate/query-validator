@@ -4,7 +4,6 @@ import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
-import org.hibernate.QueryException;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.type.*;
 import org.hibernate.type.Type;
@@ -41,28 +40,12 @@ class JavacSessionFactory extends MockSessionFactory {
 
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {
-        MockEntityPersister cached = entityPersisters.get(entityName);
-        if (cached!=null) return cached;
-
-        EntityPersister persister;
         Symbol.ClassSymbol type = findEntityClass(entityName);
-        if (type==null) {
-            return null;
-        }
-        else {
-            persister = new EntityPersister(entityName, type);
-        }
-
-        entityPersisters.put(entityName, persister);
-        return persister;
+        return type == null ? null : new EntityPersister(entityName, type);
     }
 
     @Override
     MockCollectionPersister createMockCollectionPersister(String role) {
-        MockCollectionPersister cached = collectionPersisters.get(role);
-        if (cached!=null) return cached;
-
-        MockCollectionPersister persister;
         String entityName = root(role); //only works because entity names don't contain dots
         String propertyPath = unroot(role);
         Symbol.ClassSymbol entityClass = findEntityClass(entityName);
@@ -71,21 +54,18 @@ class JavacSessionFactory extends MockSessionFactory {
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType);
         CollectionType collectionType = collectionType(memberType(property), role);
         if (isToManyAssociation(property)) {
-            persister = new ToManyAssociationPersister(role, collectionType,
+            return new ToManyAssociationPersister(role, collectionType,
                     getToManyTargetEntityName(property));
         }
         else if (isElementCollectionProperty(property)) {
             Symbol.TypeSymbol elementType =
                     getElementCollectionElementType(property).tsym;
-            persister = new ElementCollectionPersister(role, collectionType,
+            return new ElementCollectionPersister(role, collectionType,
                     elementType, propertyPath, defaultAccessType);
         }
         else {
             return null;
         }
-
-        collectionPersisters.put(role, persister);
-        return persister;
     }
 
     private static Symbol findPropertyByPath(Symbol.TypeSymbol type,
@@ -218,29 +198,17 @@ class JavacSessionFactory extends MockSessionFactory {
         @Override
         boolean isSubclassPersister(MockEntityPersister entityPersister) {
             EntityPersister persister = (EntityPersister) entityPersister;
-            return isSubclass(persister.type,type);
+            return persister.type.isSubClass(type, types);
         }
 
         @Override
-        public Type getPropertyType(String propertyPath)
-                throws QueryException {
-            Type cached = properties.get(propertyPath);
-            if (cached!=null) return cached;
-
+        Type createPropertyType(String propertyPath) {
             Symbol symbol =
                     findPropertyByPath(type, propertyPath,
                             defaultAccessType);
-            Type result = symbol == null ? null :
+            return symbol == null ? null :
                     propertyType(symbol, getEntityName(),
                             propertyPath, defaultAccessType);
-
-            if (result == null) {
-                //check subclasses, needed for treat()
-                result = getSubclassPropertyType(propertyPath);
-            }
-
-            properties.put(propertyPath, result);
-            return result;
         }
 
     }
@@ -647,7 +615,4 @@ class JavacSessionFactory extends MockSessionFactory {
                 member.type;
     }
 
-    private static boolean isSubclass(Symbol.TypeSymbol sub, Symbol.TypeSymbol sup) {
-        return sub.isSubClass(sup, types);
-    }
 }

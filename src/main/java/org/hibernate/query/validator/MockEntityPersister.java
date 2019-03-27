@@ -38,7 +38,7 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
     private final MockSessionFactory factory;
     private final List<MockEntityPersister> subclassPersisters = new ArrayList<>();
     final AccessType defaultAccessType;
-    final Map<String,Type> properties = new HashMap<>();
+    private final Map<String,Type> propertyTypesByName = new HashMap<>();
 
     MockEntityPersister(String entityName,
                         AccessType defaultAccessType,
@@ -49,8 +49,7 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
     }
 
     void initSubclassPersisters() {
-        for (MockEntityPersister other:
-                factory.entityPersisters.values()) {
+        for (MockEntityPersister other: factory.getMockEntityPersisters()) {
             other.addPersister(this);
             this.addPersister(other);
         }
@@ -62,7 +61,7 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
         }
     }
 
-    Type getSubclassPropertyType(String propertyPath) {
+    private Type getSubclassPropertyType(String propertyPath) {
         return subclassPersisters.stream()
                 .map(sp -> sp.getPropertyType(propertyPath))
                 .filter(Objects::nonNull)
@@ -88,7 +87,25 @@ abstract class MockEntityPersister implements EntityPersister, Queryable, Discri
     }
 
     @Override
-    public abstract Type getPropertyType(String propertyName) throws MappingException;
+    public final Type getPropertyType(String propertyPath) throws MappingException {
+        Type result = propertyTypesByName.get(propertyPath);
+        if (result!=null) {
+            return result;
+        }
+
+        result = createPropertyType(propertyPath);
+        if (result == null) {
+            //check subclasses, needed for treat()
+            result = getSubclassPropertyType(propertyPath);
+        }
+
+        if (result!=null) {
+            propertyTypesByName.put(propertyPath, result);
+        }
+        return result;
+    }
+
+    abstract Type createPropertyType(String propertyPath);
 
     @Override
     public Type getIdentifierType() {

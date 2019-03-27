@@ -43,6 +43,7 @@ import javax.persistence.Query;
 import javax.persistence.criteria.CriteriaBuilder;
 import java.sql.Connection;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.*;
 import static org.hibernate.internal.util.StringHelper.isEmpty;
@@ -53,9 +54,9 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     static final CustomType UNKNOWN_TYPE = new CustomType(new MockUserType());
 
-    final Map<String,MockEntityPersister> entityPersisters = new HashMap<>();
-    final Map<String,MockCollectionPersister> collectionPersisters = new HashMap<>();
-    private Set<String> unknownFunctions = new HashSet<>();
+    private final Map<String,MockEntityPersister> entityPersistersByName = new HashMap<>();
+    private final Map<String,MockCollectionPersister> collectionPersistersByName = new HashMap<>();
+    private final Set<String> unknownFunctions = new HashSet<>();
 
     private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
 
@@ -83,18 +84,18 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                 @Override
                 public EntityPersister entityPersister(String entityName)
                         throws MappingException {
-                    return createMockEntityPersister(entityName);
+                    return createEntityPersister(entityName);
                 }
 
                 @Override
                 public EntityPersister locateEntityPersister(String entityName)
                         throws MappingException {
-                    return createMockEntityPersister(entityName);
+                    return createEntityPersister(entityName);
                 }
 
                 @Override
                 public CollectionPersister collectionPersister(String role) {
-                    return createMockCollectionPersister(role);
+                    return createCollectionPersister(role);
                 }
             };
 
@@ -127,18 +128,41 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
     /**
      * Lazily create a {@link MockEntityPersister}
      */
-    abstract EntityPersister createMockEntityPersister(String entityName);
+    abstract MockEntityPersister createMockEntityPersister(String entityName);
 
     /**
      * Lazily create a {@link MockCollectionPersister}
      */
-    abstract CollectionPersister createMockCollectionPersister(String role);
+    abstract MockCollectionPersister createMockCollectionPersister(String role);
 
     abstract boolean isClassDefined(String qualifiedName);
 
     abstract boolean isFieldDefined(String qualifiedClassName, String fieldName);
 
     abstract boolean isConstructorDefined(String qualifiedClassName, List<Type> argumentTypes);
+
+    private EntityPersister createEntityPersister(String entityName) {
+        MockEntityPersister result = entityPersistersByName.get(entityName);
+        if (result!=null) return result;
+        result = createMockEntityPersister(entityName);
+        entityPersistersByName.put(entityName, result);
+        return result;
+    }
+
+    private CollectionPersister createCollectionPersister(String entityName) {
+        MockCollectionPersister result = collectionPersistersByName.get(entityName);
+        if (result!=null) return result;
+        result = createMockCollectionPersister(entityName);
+        collectionPersistersByName.put(entityName, result);
+        return result;
+    }
+
+    List<MockEntityPersister> getMockEntityPersisters() {
+        return entityPersistersByName.values()
+                .stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
 
     @SuppressWarnings("deprecation")
     @Override
@@ -149,21 +173,21 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
     @Override
     public Type getIdentifierType(String className)
             throws MappingException {
-        return createMockEntityPersister(className)
+        return createEntityPersister(className)
                 .getIdentifierType();
     }
 
     @Override
     public String getIdentifierPropertyName(String className)
             throws MappingException {
-        return createMockEntityPersister(className)
+        return createEntityPersister(className)
                 .getIdentifierPropertyName();
     }
 
     @Override
     public Type getReferencedPropertyType(String className, String propertyName)
             throws MappingException {
-        return createMockEntityPersister(className)
+        return createEntityPersister(className)
                 .getPropertyType(propertyName);
     }
 

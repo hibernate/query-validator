@@ -5,7 +5,6 @@ import org.eclipse.jdt.internal.compiler.apt.dispatch.BaseProcessingEnvImpl;
 import org.eclipse.jdt.internal.compiler.ast.*;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.*;
-import org.hibernate.QueryException;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.type.*;
 
@@ -32,28 +31,12 @@ class ECJSessionFactory extends MockSessionFactory {
 
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {
-        MockEntityPersister cached = entityPersisters.get(entityName);
-        if (cached!=null) return cached;
-
-        EntityPersister persister;
         TypeDeclaration type = findEntityClass(entityName);
-        if (type==null) {
-            return null;
-        }
-        else {
-            persister = new EntityPersister(entityName, type);
-        }
-
-        entityPersisters.put(entityName, persister);
-        return persister;
+        return type == null ? null : new EntityPersister(entityName, type);
     }
 
     @Override
     MockCollectionPersister createMockCollectionPersister(String role) {
-        MockCollectionPersister cached = collectionPersisters.get(role);
-        if (cached!=null) return cached;
-
-        MockCollectionPersister persister;
         String entityName = root(role); //only works because entity names don't contain dots
         String propertyPath = unroot(role);
         TypeBinding entityClass = findEntityClass(entityName).binding;
@@ -62,21 +45,18 @@ class ECJSessionFactory extends MockSessionFactory {
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType);
         CollectionType collectionType = collectionType(getMemberType(property), role);
         if (isToManyAssociation(property)) {
-            persister = new ToManyAssociationPersister(role, collectionType,
+            return new ToManyAssociationPersister(role, collectionType,
                     getToManyTargetEntityName(property));
         }
         else if (isElementCollectionProperty(property)) {
             TypeBinding elementType =
                     getElementCollectionElementType(property);
-            persister = new ElementCollectionPersister(role, collectionType,
+            return new ElementCollectionPersister(role, collectionType,
                     elementType, propertyPath, defaultAccessType);
         }
         else {
             return null;
         }
-
-        collectionPersisters.put(role, persister);
-        return persister;
     }
 
     private static Binding findPropertyByPath(TypeBinding type,
@@ -221,29 +201,17 @@ class ECJSessionFactory extends MockSessionFactory {
         @Override
         boolean isSubclassPersister(MockEntityPersister entityPersister) {
             EntityPersister persister = (EntityPersister) entityPersister;
-            return isSubclass(persister.type.binding, type.binding);
+            return persister.type.binding.isSubtypeOf(type.binding);
         }
 
         @Override
-        public Type getPropertyType(String propertyPath)
-                throws QueryException {
-            Type cached = properties.get(propertyPath);
-            if (cached!=null) return cached;
-
+        Type createPropertyType(String propertyPath)  {
             Binding symbol =
                     findPropertyByPath(type.binding, propertyPath,
                             defaultAccessType);
-            Type result = symbol == null ? null :
+            return symbol == null ? null :
                     propertyType(symbol, getEntityName(),
                             propertyPath, defaultAccessType);
-
-            if (result == null) {
-                //check subclasses, needed for treat()
-                result = getSubclassPropertyType(propertyPath);
-            }
-
-            properties.put(propertyPath, result);
-            return result;
         }
 
     }
@@ -330,10 +298,6 @@ class ECJSessionFactory extends MockSessionFactory {
             }
         }
         return null;
-    }
-
-    private static boolean isSubclass(TypeBinding subtype, TypeBinding type) {
-        return subtype.isSubtypeOf(type);
     }
 
     private static AccessType getDefaultAccessType(TypeBinding type) {
@@ -537,7 +501,7 @@ class ECJSessionFactory extends MockSessionFactory {
         return null;
     }
 
-    static String getToOneTargetEntity(Binding property) {
+    private static String getToOneTargetEntity(Binding property) {
         AnnotationBinding annotation = toOneAnnotation(property);
         TypeBinding classType = (TypeBinding)
                 getAnnotationMember(annotation, "targetEntity");
