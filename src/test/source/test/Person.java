@@ -2,6 +2,7 @@ package test;
 
 import javax.persistence.Id;
 import javax.persistence.Entity;
+import javax.persistence.Basic;
 import javax.persistence.Access;
 import javax.persistence.ElementCollection;
 import javax.persistence.OneToMany;
@@ -23,6 +24,8 @@ import static javax.persistence.AccessType.PROPERTY;
 public class Person {
     @Id long id;
     public String name;
+    @Basic(optional=false)
+    public Sex sex;
     public Date dob;
     @OneToOne
     public Address address;

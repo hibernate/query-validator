@@ -93,6 +93,8 @@ public class GoodQueries {
         createQuery("select cast(p.dob as string) from Person p"); //SQL "cast()" function
         createQuery("select extract(month from p.dob), extract(year from p.dob) from Person p"); //SQL "extract()" function
         createQuery("select function('bit_length', e.name) from Employee e"); //JPQL "function()" passthrough
+
+        createQuery("from Person p where p.sex = test.Sex.FEMALE");
     }
 
     @SuppressWarnings("hql.unknown-function")

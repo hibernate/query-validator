@@ -6,8 +6,7 @@ import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
 import org.hibernate.QueryException;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
-import org.hibernate.type.CollectionType;
-import org.hibernate.type.CompositeCustomType;
+import org.hibernate.type.*;
 import org.hibernate.type.Type;
 
 import javax.lang.model.element.AnnotationMirror;
@@ -156,10 +155,13 @@ class JavacSessionFactory extends MockSessionFactory {
     private static class Component extends MockComponent {
         private String[] propertyNames;
         private Type[] propertyTypes;
+        Symbol.TypeSymbol type;
 
         Component(Symbol.TypeSymbol type,
                   String entityName, String path,
                   AccessType defaultAccessType) {
+            this.type = type;
+
             List<String> names = new ArrayList<>();
             List<Type> types = new ArrayList<>();
 
@@ -286,7 +288,7 @@ class JavacSessionFactory extends MockSessionFactory {
         }
     }
 
-    static Symbol.ClassSymbol findEntityClass(String entityName) {
+    private static Symbol.ClassSymbol findEntityClass(String entityName) {
         for (Symbol.PackageSymbol pack:
                 new ArrayList<>(syms.packages.values())) {
             try {
@@ -372,7 +374,7 @@ class JavacSessionFactory extends MockSessionFactory {
         return null;
     }
 
-    static boolean isMappedClass(Symbol.TypeSymbol type) {
+    private static boolean isMappedClass(Symbol.TypeSymbol type) {
         return hasAnnotation(type, "javax.persistence.Entity")
                 || hasAnnotation(type, "javax.persistence.Embeddable")
                 || hasAnnotation(type, "javax.persistence.MappedSuperclass");
@@ -523,12 +525,70 @@ class JavacSessionFactory extends MockSessionFactory {
                 classType;
     }
 
-    static Symbol.ClassSymbol findClassByQualifiedName(String path) {
-        return syms.classes.get(names.fromString(path));
+    @Override
+    boolean isClassDefined(String qualifiedName) {
+        return findClassByQualifiedName(qualifiedName)!=null;
     }
 
-    static boolean isAssignable(Symbol.VarSymbol param, Symbol.ClassSymbol typeClass) {
-        return !typeClass.isSubClass(param.type.tsym, types);
+    @Override
+    boolean isFieldDefined(String qualifiedClassName, String fieldName) {
+        Symbol.ClassSymbol type = findClassByQualifiedName(qualifiedClassName);
+        if (type==null) return false;
+        return type.members().lookup(names.fromString(fieldName)).sym != null;
+    }
+
+    @Override
+    boolean isConstructorDefined(String qualifiedClassName,
+                                 List<org.hibernate.type.Type> argumentTypes) {
+        Symbol.ClassSymbol symbol = findClassByQualifiedName(qualifiedClassName);
+        if (symbol==null) return false;
+        for (Symbol cons: symbol.members().getElements(Symbol::isConstructor)) {
+            Symbol.MethodSymbol constructor = (Symbol.MethodSymbol) cons;
+            if (constructor.params.length()==argumentTypes.size()) {
+                boolean argumentsCheckOut = true;
+                for (int i=0; i<argumentTypes.size(); i++) {
+                    org.hibernate.type.Type type = argumentTypes.get(i);
+                    Symbol.VarSymbol param = constructor.params.get(i);
+                    Symbol.TypeSymbol typeClass;
+                    if (type instanceof EntityType) {
+                        String entityName = ((EntityType) type).getAssociatedEntityName();
+                        typeClass = findEntityClass(entityName);
+                    }
+                    else if (type instanceof CompositeCustomType) {
+                        typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
+                    }
+                    else if (type instanceof BasicType) {
+                        String className;
+                        //sadly there is no way to get the classname
+                        //from a Hibernate Type without trying to load
+                        //the class!
+                        try {
+                            className = type.getReturnedClass().getName();
+                        }
+                        catch (Exception e) {
+                            continue;
+                        }
+                        typeClass = findClassByQualifiedName(className);
+                    }
+                    else {
+                        //TODO: what other Hibernate Types do we
+                        //      need to consider here?
+                        continue;
+                    }
+                    if (typeClass!=null
+                            && !typeClass.isSubClass(param.type.tsym, types)) {
+                        argumentsCheckOut = false;
+                        break;
+                    }
+                }
+                if (argumentsCheckOut) return true; //matching constructor found!
+            }
+        }
+        return false;
+    }
+
+    private static Symbol.ClassSymbol findClassByQualifiedName(String path) {
+        return syms.classes.get(names.fromString(path));
     }
 
     private static AccessType getDefaultAccessType(Symbol.TypeSymbol type) {

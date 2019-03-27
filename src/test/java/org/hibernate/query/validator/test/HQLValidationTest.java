@@ -64,7 +64,7 @@ public class HQLValidationTest {
 //        assertTrue(errors.contains("BadQueries.java:40:"));
 //        assertTrue(errors.contains("BadQueries.java:41:"));
 
-        assertTrue(errors.contains("Person.java:21: error: Person has no mapped x"));
+        assertTrue(errors.contains("Person.java:22: error: Person has no mapped x"));
     }
 
     @Test
@@ -107,7 +107,7 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("illegal token: ?") && errors.contains("BadQueries.java (at line 38)"));
 
-        assertTrue(errors.contains("Person has no mapped x")&& errors.contains("Person.java (at line 21)"));
+        assertTrue(errors.contains("Person has no mapped x") && errors.contains("Person.java (at line 22)"));
 
     }
 

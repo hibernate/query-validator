@@ -134,6 +134,12 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
      */
     abstract CollectionPersister createMockCollectionPersister(String role);
 
+    abstract boolean isClassDefined(String qualifiedName);
+
+    abstract boolean isFieldDefined(String qualifiedClassName, String fieldName);
+
+    abstract boolean isConstructorDefined(String qualifiedClassName, List<Type> argumentTypes);
+
     @SuppressWarnings("deprecation")
     @Override
     public TypeResolver getTypeResolver() {

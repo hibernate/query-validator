@@ -2,15 +2,12 @@ package org.hibernate.query.validator;
 
 import org.eclipse.jdt.internal.compiler.Compiler;
 import org.eclipse.jdt.internal.compiler.apt.dispatch.BaseProcessingEnvImpl;
-import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
-import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.*;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.*;
 import org.hibernate.QueryException;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
-import org.hibernate.type.CollectionType;
-import org.hibernate.type.CompositeCustomType;
-import org.hibernate.type.Type;
+import org.hibernate.type.*;
 
 import javax.persistence.AccessType;
 import java.beans.Introspector;
@@ -149,10 +146,13 @@ class ECJSessionFactory extends MockSessionFactory {
     private static class Component extends MockComponent {
         private String[] propertyNames;
         private Type[] propertyTypes;
+        TypeBinding type;
 
         Component(TypeBinding type,
                   String entityName, String path,
                   AccessType defaultAccessType) {
+            this.type = type;
+
             List<String> names = new ArrayList<>();
             List<Type> types = new ArrayList<>();
 
@@ -617,4 +617,86 @@ class ECJSessionFactory extends MockSessionFactory {
             }
         }
     }
+
+    @Override
+    boolean isClassDefined(String qualifiedName) {
+        return findClassByQualifiedName(qualifiedName)!=null;
+    }
+
+    @Override
+    boolean isFieldDefined(String qualifiedClassName, String fieldName) {
+        TypeDeclaration type = findClassByQualifiedName(qualifiedClassName);
+        if (type==null) return false;
+        for (FieldDeclaration field: type.fields) {
+            if (simpleName(field.binding).equals(fieldName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    boolean isConstructorDefined(String qualifiedClassName,
+                                 List<Type> argumentTypes) {
+        TypeDeclaration symbol = findClassByQualifiedName(qualifiedClassName);
+        if (symbol==null) return false;
+        for (AbstractMethodDeclaration cons : symbol.methods) {
+            if (cons instanceof ConstructorDeclaration) {
+                ConstructorDeclaration constructor = (ConstructorDeclaration) cons;
+                if (constructor.arguments.length == argumentTypes.size()) {
+                    boolean argumentsCheckOut = true;
+                    for (int i = 0; i < argumentTypes.size(); i++) {
+                        Type type = argumentTypes.get(i);
+                        Argument param = constructor.arguments[i];
+                        TypeBinding typeClass;
+                        if (type instanceof EntityType) {
+                            String entityName = ((EntityType) type).getAssociatedEntityName();
+                            typeClass = findEntityClass(entityName).binding;
+                        }
+                        else if (type instanceof CompositeCustomType) {
+                            typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
+                        }
+                        else if (type instanceof BasicType) {
+                            String className;
+                            //sadly there is no way to get the classname
+                            //from a Hibernate Type without trying to load
+                            //the class!
+                            try {
+                                className = type.getReturnedClass().getName();
+                            } catch (Exception e) {
+                                continue;
+                            }
+                            typeClass = findClassByQualifiedName(className).binding;
+                        }
+                        else {
+                            //TODO: what other Hibernate Types do we
+                            //      need to consider here?
+                            continue;
+                        }
+                        if (typeClass != null
+                                && param.type.resolvedType.isSubtypeOf(typeClass)) {
+                            argumentsCheckOut = false;
+                            break;
+                        }
+                    }
+                    if (argumentsCheckOut) return true; //matching constructor found!
+                }
+            }
+        }
+        return false;
+    }
+
+    static TypeDeclaration findClassByQualifiedName(String path) {
+        for (CompilationUnitDeclaration unit: compiler.unitsToProcess) {
+            for (TypeDeclaration type: unit.types) {
+                if (isEntity(type.binding)
+                        && qualifiedName(type.binding).equals(path)) {
+                    return type;
+                }
+            }
+        }
+        return null;
+    }
+
+
 }
