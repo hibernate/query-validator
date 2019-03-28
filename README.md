@@ -110,8 +110,9 @@ the JPA specification.
 One important example of how the languages are different is the
 handling of function names. In the JPA spec, function names like
 `SUBSTRING`, `SQRT`, and `COALESCE` are *reserved words*. In HQL, 
-they're just regular identifiers, and may even refer to a 
-user-defined or vendor-specific SQL function.
+they're just regular identifiers, and you may even write a HQL
+query that directly calls a user-defined or non-portable SQL 
+function.
 
 ### Function arguments are not checked
 
