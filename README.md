@@ -78,7 +78,7 @@ manually.
    Annotation Processing** and select **Enable annotation 
    processing**. 
 2. Then go to **Java Compiler > Annotation Processing > 
-   Factory Path** and click **Add External JARs** and
+   Factory Path** and click **Add External JARs...** and
    add `target/query-validator-1.0-SNAPSHOT.jar` from this 
    project directory.
 
