@@ -96,7 +96,7 @@ public class ECJProcessor extends AbstractProcessor {
         }
     }
 
-    private boolean isCheckable(TypeBinding type, CompilationUnitDeclaration unit) {
+    private static boolean isCheckable(TypeBinding type, CompilationUnitDeclaration unit) {
         Binding packInfo = unit.scope.getType("package-info".toCharArray());
         return hasAnnotation(packInfo, CheckHQL.class.getName())
             || hasAnnotation(type, CheckHQL.class.getName());

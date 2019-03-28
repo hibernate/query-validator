@@ -9,7 +9,6 @@ import org.hibernate.type.*;
 import javax.persistence.AccessType;
 import java.beans.Introspector;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static java.util.Arrays.stream;
@@ -607,51 +606,47 @@ class ECJSessionFactory extends MockSessionFactory {
                 findClassByQualifiedName(qualifiedClassName);
         if (symbol==null) return false;
         for (MethodBinding method : symbol.methods()) {
-            if (method.isConstructor()) {
-                if (method.parameters.length == argumentTypes.size()) {
-                    boolean argumentsCheckOut = true;
-                    for (int i = 0; i < argumentTypes.size(); i++) {
-                        Type type = argumentTypes.get(i);
-                        TypeBinding param = method.parameters[i];
-                        TypeBinding typeClass;
-                        if (type instanceof EntityType) {
-                            String entityName = ((EntityType) type).getAssociatedEntityName();
-                            typeClass = findEntityClass(entityName);
-                        }
-                        else if (type instanceof CompositeCustomType) {
-                            typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
-                        }
-                        else if (type instanceof BasicType) {
-                            String className;
-                            //sadly there is no way to get the classname
-                            //from a Hibernate Type without trying to load
-                            //the class!
-                            try {
-                                className = type.getReturnedClass().getName();
-                            } catch (Exception e) {
-                                continue;
-                            }
-                            typeClass = findClassByQualifiedName(className);
-                        }
-                        else {
-                            //TODO: what other Hibernate Types do we
-                            //      need to consider here?
+            if (method.isConstructor()
+                    && method.parameters.length == argumentTypes.size()) {
+                boolean argumentsCheckOut = true;
+                for (int i = 0; i < argumentTypes.size(); i++) {
+                    Type type = argumentTypes.get(i);
+                    TypeBinding param = method.parameters[i];
+                    TypeBinding typeClass;
+                    if (type instanceof EntityType) {
+                        String entityName = ((EntityType) type).getAssociatedEntityName();
+                        typeClass = findEntityClass(entityName);
+                    } else if (type instanceof CompositeCustomType) {
+                        typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
+                    } else if (type instanceof BasicType) {
+                        String className;
+                        //sadly there is no way to get the classname
+                        //from a Hibernate Type without trying to load
+                        //the class!
+                        try {
+                            className = type.getReturnedClass().getName();
+                        } catch (Exception e) {
                             continue;
                         }
-                        if (typeClass != null && !typeClass.isSubtypeOf(param)) {
-                            argumentsCheckOut = false;
-                            break;
-                        }
+                        typeClass = findClassByQualifiedName(className);
+                    } else {
+                        //TODO: what other Hibernate Types do we
+                        //      need to consider here?
+                        continue;
                     }
-                    if (argumentsCheckOut) return true; //matching constructor found!
+                    if (typeClass != null && !typeClass.isSubtypeOf(param)) {
+                        argumentsCheckOut = false;
+                        break;
+                    }
                 }
+                if (argumentsCheckOut) return true; //matching constructor found!
             }
         }
         return false;
     }
 
     private TypeBinding findClassByQualifiedName(String path) {
-        char[][] name = Arrays.stream(path.split("\\."))
+        char[][] name = stream(path.split("\\."))
                 .map(String::toCharArray)
                 .toArray(char[][]::new);
         TypeBinding type = unit.scope.getType(name, name.length);
@@ -670,6 +665,5 @@ class ECJSessionFactory extends MockSessionFactory {
         return type instanceof MissingTypeBinding
             || type instanceof ProblemReferenceBinding;
     }
-
 
 }

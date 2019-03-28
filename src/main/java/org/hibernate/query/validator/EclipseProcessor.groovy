@@ -5,11 +5,8 @@ import org.hibernate.QueryException
 import org.hibernate.hql.internal.ast.ParseErrorHandler
 
 import javax.annotation.processing.AbstractProcessor
-import javax.annotation.processing.ProcessingEnvironment
 import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
-import javax.lang.model.element.Element
-import javax.lang.model.element.PackageElement
 import javax.lang.model.element.TypeElement
 
 import static org.hibernate.query.validator.EclipseSessionFactory.*
@@ -27,165 +24,154 @@ class EclipseProcessor extends AbstractProcessor {
 
     @Override
     boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        for (TypeElement annotation in annotations) {
-            for (Element element in roundEnv.getElementsAnnotatedWith(annotation)) {
-                if (element instanceof PackageElement) {
-                    for (Element root in roundEnv.getRootElements()) {
-                        Element enclosing = root.getEnclosingElement()
-                        if (enclosing != null && enclosing == element) {
-                            checkHQL(root)
-                        }
-                    }
-                } else {
-                    checkHQL(element)
-                }
+        def compiler = processingEnv.getCompiler()
+        if (!roundEnv.getRootElements().isEmpty()) {
+            for (unit in compiler.unitsToProcess) {
+                compiler.parser.getMethodBodies(unit)
+                checkHQL(unit, compiler)
             }
         }
         return false
     }
 
-    @Override
-    synchronized void init(ProcessingEnvironment processingEnv) {
-        super.init(processingEnv)
-        EclipseSessionFactory.initialize(processingEnv)
+    private static boolean isCheckable(type, unit) {
+        def packInfo = unit.scope.getType("package-info".toCharArray())
+        return hasAnnotation(packInfo, CheckHQL.class.getName()) ||
+                hasAnnotation(type, CheckHQL.class.getName())
     }
 
-    private void checkHQL(Element element) {
-        def compiler = processingEnv.compiler
-        compiler.unitsToProcess.each { unit ->
-            compiler.parser.getMethodBodies(unit)
-            unit.types.each { type ->
-                if (qualifiedTypeName(type.binding) == element.toString()) {
-                    type.methods.each { method ->
-                        validateStatements(method.statements, unit)
-                    }
-                    type.annotations.each { annotation ->
-                        switch (qualifiedTypeName(annotation.resolvedType)) {
-                            case "javax.persistence.NamedQuery":
-                                annotation.memberValuePairs.each { pair ->
+    private void checkHQL(unit, compiler) {
+        for (type in unit.types) {
+            if (isCheckable(type.binding, unit)) {
+                type.annotations.each { annotation ->
+                    switch (qualifiedTypeName(annotation.resolvedType)) {
+                        case "javax.persistence.NamedQuery":
+                            annotation.memberValuePairs.each { pair ->
+                                if (simpleVariableName(pair) == "query") {
+                                    validateArgument(pair.value, unit, compiler)
+                                }
+                            }
+                            break
+                        case "javax.persistence.NamedQueries":
+                            annotation.memberValue.expressions.each { ann ->
+                                ann.memberValuePairs.each { pair ->
                                     if (simpleVariableName(pair) == "query") {
-                                        validateArgument(pair.value, unit)
+                                        validateArgument(pair.value, unit, compiler)
                                     }
                                 }
-                                break
-                            case "javax.persistence.NamedQueries":
-                                annotation.memberValue.expressions.each { ann ->
-                                    ann.memberValuePairs.each { pair ->
-                                        if (simpleVariableName(pair) == "query") {
-                                            validateArgument(pair.value, unit)
-                                        }
-                                    }
-                                }
-                                break
-                        }
+                            }
+                            break
                     }
+                }
+                type.methods.each { method ->
+                    validateStatements(method.statements, unit, compiler)
                 }
             }
         }
     }
 
-    private void validateStatements(statements, unit) {
-        statements.each { statement -> validateStatement(statement, unit) }
+    private void validateStatements(statements, unit, compiler) {
+        statements.each { statement -> validateStatement(statement, unit, compiler) }
     }
 
-    private void validateStatement(statement, unit) {
+    private void validateStatement(statement, unit, compiler) {
         if (statement != null) switch (statement.class.simpleName) {
             case "MessageSend":
                 if (simpleMethodName(statement) == "createQuery") {
                     statement.arguments.each { arg ->
                         if (arg.class.simpleName == "StringLiteral") {
-                            validateArgument(arg, unit)
+                            validateArgument(arg, unit, compiler)
                         }
                     }
                 }
-                validateStatement(statement.receiver, unit)
-                validateStatements(statement.arguments, unit)
+                validateStatement(statement.receiver, unit, compiler)
+                validateStatements(statement.arguments, unit, compiler)
                 break
             case "AbstractVariableDeclaration":
-                validateStatement(statement.initialization, unit)
-                break;
+                validateStatement(statement.initialization, unit, compiler)
+                break
             case "AssertStatement":
-                validateStatement(statement.assertExpression, unit)
-                break;
+                validateStatement(statement.assertExpression, unit, compiler)
+                break
             case "Block":
-                validateStatements(statement.statements, unit)
+                validateStatements(statement.statements, unit, compiler)
                 break
             case "SwitchStatement":
-                validateStatement(statement.expression, unit)
-                validateStatements(statement.statements, unit)
+                validateStatement(statement.expression, unit, compiler)
+                validateStatements(statement.statements, unit, compiler)
                 break
             case "ForStatement":
-                validateStatement(statement.action, unit)
-                break;
+                validateStatement(statement.action, unit, compiler)
+                break
             case "ForeachStatement":
-                validateStatement(statement.collection, unit)
-                validateStatement(statement.action, unit)
-                break;
+                validateStatement(statement.collection, unit, compiler)
+                validateStatement(statement.action, unit, compiler)
+                break
             case "DoStatement":
             case "WhileStatement":
-                validateStatement(statement.condition, unit)
-                validateStatement(statement.action, unit)
+                validateStatement(statement.condition, unit, compiler)
+                validateStatement(statement.action, unit, compiler)
                 break
             case "IfStatement":
-                validateStatement(statement.condition, unit)
-                validateStatement(statement.thenStatement, unit)
-                validateStatement(statement.elseStatement, unit)
+                validateStatement(statement.condition, unit, compiler)
+                validateStatement(statement.thenStatement, unit, compiler)
+                validateStatement(statement.elseStatement, unit, compiler)
                 break
             case "TryStatement":
-                validateStatement(statement.tryBlock, unit)
-                validateStatements(statement.catchBlocks, unit)
-                validateStatement(statement.finallyBlock, unit)
+                validateStatement(statement.tryBlock, unit, compiler)
+                validateStatements(statement.catchBlocks, unit, compiler)
+                validateStatement(statement.finallyBlock, unit, compiler)
                 break
             case "SynchronizedStatement":
-                validateStatement(statement.expression, unit)
-                validateStatement(statement.block, unit)
+                validateStatement(statement.expression, unit, compiler)
+                validateStatement(statement.block, unit, compiler)
                 break
             case "BinaryExpression":
-                validateStatement(statement.left, unit)
-                validateStatement(statement.right, unit)
+                validateStatement(statement.left, unit, compiler)
+                validateStatement(statement.right, unit, compiler)
                 break
             case "UnaryExpression":
             case "CastExpression":
             case "InstanceOfExpression":
-                validateStatement(statement.expression, unit)
+                validateStatement(statement.expression, unit, compiler)
                 break
             case "ConditionalExpression":
-                validateStatement(statement.condition, unit)
-                validateStatement(statement.valueIfTrue, unit)
-                validateStatement(statement.valueIfFalse, unit)
+                validateStatement(statement.condition, unit, compiler)
+                validateStatement(statement.valueIfTrue, unit, compiler)
+                validateStatement(statement.valueIfFalse, unit, compiler)
                 break
             case "LambdaExpression":
-                validateStatement(statement.body, unit)
+                validateStatement(statement.body, unit, compiler)
                 break
             case "ArrayInitializer":
-                validateStatements(statement.expressions, unit)
+                validateStatements(statement.expressions, unit, compiler)
                 break
             case "ArrayAllocationExpression":
-                validateStatements(statement.initializer, unit)
+                validateStatements(statement.initializer, unit, compiler)
                 break
             case "Assignment":
-                validateStatement(statement.lhs, unit)
-                validateStatement(statement.expression, unit)
+                validateStatement(statement.lhs, unit, compiler)
+                validateStatement(statement.expression, unit, compiler)
                 break
             case "AllocationExpression":
-                validateStatements(statement.arguments, unit)
+                validateStatements(statement.arguments, unit, compiler)
                 break
             case "ReturnStatement":
-                validateStatement(statement.expression, unit);
+                validateStatement(statement.expression, unit, compiler)
                 break
             case "ThrowStatement":
-                validateStatement(statement.exception, unit);
+                validateStatement(statement.exception, unit, compiler)
                 break
             case "LabeledStatement":
-                validateStatement(statement.statement, unit);
+                validateStatement(statement.statement, unit, compiler)
                 break
         }
     }
 
-    void validateArgument(arg, unit) {
+    void validateArgument(arg, unit, compiler) {
         String hql = new String((char[]) arg.source())
-        ErrorReporter handler = new ErrorReporter(arg, unit)
-        validate(hql, handler, new EclipseSessionFactory(handler))
+        ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
+        validate(hql, handler, new EclipseSessionFactory(handler, unit))
     }
 
     @Override
@@ -197,8 +183,10 @@ class EclipseProcessor extends AbstractProcessor {
 
         private def literal
         private def unit
+        private def compiler
 
-        ErrorReporter(literal, unit) {
+        ErrorReporter(literal, unit, compiler) {
+            this.compiler = compiler
             this.literal = literal
             this.unit = unit
         }

@@ -6,18 +6,16 @@ import org.hibernate.type.*
 import javax.persistence.AccessType
 import java.beans.Introspector
 
+import static java.util.Arrays.stream
 import static org.hibernate.internal.util.StringHelper.*
 
 class EclipseSessionFactory extends MockSessionFactory {
 
-    public static def compiler
+    final def unit;
 
-    static void initialize(processingEnv) {
-        compiler = processingEnv.getCompiler()
-    }
-
-    EclipseSessionFactory(ParseErrorHandler handler) {
+    EclipseSessionFactory(ParseErrorHandler handler, unit) {
         super(handler)
+        this.unit = unit;
     }
 
     @Override
@@ -30,7 +28,7 @@ class EclipseSessionFactory extends MockSessionFactory {
     MockCollectionPersister createMockCollectionPersister(String role) {
         String entityName = root(role) //only works because entity names don't contain dots
         String propertyPath = unroot(role)
-        def entityClass = findEntityClass(entityName).binding
+        def entityClass = findEntityClass(entityName)
         AccessType defaultAccessType = getDefaultAccessType(entityClass)
         def property =
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType)
@@ -173,7 +171,7 @@ class EclipseSessionFactory extends MockSessionFactory {
         private final def typeDeclaration
 
         private EntityPersister(String entityName, type) {
-            super(entityName, getDefaultAccessType(type.binding),
+            super(entityName, getDefaultAccessType(type),
                     EclipseSessionFactory.this)
             this.typeDeclaration = type
             initSubclassPersisters()
@@ -182,14 +180,14 @@ class EclipseSessionFactory extends MockSessionFactory {
         @Override
         boolean isSubclassPersister(MockEntityPersister entityPersister) {
             EntityPersister persister = (EntityPersister) entityPersister
-            return persister.typeDeclaration.binding.isSubtypeOf(
-                    typeDeclaration.binding)
+            return persister.typeDeclaration.isSubtypeOf(
+                    typeDeclaration)
         }
 
         @Override
         Type createPropertyType(String propertyPath) {
             def symbol =
-                    findPropertyByPath(typeDeclaration.binding, propertyPath,
+                    findPropertyByPath(typeDeclaration, propertyPath,
                             defaultAccessType)
             return symbol == null ? null :
                     propertyType(symbol, getEntityName(),
@@ -263,7 +261,7 @@ class EclipseSessionFactory extends MockSessionFactory {
                 "." + new String((char[]) binding.selector)
     }
 
-    private static boolean hasAnnotation(annotations, String name) {
+    static boolean hasAnnotation(annotations, String name) {
         for (ann in annotations.getAnnotations()) {
             if (qualifiedTypeName(ann.getAnnotationType()) == name) {
                 return true
@@ -300,16 +298,11 @@ class EclipseSessionFactory extends MockSessionFactory {
         return AccessType.FIELD
     }
 
-    private static def findEntityClass(String entityName) {
-        for (unit in compiler.unitsToProcess) {
-            for (type in unit.types) {
-                if (isEntity(type.binding) &&
-                        getEntityName(type.binding) == entityName) {
-                    return type
-                }
-            }
-        }
-        return null
+    private def findEntityClass(String entityName) {
+        def type = unit.scope.getType(entityName.toCharArray())
+        return !missing(type) && isEntity(type) &&
+                getEntityName(type).equals(entityName) ?
+                type : null
     }
 
     private static def findProperty(type, String property,
@@ -545,8 +538,8 @@ class EclipseSessionFactory extends MockSessionFactory {
     boolean isFieldDefined(String qualifiedClassName, String fieldName) {
         def type = findClassByQualifiedName(qualifiedClassName)
         if (type == null) return false
-        for (field in type.fields) {
-            if (simpleVariableName(field.binding) == fieldName) {
+        for (field in type.fields()) {
+            if (simpleVariableName(field) == fieldName) {
                 return true
             }
         }
@@ -558,16 +551,16 @@ class EclipseSessionFactory extends MockSessionFactory {
                                  List<Type> argumentTypes) {
         def symbol = findClassByQualifiedName(qualifiedClassName)
         if (symbol == null) return false
-        for (method in symbol.methods) {
+        for (method in symbol.methods()) {
             if (method.isConstructor() &&
-                    method.arguments.length == argumentTypes.size()) {
+                    method.parameters.length == argumentTypes.size()) {
                 boolean argumentsCheckOut = true
                 for (int i = 0; i < argumentTypes.size(); i++) {
                     Type type = argumentTypes.get(i)
                     def typeClass
                     if (type instanceof EntityType) {
                         String entityName = type.getAssociatedEntityName()
-                        typeClass = findEntityClass(entityName).binding
+                        typeClass = findEntityClass(entityName)
                     } else if (type instanceof CompositeCustomType) {
                         typeClass = type.getUserType().type
                     } else if (type instanceof BasicType) {
@@ -580,14 +573,13 @@ class EclipseSessionFactory extends MockSessionFactory {
                         } catch (Exception e) {
                             continue
                         }
-                        typeClass = findClassByQualifiedName(className).binding
+                        typeClass = findClassByQualifiedName(className)
                     } else {
                         //TODO: what other Hibernate Types do we
                         //      need to consider here?
                         continue
                     }
-                    if (typeClass != null &&
-                            method.arguments[i].type.resolvedType.isSubtypeOf(typeClass)) {
+                    if (typeClass != null && !typeClass.isSubtypeOf(param)) {
                         argumentsCheckOut = false
                         break
                     }
@@ -598,16 +590,16 @@ class EclipseSessionFactory extends MockSessionFactory {
         return false
     }
 
-    static def findClassByQualifiedName(String path) {
-        for (unit in compiler.unitsToProcess) {
-            for (type in unit.types) {
-                if (isEntity(type.binding) &&
-                        qualifiedTypeName(type.binding) == path) {
-                    return type
-                }
-            }
-        }
-        return null
+    def findClassByQualifiedName(String path) {
+        char[][] name =
+                stream(path.split("\\.")).map {s -> s.toCharArray()}.toArray {len -> new char[len][]}
+        def type = unit.scope.getType(name, name.length)
+        return missing(type) ? null : type
+    }
+
+    private static boolean missing(type) {
+        return type.class.simpleName == "MissingTypeBinding" ||
+                type.class.simpleName == "ProblemReferenceBinding"
     }
 
 }
