@@ -70,7 +70,6 @@ public class HQLProcessor extends AbstractProcessor {
         catch (Throwable e) {
             processingEnv.getMessager()
                     .printMessage(Diagnostic.Kind.MANDATORY_WARNING, e.getMessage());
-            e.fillInStackTrace();
             StringWriter writer = new StringWriter();
             e.printStackTrace(new PrintWriter(writer));
             processingEnv.getMessager()
