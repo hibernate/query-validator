@@ -107,6 +107,12 @@ Queries are interpreted according to Hibernate's flavor of JPQL
 (i.e. HQL), which is a superset of the query language defined by 
 the JPA specification.
 
+One important example of how the languages are different is the
+handling of function names. In the JPA spec, function names like
+`SUBSTRING`, `SQRT`, and `COALESCE` are *reserved words*. In HQL, 
+they're just regular identifiers, and may even refer to a 
+user-defined or vendor-specific SQL function.
+
 ### Function arguments are not checked
 
 Hibernate's query translator never typechecks function arguments 
