@@ -11,13 +11,13 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Set;
 
-import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
-
 @SupportedAnnotationTypes("*")
 //@AutoService(Processor.class)
 public class HQLProcessor extends AbstractProcessor {
 
     static final String CHECK_HQL = "org.hibernate.query.validator.CheckHQL";
+
+    public static boolean forceEclipseForTesting = false;
 
     private AbstractProcessor delegate;
 
@@ -30,18 +30,16 @@ public class HQLProcessor extends AbstractProcessor {
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         String compiler = processingEnv.getClass().getName();
-        if (compiler.endsWith("BatchProcessingEnvImpl")) {
+        if (compiler.endsWith("IdeBuildProcessingEnvImpl")
+                || forceEclipseForTesting) {
+            //create it using reflection to allow
+            //us to compile everything else w/o
+            //the Groovy compiler being present
+            delegate = newEclipseProcessor();
+        } else if (compiler.endsWith("BatchProcessingEnvImpl")) {
             delegate = new ECJProcessor();
         } else if (compiler.endsWith("JavacProcessingEnvironment")) {
             delegate = new JavacProcessor();
-        } else if (compiler.endsWith("IdeBuildProcessingEnvImpl")) {
-            try {
-                delegate = (AbstractProcessor)
-                        Class.forName("org.hibernate.query.validator.EclipseProcessor")
-                                .newInstance();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }
         if (delegate!=null) {
             delegate.init(processingEnv);
@@ -54,6 +52,17 @@ public class HQLProcessor extends AbstractProcessor {
 //                    .printMessage(Diagnostic.Kind.NOTE,
 //                            "Could not install Hibernate Query Validator");
 //        }
+    }
+
+    private static AbstractProcessor newEclipseProcessor() {
+        try {
+            return (AbstractProcessor)
+                    Class.forName("org.hibernate.query.validator.EclipseProcessor")
+                            .newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @Override
