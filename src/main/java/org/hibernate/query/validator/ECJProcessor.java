@@ -25,6 +25,7 @@ import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
 import static org.hibernate.query.validator.ECJSessionFactory.hasAnnotation;
 import static org.hibernate.query.validator.ECJSessionFactory.qualifiedName;
+import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
 import static org.hibernate.query.validator.Validation.validate;
 
 /**
@@ -98,8 +99,7 @@ public class ECJProcessor extends AbstractProcessor {
 
     private static boolean isCheckable(TypeBinding type, CompilationUnitDeclaration unit) {
         Binding packInfo = unit.scope.getType("package-info".toCharArray());
-        return hasAnnotation(packInfo, CheckHQL.class.getName())
-            || hasAnnotation(type, CheckHQL.class.getName());
+        return hasAnnotation(packInfo, CHECK_HQL) || hasAnnotation(type, CHECK_HQL);
     }
 
     @Override
