@@ -1,10 +1,10 @@
 package org.hibernate.query.validator;
 
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.RetentionPolicy.CLASS;
 
 /**
  * <p>
@@ -52,5 +52,5 @@ import static java.lang.annotation.ElementType.*;
  * @see javax.persistence.EntityManager#createQuery(String)
  */
 @Target({PACKAGE, TYPE, METHOD, CONSTRUCTOR, FIELD})
-@Retention(RetentionPolicy.SOURCE)
+@Retention(CLASS)
 public @interface CheckHQL {}
