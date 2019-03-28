@@ -10,6 +10,7 @@ import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
 
 import static org.hibernate.query.validator.EclipseSessionFactory.*
+import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
 import static org.hibernate.query.validator.Validation.validate
 
 /**
@@ -18,7 +19,7 @@ import static org.hibernate.query.validator.Validation.validate
  *
  * @see CheckHQL
  */
-//@SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
+//@SupportedAnnotationTypes(CHECK_HQL)
 //@AutoService(Processor.class)
 class EclipseProcessor extends AbstractProcessor {
 
@@ -36,8 +37,8 @@ class EclipseProcessor extends AbstractProcessor {
 
     private static boolean isCheckable(type, unit) {
         def packInfo = unit.scope.getType("package-info".toCharArray())
-        return hasAnnotation(packInfo, CheckHQL.class.getName()) ||
-                hasAnnotation(type, CheckHQL.class.getName())
+        return hasAnnotation(packInfo, CHECK_HQL) ||
+                hasAnnotation(type, CHECK_HQL)
     }
 
     private void checkHQL(unit, compiler) {

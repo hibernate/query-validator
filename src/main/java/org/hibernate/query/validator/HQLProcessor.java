@@ -11,11 +11,13 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Set;
 
-@SupportedAnnotationTypes(
-        {"org.hibernate.query.validator.CheckHQL",
-                "javax.persistence.*"})
+import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
+
+@SupportedAnnotationTypes({CHECK_HQL, "javax.persistence.*"})
 //@AutoService(Processor.class)
 public class HQLProcessor extends AbstractProcessor {
+
+    static final String CHECK_HQL = "org.hibernate.query.validator.CheckHQL";
 
     private AbstractProcessor delegate;
 
