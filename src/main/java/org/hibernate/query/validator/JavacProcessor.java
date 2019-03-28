@@ -32,7 +32,7 @@ import static org.hibernate.query.validator.Validation.validate;
  *
  * @see CheckHQL
  */
-//@SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
+//@SupportedAnnotationTypes(CHECK_HQL)
 //@AutoService(Processor.class)
 public class JavacProcessor extends AbstractProcessor {
 
