@@ -1,28 +1,38 @@
 package org.hibernate.query.validator;
 
-import com.google.auto.service.AutoService;
-
-import javax.annotation.processing.*;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
+import javax.tools.Diagnostic;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Set;
 
-@SupportedAnnotationTypes("org.hibernate.query.validator.CheckHQL")
-@AutoService(Processor.class)
+@SupportedAnnotationTypes(
+        {"org.hibernate.query.validator.CheckHQL",
+                "javax.persistence.*"})
+//@AutoService(Processor.class)
 public class HQLProcessor extends AbstractProcessor {
 
     private AbstractProcessor delegate;
 
     @Override
     public SourceVersion getSupportedSourceVersion() {
-        return delegate.getSupportedSourceVersion();
+        return SourceVersion.latestSupported();
     }
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         String compiler = processingEnv.getClass().getName();
-        if (compiler.endsWith("IdeProcessingEnvImpl")) {
+        if (compiler.endsWith("BatchProcessingEnvImpl")) {
+            delegate = new ECJProcessor();
+        } else if (compiler.endsWith("JavacProcessingEnvironment")) {
+            delegate = new JavacProcessor();
+        } else if (compiler.endsWith("IdeBuildProcessingEnvImpl")) {
             try {
                 delegate = (AbstractProcessor)
                         Class.forName("org.hibernate.query.validator.EclipseProcessor")
@@ -30,16 +40,40 @@ public class HQLProcessor extends AbstractProcessor {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        } else if (compiler.endsWith("BatchProcessingEnvImpl")) {
-            delegate = new ECJProcessor();
-        } else if (compiler.endsWith("JavacProcessingEnvironment")) {
-            delegate = new JavacProcessor();
         }
-        delegate.init(processingEnv);
+        if (delegate!=null) {
+            delegate.init(processingEnv);
+//            processingEnv.getMessager()
+//                    .printMessage(Diagnostic.Kind.NOTE,
+//                            "Installed Hibernate Query Validator");
+        }
+//        else {
+//            processingEnv.getMessager()
+//                    .printMessage(Diagnostic.Kind.NOTE,
+//                            "Could not install Hibernate Query Validator");
+//        }
     }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        return delegate.process(annotations, roundEnv);
+        if (delegate==null) {
+            return false;
+        }
+        try {
+//            processingEnv.getMessager()
+//                    .printMessage(Diagnostic.Kind.MANDATORY_WARNING,
+//                            "CALLED " + roundEnv.getRootElements().size());
+            delegate.process(annotations, roundEnv);
+        }
+        catch (Throwable e) {
+            processingEnv.getMessager()
+                    .printMessage(Diagnostic.Kind.MANDATORY_WARNING, e.getMessage());
+            e.fillInStackTrace();
+            StringWriter writer = new StringWriter();
+            e.printStackTrace(new PrintWriter(writer));
+            processingEnv.getMessager()
+                    .printMessage(Diagnostic.Kind.MANDATORY_WARNING, writer.toString());
+        }
+        return false;
     }
 }
