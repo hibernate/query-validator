@@ -3,8 +3,6 @@ package org.hibernate.query.validator.test;
 import org.eclipse.jdt.core.compiler.batch.BatchCompiler;
 import org.junit.Test;
 
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -14,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import static javax.tools.ToolProvider.getSystemJavaCompiler;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -139,9 +138,7 @@ public class HQLValidationTest {
         String[] args = files.toArray(new String[0]);
         ByteArrayOutputStream err = new ByteArrayOutputStream();
 
-        JavaCompiler javac = ToolProvider.getSystemJavaCompiler();
-        int rc = javac.run(null, System.out, err, args);
-        assert rc!=0;
+        getSystemJavaCompiler().run(null, System.out, err, args);
 
         String errors = err.toString();
         System.out.println(errors);
@@ -178,11 +175,9 @@ public class HQLValidationTest {
         String[] args = files.toArray(new String[0]);
         ByteArrayOutputStream err = new ByteArrayOutputStream();
 
-        boolean success =
-                BatchCompiler.compile(args,
-                        new PrintWriter(System.out),
-                        new PrintWriter(err), null);
-        assert !success;
+        BatchCompiler.compile(args,
+                new PrintWriter(System.out),
+                new PrintWriter(err), null);
 
         String errors = err.toString();
         System.out.println(errors);
