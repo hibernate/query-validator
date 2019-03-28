@@ -24,7 +24,7 @@ you prefer.
    classpath of your project.
 2. Annotate a package, class, or method with `@CheckHQL`.
 
-Then the validator with check any static string argument of
+Then the validator will check any static string argument of
 
 - the `createQuery()` method or
 - the `@NamedQuery()` annotation
