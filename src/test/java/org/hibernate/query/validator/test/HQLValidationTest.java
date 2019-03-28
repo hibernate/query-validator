@@ -170,6 +170,7 @@ public class HQLValidationTest {
         files.add("-classpath");
         StringBuilder cp = new StringBuilder();
 //        cp.append("target/query-validator-1.0-SNAPSHOT.jar");
+        cp.append("build/libs/query-validator-1.0-SNAPSHOT.jar");
         cp.append(":target/classes");
         Files.list(Paths.get("lib"))
                 .map(Path::toString)
@@ -207,6 +208,7 @@ public class HQLValidationTest {
         files.add("-classpath");
         StringBuilder cp = new StringBuilder();
 //        cp.append("target/query-validator-1.0-SNAPSHOT.jar");
+        cp.append("build/libs/query-validator-1.0-SNAPSHOT.jar");
         cp.append(":target/classes");
         Files.list(Paths.get("lib"))
                 .map(Path::toString)

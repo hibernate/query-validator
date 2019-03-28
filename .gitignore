@@ -2,4 +2,6 @@
 .idea/workspace.xml
 out/
 target/
+build/
+.gradle
 dependency-reduced-pom.xml
