@@ -20,8 +20,8 @@ basic JPA metadata annotations like `@Entity`, `@ManyToOne`,
 mapping information like table and column names if that's what 
 you prefer.
 
-1. Put `query-validator-1.0-SNAPSHOT.jar` and its dependencies 
-   in the compile-time classpath of your project.
+1. Put `query-validator-1.0-SNAPSHOT.jar` in the compile-time 
+   classpath of your project.
 2. Annotate a package, class, or method with `@CheckHQL`.
 
 Then the validator with check any static string argument of
@@ -51,8 +51,12 @@ method containing the query:
 
 ### Usage from command line
 
-Just compile your code with `javac` or `mvn`, with the query 
-validator and its dependencies in the compile-time classpath.
+Just compile your code with `javac`, `mvn`, or even with ECJ,
+`java -jar ecj-4.6.1.jar`, with the query validator `jar` in 
+the compile-time classpath.
+
+Errors from the query validator will be displayed in the 
+compiler output alongside other compilation errors.
 
 ### Usage in IntelliJ
 
@@ -60,10 +64,27 @@ Select **Enable annotation processing** in IntelliJ IDEA
 preferences under **Build, Execution, Deployment > Compiler > 
 AnnotationProcessors**. 
 
+IntelliJ only runs annotation processors during a build (that
+is, when you `Run` your code or explicitly `Build Project`). 
+So you won't see errors in your Java editor as you're typing.
+
 ### Usage in Eclipse
 
-Initial support for the Eclipse compiler (ECJ) is already 
-available!
+Eclipse IDE doesn't load annotation processors from the 
+project classpath. So you'll need to add the query validator
+manually.
+
+1. In **Project > Properties** go to **Java Compiler > 
+   Annotation Processing** and select **Enable annotation 
+   processing**. 
+2. Then go to **Java Compiler > Annotation Processing > 
+   Factory Path** and click **Add External JARs** and
+   add `target/query-validator-1.0-SNAPSHOT.jar` from this 
+   project directory.
+
+Eclipse runs annotation processors during every incremental
+build (that is, every time you `Save`), so you'll see errors
+displayed inline in your Java editor.
 
 ## Compatibility
 
@@ -73,7 +94,8 @@ The query validator was developed and tested with:
 - Hibernate 5.4.2.Final
 - ECJ 4.6.1
 
-Other versions of `javac` and Hibernate may or may not work.
+Other versions of `javac`, ECJ, and Hibernate may or may not 
+work.
 
 ## Caveats
 
@@ -83,7 +105,7 @@ Please be aware of the following issues.
 
 Queries are interpreted according to Hibernate's flavor of JPQL 
 (i.e. HQL), which is a superset of the query language defined by 
-the JPA specification. 
+the JPA specification.
 
 ### Function arguments are not checked
 
@@ -93,6 +115,13 @@ a function call straight through to the database.
 
 Fixing this will require a nontrivial enhancement to Hibernate's
 HQL translator.
+
+### Explicit entity names are not supported in Eclipse/ECJ
+
+In ECJ, don't use `@Entity(name="Whatever")`, since during an
+incremental build, the processor won't be able to discover the
+entity named `Whatever`. (Just let the entity name default to
+the name of the class.) 
 
 ### Some ugly error messages
 
