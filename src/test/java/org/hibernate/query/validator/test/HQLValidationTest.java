@@ -100,8 +100,8 @@ public class HQLValidationTest {
         assertTrue(errors.contains("p.name is not defined") && errors.contains("BadQueries.java (at line 29)"));
 
         assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
-//        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
-//        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
 
         assertTrue(errors.contains("entry() has no members") && errors.contains("BadQueries.java (at line 36)"));
 
@@ -145,8 +145,8 @@ public class HQLValidationTest {
         assertTrue(errors.contains("p.name is not defined") && errors.contains("BadQueries.java (at line 29)"));
 
         assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
-//        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
-//        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
 
         assertTrue(errors.contains("entry() has no members") && errors.contains("BadQueries.java (at line 36)"));
 
