@@ -13,7 +13,7 @@ import java.util.Set;
 
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
 
-@SupportedAnnotationTypes({CHECK_HQL, "javax.persistence.*"})
+@SupportedAnnotationTypes("*")
 //@AutoService(Processor.class)
 public class HQLProcessor extends AbstractProcessor {
 
