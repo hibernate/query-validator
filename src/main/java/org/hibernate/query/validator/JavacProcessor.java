@@ -16,7 +16,6 @@ import org.hibernate.QueryException;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 
 import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
@@ -51,12 +50,6 @@ public class JavacProcessor extends AbstractProcessor {
             }
         }
         return false;
-    }
-
-    @Override
-    public synchronized void init(ProcessingEnvironment processingEnv) {
-        super.init(processingEnv);
-        JavacSessionFactory.initialize((JavacProcessingEnvironment) processingEnv);
     }
 
     private void checkHQL(Element element) {
@@ -139,11 +132,10 @@ public class JavacProcessor extends AbstractProcessor {
                         Object literalValue = jcLiteral.value;
                         if (inCreateQueryMethod && literalValue instanceof String) {
                             String hql = (String) literalValue;
-
                             ErrorReporter handler = new ErrorReporter(jcLiteral, element);
-
                             validate(hql, handler,
-                                    new JavacSessionFactory(handler) {
+                                    new JavacSessionFactory(handler,
+                                            (JavacProcessingEnvironment) processingEnv) {
                                         @Override
                                         void unknownSqlFunction(String functionName) {
                                             if (strict) {

@@ -23,19 +23,17 @@ import static org.hibernate.internal.util.StringHelper.*;
 
 class JavacSessionFactory extends MockSessionFactory {
 
-    private static Names names;
-    private static Types types;
-    private static Symtab syms;
+    private final Names names;
+    private final Types types;
+    private final Symtab syms;
 
-    static void initialize(JavacProcessingEnvironment processingEnv) {
+    JavacSessionFactory(ParseErrorHandler handler,
+                        JavacProcessingEnvironment processingEnv) {
+        super(handler);
         Context context = processingEnv.getContext();
         names = Names.instance(context);
         types = Types.instance(context);
         syms = Symtab.instance(context);
-    }
-
-    JavacSessionFactory(ParseErrorHandler handler) {
-        super(handler);
     }
 
     @Override
@@ -256,7 +254,7 @@ class JavacSessionFactory extends MockSessionFactory {
         }
     }
 
-    private static Symbol.ClassSymbol findEntityClass(String entityName) {
+    private Symbol.ClassSymbol findEntityClass(String entityName) {
         for (Symbol.PackageSymbol pack:
                 new ArrayList<>(syms.packages.values())) {
             try {
@@ -458,7 +456,7 @@ class JavacSessionFactory extends MockSessionFactory {
         return name==null ? type.name.toString() : name;
     }
 
-    private static com.sun.tools.javac.code.Type getCollectionElementType(Symbol property) {
+    private com.sun.tools.javac.code.Type getCollectionElementType(Symbol property) {
         com.sun.tools.javac.code.Type elementType = memberType(property).getTypeArguments().last();
         return elementType==null ? syms.objectType : elementType;
     }
@@ -473,7 +471,7 @@ class JavacSessionFactory extends MockSessionFactory {
                 simpleName(classType);
     }
 
-    private static String getToManyTargetEntityName(Symbol property) {
+    private String getToManyTargetEntityName(Symbol property) {
         AnnotationMirror annotation = toManyAnnotation(property);
         com.sun.tools.javac.code.Type.ClassType classType = (com.sun.tools.javac.code.Type.ClassType)
                 getAnnotationMember(annotation, "targetEntity");
@@ -483,7 +481,7 @@ class JavacSessionFactory extends MockSessionFactory {
                 simpleName(classType);
     }
 
-    private static com.sun.tools.javac.code.Type getElementCollectionElementType(Symbol property) {
+    private com.sun.tools.javac.code.Type getElementCollectionElementType(Symbol property) {
         AnnotationMirror annotation = getAnnotation(property,
                 "javax.persistence.ElementCollection");
         com.sun.tools.javac.code.Type classType = (com.sun.tools.javac.code.Type)
@@ -555,7 +553,7 @@ class JavacSessionFactory extends MockSessionFactory {
         return false;
     }
 
-    private static Symbol.ClassSymbol findClassByQualifiedName(String path) {
+    private Symbol.ClassSymbol findClassByQualifiedName(String path) {
         return syms.classes.get(names.fromString(path));
     }
 

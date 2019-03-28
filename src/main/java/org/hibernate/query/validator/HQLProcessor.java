@@ -22,10 +22,17 @@ public class HQLProcessor extends AbstractProcessor {
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
         String compiler = processingEnv.getClass().getName();
-        if (compiler.endsWith("ProcessingEnvImpl")) {
+        if (compiler.endsWith("IdeProcessingEnvImpl")) {
+            try {
+                delegate = (AbstractProcessor)
+                        Class.forName("org.hibernate.query.validator.EclipseProcessor")
+                                .newInstance();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else if (compiler.endsWith("BatchProcessingEnvImpl")) {
             delegate = new ECJProcessor();
-        }
-        else if (compiler.endsWith("JavacProcessingEnvironment")) {
+        } else if (compiler.endsWith("JavacProcessingEnvironment")) {
             delegate = new JavacProcessor();
         }
         delegate.init(processingEnv);

@@ -8,21 +8,21 @@ public class BadQueries {
         createQuery("from Person where p.name='gavin' select"); //syntax error
         createQuery("from Person p where p.name+='gavin'"); //syntax error
         createQuery("select from Person where p.name='gavin'"); //syntax error
-
-        createQuery("select new test.Nil(p,a) from Person p join p.address a"); //error
-        createQuery("select new test.Pair(p) from Person p"); //error
-        createQuery("select new test.Pair(p,p.name) from Person p"); //error
-
+        if (1 == ".".length()) {
+            createQuery("select new test.Nil(p,a) from Person p join p.address a"); //error
+            createQuery("select new test.Pair(p) from Person p"); //error
+            createQuery("select new test.Pair(p,p.name) from Person p"); //error
+        }
         createQuery("from People p where p.name='gavin'"); //error
         createQuery("from Person p where p.firstName='gavin'"); //error
         createQuery("from Person p join p.addr a"); //error
         createQuery("from Person p where p.address.town='barcelona'"); //error
         createQuery("from Person p where p.name in (select a.name from Address a)"); //error
         createQuery("from Address add where add.country.type='au'"); //error
-
-        createQuery("select e from Employee e join e.contacts c where key(c).length > 0"); //error
-        createQuery("select p.name, n from Person p join p.notes n where n.length>0"); //error
-
+        for (int i=0; i<100; i++) {
+            createQuery("select e from Employee e join e.contacts c where key(c).length > 0"); //error
+            createQuery("select p.name, n from Person p join p.notes n where n.length>0"); //error
+        }
         createQuery("select xxx from Person"); //warning
         createQuery("select func(p.name), year(current_date) from Person p"); //warning
         createQuery("from Person p where p.name = function('custom', p.id)"); //warning

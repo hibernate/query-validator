@@ -1,8 +1,6 @@
 package org.hibernate.query.validator;
 
-import org.eclipse.jdt.internal.compiler.Compiler;
-import org.eclipse.jdt.internal.compiler.apt.dispatch.BaseProcessingEnvImpl;
-import org.eclipse.jdt.internal.compiler.ast.*;
+import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.*;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
@@ -11,6 +9,7 @@ import org.hibernate.type.*;
 import javax.persistence.AccessType;
 import java.beans.Introspector;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static java.util.Arrays.stream;
@@ -19,19 +18,17 @@ import static org.hibernate.internal.util.StringHelper.*;
 
 class ECJSessionFactory extends MockSessionFactory {
 
-    static Compiler compiler;
+    private final CompilationUnitDeclaration unit;
 
-    static void initialize(BaseProcessingEnvImpl processingEnv) {
-        compiler = processingEnv.getCompiler();
-    }
-
-    ECJSessionFactory(ParseErrorHandler handler) {
+    ECJSessionFactory(ParseErrorHandler handler,
+                      CompilationUnitDeclaration unit) {
         super(handler);
+        this.unit = unit;
     }
 
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {
-        TypeDeclaration type = findEntityClass(entityName);
+        TypeBinding type = findEntityClass(entityName);
         return type == null ? null : new EntityPersister(entityName, type);
     }
 
@@ -39,7 +36,7 @@ class ECJSessionFactory extends MockSessionFactory {
     MockCollectionPersister createMockCollectionPersister(String role) {
         String entityName = root(role); //only works because entity names don't contain dots
         String propertyPath = unroot(role);
-        TypeBinding entityClass = findEntityClass(entityName).binding;
+        TypeBinding entityClass = findEntityClass(entityName);
         AccessType defaultAccessType = getDefaultAccessType(entityClass);
         Binding property =
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType);
@@ -189,10 +186,10 @@ class ECJSessionFactory extends MockSessionFactory {
     }
 
     private class EntityPersister extends MockEntityPersister {
-        private final TypeDeclaration type;
+        private final TypeBinding type;
 
-        private EntityPersister(String entityName, TypeDeclaration type) {
-            super(entityName, getDefaultAccessType(type.binding),
+        private EntityPersister(String entityName, TypeBinding type) {
+            super(entityName, getDefaultAccessType(type),
                     ECJSessionFactory.this);
             this.type = type;
             initSubclassPersisters();
@@ -201,13 +198,13 @@ class ECJSessionFactory extends MockSessionFactory {
         @Override
         boolean isSubclassPersister(MockEntityPersister entityPersister) {
             EntityPersister persister = (EntityPersister) entityPersister;
-            return persister.type.binding.isSubtypeOf(type.binding);
+            return persister.type.isSubtypeOf(type);
         }
 
         @Override
         Type createPropertyType(String propertyPath)  {
             Binding symbol =
-                    findPropertyByPath(type.binding, propertyPath,
+                    findPropertyByPath(type, propertyPath,
                             defaultAccessType);
             return symbol == null ? null :
                     propertyType(symbol, getEntityName(),
@@ -281,10 +278,9 @@ class ECJSessionFactory extends MockSessionFactory {
                 + "." + charToString(binding.selector);
     }
 
-    private static boolean hasAnnotation(Binding annotations, String name) {
+    static boolean hasAnnotation(Binding annotations, String name) {
         for (AnnotationBinding ann: annotations.getAnnotations()) {
-            if (qualifiedName(ann.getAnnotationType())
-                    .equals(name)) {
+            if (qualifiedName(ann.getAnnotationType()).equals(name)) {
                 return true;
             }
         }
@@ -318,16 +314,20 @@ class ECJSessionFactory extends MockSessionFactory {
         return AccessType.FIELD;
     }
 
-    private static TypeDeclaration findEntityClass(String entityName) {
-        for (CompilationUnitDeclaration unit: compiler.unitsToProcess) {
-            for (TypeDeclaration type: unit.types) {
-                if (isEntity(type.binding)
-                        && getEntityName(type.binding).equals(entityName)) {
-                    return type;
-                }
-            }
-        }
-        return null;
+    private TypeBinding findEntityClass(String entityName) {
+        TypeBinding type = unit.scope.getType(entityName.toCharArray());
+        return !missing(type) && isEntity(type)
+                && getEntityName(type).equals(entityName) ?
+                type : null;
+//        for (CompilationUnitDeclaration unit: compiler.unitsToProcess) {
+//            for (TypeDeclaration type: unit.types) {
+//                if (isEntity(type.binding)
+//                        && getEntityName(type.binding).equals(entityName)) {
+//                    return type;
+//                }
+//            }
+//        }
+//        return null;
     }
 
     private static Binding findProperty(TypeBinding type, String propertyName,
@@ -589,10 +589,11 @@ class ECJSessionFactory extends MockSessionFactory {
 
     @Override
     boolean isFieldDefined(String qualifiedClassName, String fieldName) {
-        TypeDeclaration type = findClassByQualifiedName(qualifiedClassName);
+        SourceTypeBinding type = (SourceTypeBinding)
+                findClassByQualifiedName(qualifiedClassName);
         if (type==null) return false;
-        for (FieldDeclaration field: type.fields) {
-            if (simpleName(field.binding).equals(fieldName)) {
+        for (FieldBinding field: type.fields()) {
+            if (simpleName(field).equals(fieldName)) {
                 return true;
             }
         }
@@ -602,20 +603,20 @@ class ECJSessionFactory extends MockSessionFactory {
     @Override
     boolean isConstructorDefined(String qualifiedClassName,
                                  List<Type> argumentTypes) {
-        TypeDeclaration symbol = findClassByQualifiedName(qualifiedClassName);
+        SourceTypeBinding symbol = (SourceTypeBinding)
+                findClassByQualifiedName(qualifiedClassName);
         if (symbol==null) return false;
-        for (AbstractMethodDeclaration cons : symbol.methods) {
-            if (cons instanceof ConstructorDeclaration) {
-                ConstructorDeclaration constructor = (ConstructorDeclaration) cons;
-                if (constructor.arguments.length == argumentTypes.size()) {
+        for (MethodBinding method : symbol.methods()) {
+            if (method.isConstructor()) {
+                if (method.parameters.length == argumentTypes.size()) {
                     boolean argumentsCheckOut = true;
                     for (int i = 0; i < argumentTypes.size(); i++) {
                         Type type = argumentTypes.get(i);
-                        Argument param = constructor.arguments[i];
+                        TypeBinding param = method.parameters[i];
                         TypeBinding typeClass;
                         if (type instanceof EntityType) {
                             String entityName = ((EntityType) type).getAssociatedEntityName();
-                            typeClass = findEntityClass(entityName).binding;
+                            typeClass = findEntityClass(entityName);
                         }
                         else if (type instanceof CompositeCustomType) {
                             typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
@@ -630,15 +631,14 @@ class ECJSessionFactory extends MockSessionFactory {
                             } catch (Exception e) {
                                 continue;
                             }
-                            typeClass = findClassByQualifiedName(className).binding;
+                            typeClass = findClassByQualifiedName(className);
                         }
                         else {
                             //TODO: what other Hibernate Types do we
                             //      need to consider here?
                             continue;
                         }
-                        if (typeClass != null
-                                && param.type.resolvedType.isSubtypeOf(typeClass)) {
+                        if (typeClass != null && !typeClass.isSubtypeOf(param)) {
                             argumentsCheckOut = false;
                             break;
                         }
@@ -650,16 +650,25 @@ class ECJSessionFactory extends MockSessionFactory {
         return false;
     }
 
-    static TypeDeclaration findClassByQualifiedName(String path) {
-        for (CompilationUnitDeclaration unit: compiler.unitsToProcess) {
-            for (TypeDeclaration type: unit.types) {
-                if (isEntity(type.binding)
-                        && qualifiedName(type.binding).equals(path)) {
-                    return type;
-                }
-            }
-        }
-        return null;
+    private TypeBinding findClassByQualifiedName(String path) {
+        char[][] name = Arrays.stream(path.split("\\."))
+                .map(String::toCharArray)
+                .toArray(char[][]::new);
+        TypeBinding type = unit.scope.getType(name, name.length);
+        return missing(type) ? null : type;
+//        for (CompilationUnitDeclaration unit: compiler.unitsToProcess) {
+//            for (TypeDeclaration type: unit.types) {
+//                if (qualifiedName(type.binding).equals(path)) {
+//                    return type;
+//                }
+//            }
+//        }
+//        return null;
+    }
+
+    private static boolean missing(TypeBinding type) {
+        return type instanceof MissingTypeBinding
+            || type instanceof ProblemReferenceBinding;
     }
 
 

@@ -59,7 +59,8 @@ class Validation {
                 } catch (Exception e) {
                     //throw away NullPointerExceptions and the like
                     //since I guess they represent bugs in Hibernate
-//                                        e.printStackTrace();
+//                    e.printStackTrace();
+                    ;
                 }
 
                 //don't use this much simpler implementation

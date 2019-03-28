@@ -13,8 +13,6 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.7</maven.compiler.source>
-        <maven.compiler.target>1.7</maven.compiler.target>
     </properties>
 
     <dependencies>
@@ -57,6 +55,14 @@
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging</artifactId>
             <version>3.3.2.Final</version>
+        </dependency>
+
+        <!-- groovy dependency -->
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <classifier>indy</classifier>
+            <version>2.5.6</version>
         </dependency>
 
         <!-- javac dependency (tools.jar) -->
@@ -103,7 +109,23 @@
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
+                    <!--compilerId>groovy-eclipse-compiler</compilerId>
+                    <compilerArguments>
+                        <indy/>
+                    </compilerArguments-->
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-eclipse-compiler</artifactId>
+                        <version>3.3.0-01</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-eclipse-batch</artifactId>
+                        <version>2.5.6-01</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
@@ -117,6 +139,12 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                                    <resource>META-INF/services/javax.annotation.processing.Processor</resource>
+                                    <file>src/test/resources/META-INF/services/javax.annotation.processing.Processor</file>
+                                </transformer>
+                            </transformers>
                             <artifactSet>
                                 <includes>
                                     <include>org.hibernate:*</include>
@@ -125,6 +153,7 @@
                                     <include>javax.transaction:*</include>
                                     <include>net.bytebuddy:*</include>
                                     <include>org.jboss.logging:*</include>
+                                    <include>org.codehaus.groovy:groovy:*</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
@@ -144,13 +173,45 @@
                                     <shadedPattern>org.hibernate.query.validator</shadedPattern>
                                 </relocation>
                                 <relocation>
-                                    <pattern>javax</pattern>
-                                    <shadedPattern>org.hibernate.query.validator</shadedPattern>
+                                    <pattern>javax.persistence</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.jpa</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>javax.transaction</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.jta</shadedPattern>
                                 </relocation>
                                 <relocation>
                                     <pattern>antlr</pattern>
                                     <shadedPattern>org.hibernate.query.validator.antlr</shadedPattern>
                                 </relocation>
+                                <!--relocation>
+                                    <pattern>org.apache.groovy</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.groovy</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.codehaus.groovy</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.groovy</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>groovy</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.groovy</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>groovyjarjarantlr</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.groovy.antlr</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>groovyjarjarasm</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.groovy.asm</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>groovyjarjarcommonscli</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.groovy.cli</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>groovyjarjarpicocli</pattern>
+                                    <shadedPattern>org.hibernate.query.validator.groovy.picocli</shadedPattern>
+                                </relocation-->
                             </relocations>
                         </configuration>
                     </execution>
