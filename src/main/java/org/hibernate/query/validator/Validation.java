@@ -24,6 +24,9 @@ import static org.hibernate.internal.util.StringHelper.unqualify;
 
 class Validation {
 
+    private static final Pattern NAMED_PARAMETERS = Pattern.compile(":(\\w+)\\b");
+    private static final Pattern LABELED_PARAMETERS = Pattern.compile("\\?(\\d+)\\b");
+
     static void validate(String hql, boolean checkParams,
                          Set<Integer> setParameterLabels,
                          Set<String> setParameterNames,
@@ -73,7 +76,7 @@ class Validation {
                 try {
                     String unsetParams = null;
                     String notSet = null;
-                    Matcher names = Pattern.compile(":(\\w+)\\b").matcher(hql);
+                    Matcher names = NAMED_PARAMETERS.matcher(hql);
                     while (names.find()) {
                         String name = names.group(1);
                         if (!setParameterNames.contains(name)) {
@@ -84,7 +87,7 @@ class Validation {
                             //int loc = walker.getNamedParameterLocations(name)[0];
                         }
                     }
-                    Matcher labels = Pattern.compile("\\?(\\d+)\\b").matcher(hql);
+                    Matcher labels = LABELED_PARAMETERS.matcher(hql);
                     while (labels.find()) {
                         int label = parseInt(labels.group(1));
                         if (!setParameterLabels.contains(label)) {
