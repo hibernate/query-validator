@@ -65,7 +65,6 @@ public class ECJProcessor extends AbstractProcessor {
                     public boolean visit(SingleMemberAnnotation annotation, BlockScope scope) {
                         if (qualifiedName(annotation.type.resolvedType)
                                 .equals(SuppressWarnings.class.getName())) {
-
                             Expression memberValue = annotation.memberValue;
                             if (memberValue instanceof StringLiteral) {
                                 setNonStrict((StringLiteral) memberValue);
