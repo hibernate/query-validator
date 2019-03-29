@@ -61,24 +61,59 @@ public class JavacProcessor extends AbstractProcessor {
                 tree.accept(new TreeScanner() {
                     Set<Integer> setParameterLabels = new HashSet<>();
                     Set<String> setParameterNames = new HashSet<>();
-                    boolean inSetParameterMethod = false;
-                    boolean inCreateQueryMethod = false;
-                    boolean inNamedQueryAnnotation = false;
+                    boolean immediatelyCalled;
                     boolean strict = true;
+
+                    private void check(JCTree.JCLiteral jcLiteral, String hql,
+                                       boolean inCreateQueryMethod) {
+                        ErrorReporter handler = new ErrorReporter(jcLiteral, element);
+                        validate(hql, inCreateQueryMethod && immediatelyCalled,
+                                setParameterLabels, setParameterNames, handler,
+                                new JavacSessionFactory(handler,
+                                        (JavacProcessingEnvironment) processingEnv) {
+                                    @Override
+                                    void unknownSqlFunction(String functionName) {
+                                        if (strict) {
+                                            super.unknownSqlFunction(functionName);
+                                        }
+                                    }
+                                });
+                    }
+
+                    JCTree.JCLiteral firstArgument(JCTree.JCMethodInvocation call) {
+                        for (JCTree.JCExpression e: call.args) {
+                            return e instanceof JCTree.JCLiteral ?
+                                    (JCTree.JCLiteral) e : null;
+                        }
+                        return null;
+                    }
 
                     @Override
                     public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
                         String name = getMethodName(jcMethodInvocation.meth);
                         switch (name) {
-                            case "createQuery":
-                                inCreateQueryMethod = true;
+                            case "getResultList":
+                            case "getSingleResult":
+                                immediatelyCalled = true;
                                 super.visitApply(jcMethodInvocation);
-                                inCreateQueryMethod = false;
+                                immediatelyCalled = false;
+                                break;
+                            case "createQuery":
+                                JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
+                                if (queryArg.value instanceof String) {
+                                    String hql = (String) queryArg.value;
+                                    check(queryArg, hql, true);
+                                }
+                                super.visitApply(jcMethodInvocation);
                                 break;
                             case "setParameter":
-                                inSetParameterMethod = true;
+                                JCTree.JCLiteral paramArg = firstArgument(jcMethodInvocation);
+                                if (paramArg.value instanceof String) {
+                                    setParameterNames.add((String) paramArg.value);
+                                } else if (paramArg.value instanceof Integer) {
+                                    setParameterLabels.add((Integer) paramArg.value);
+                                }
                                 super.visitApply(jcMethodInvocation);
-                                inSetParameterMethod = false;
                                 break;
                             default:
                                 super.visitApply(jcMethodInvocation); //needed!
@@ -87,15 +122,15 @@ public class JavacProcessor extends AbstractProcessor {
                     }
 
                     @Override
-                    public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
+                    public void visitAnnotation (JCTree.JCAnnotation jcAnnotation){
                         AnnotationMirror annotation = jcAnnotation.attribute;
                         String name = annotation.getAnnotationType().toString();
                         if (SuppressWarnings.class.getName().equals(name)) {
-                            for (AnnotationValue value:
+                            for (AnnotationValue value :
                                     annotation.getElementValues().values()) {
                                 @SuppressWarnings("unchecked")
                                 List<Attribute> list = (List) value.getValue();
-                                for (Attribute val: list) {
+                                for (Attribute val : list) {
                                     if (val.getValue().toString()
                                             .equals("hql.unknown-function")) {
                                         strict = false;
@@ -106,51 +141,18 @@ public class JavacProcessor extends AbstractProcessor {
                             for (JCTree.JCExpression arg : jcAnnotation.args) {
                                 if (arg instanceof JCTree.JCAssign) {
                                     JCTree.JCAssign assign = (JCTree.JCAssign) arg;
-                                    if ("query".equals(assign.lhs.toString())) {
-                                        inNamedQueryAnnotation = true;
-                                        super.visitAssign(assign);
-                                        inNamedQueryAnnotation = false;
+                                    if ("query".equals(assign.lhs.toString())
+                                            && assign.rhs instanceof JCTree.JCLiteral) {
+                                        JCTree.JCLiteral jcLiteral =
+                                                (JCTree.JCLiteral) assign.rhs;
+                                        if (jcLiteral.value instanceof String) {
+                                            check(jcLiteral, (String) jcLiteral.value, false);
+                                        }
                                     }
                                 }
                             }
                         } else {
                             super.visitAnnotation(jcAnnotation); //needed!
-                        }
-                    }
-
-                    @Override
-                    public void visitLiteral(JCTree.JCLiteral jcLiteral) {
-                        Object literalValue = jcLiteral.value;
-                        if (literalValue instanceof String) {
-                            if (inCreateQueryMethod || inNamedQueryAnnotation) {
-                                String hql = (String) literalValue;
-                                ErrorReporter handler = new ErrorReporter(jcLiteral, element);
-                                validate(hql, inCreateQueryMethod,
-                                        setParameterLabels, setParameterNames, handler,
-                                        new JavacSessionFactory(handler,
-                                                (JavacProcessingEnvironment) processingEnv) {
-                                            @Override
-                                            void unknownSqlFunction(String functionName) {
-                                                if (strict) {
-                                                    super.unknownSqlFunction(functionName);
-                                                }
-                                            }
-                                        });
-                            }
-                            else if (inSetParameterMethod) {
-                                String paramName = (String) literalValue;
-                                setParameterNames.add(paramName);
-                                //the remaining parameters aren't parameter names!
-                                inSetParameterMethod = false;
-                            }
-                        }
-                        if (literalValue instanceof Integer) {
-                            if (inSetParameterMethod) {
-                                int paramLabel = (Integer) literalValue;
-                                setParameterLabels.add(paramLabel);
-                                //the remaining parameters aren't parameter names!
-                                inSetParameterMethod = false;
-                            }
                         }
                     }
 

@@ -40,9 +40,16 @@ public class BadQueries {
         createQuery("from Person p where max(indices(p.notes)) > 1"); //should be error!
         createQuery("from Person p where sum(elements(p.notes)) = ''"); //should be error!
 
-        createQuery("from Person p where p.name = ?1 and p.id > ?2"); //JPQL positional args
-        createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
+        createQuery("from Person p where p.name = ?1 and p.id > ?2")
+                .setParameter(1, "").getResultList(); //JPQL positional args
+        createQuery("from Person p where p.name = :name and p.id >= :minId")
+                .setParameter("minId", 12).getResultList(); //JPQL named args
     }
 
-    private static void createQuery(String s) {}
+    private static Query createQuery(String s) { return new Query(); }
+    private static class Query {
+        public Query setParameter(String s, Object o) { return this; }
+        public Query setParameter(int i, Object o) { return this; }
+        public Query getResultList() { return this; }
+    }
 }

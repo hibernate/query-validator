@@ -66,8 +66,8 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("Person.java:22: error: Person has no mapped x"));
 
-        assertTrue(errors.contains("BadQueries.java:43: warning: ?1, ?2 are not set"));
-        assertTrue(errors.contains("BadQueries.java:44: warning: :name, :minId are not set"));
+        assertTrue(errors.contains("BadQueries.java:43: warning: ?2 is not set"));
+        assertTrue(errors.contains("BadQueries.java:45: warning: :name is not set"));
 
     }
 
@@ -113,8 +113,8 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("Person has no mapped x") && errors.contains("Person.java (at line 22)"));
 
-        assertTrue(errors.contains("?1, ?2 are not set") && errors.contains("BadQueries.java (at line 43)"));
-        assertTrue(errors.contains(":name, :minId are not set") && errors.contains("BadQueries.java (at line 44)"));
+        assertTrue(errors.contains("?2 is not set") && errors.contains("BadQueries.java (at line 43)"));
+        assertTrue(errors.contains(":name is not set") && errors.contains("BadQueries.java (at line 45)"));
 
     }
 
@@ -161,8 +161,8 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("Person has no mapped x") && errors.contains("Person.java (at line 22)"));
 
-        assertTrue(errors.contains("?1, ?2 are not set") && errors.contains("BadQueries.java (at line 43)"));
-        assertTrue(errors.contains(":name, :minId are not set") && errors.contains("BadQueries.java (at line 44)"));
+        assertTrue(errors.contains("?2 is not set") && errors.contains("BadQueries.java (at line 43)"));
+        assertTrue(errors.contains(":name is not set") && errors.contains("BadQueries.java (at line 45)"));
 
         HQLProcessor.forceEclipseForTesting = false;
     }

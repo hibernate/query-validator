@@ -9,6 +9,7 @@ import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
 
+import static java.lang.Integer.parseInt
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
 import static org.hibernate.query.validator.HQLProcessor.jpa
@@ -29,7 +30,7 @@ class EclipseProcessor extends AbstractProcessor {
         if (!roundEnv.getRootElements().isEmpty()) {
             for (unit in compiler.unitsToProcess) {
                 compiler.parser.getMethodBodies(unit)
-                checkHQL(unit, compiler)
+                new Checker(unit, compiler).checkHQL()
             }
         }
         return false
@@ -41,165 +42,185 @@ class EclipseProcessor extends AbstractProcessor {
                 hasAnnotation(type, CHECK_HQL)
     }
 
-    private void checkHQL(unit, compiler) {
-        for (type in unit.types) {
-            if (isCheckable(type.binding, unit)) {
-                type.annotations.each { annotation ->
-                    switch (qualifiedTypeName(annotation.resolvedType)) {
-                        case jpa("NamedQuery"):
-                            annotation.memberValuePairs.each { pair ->
-                                if (simpleVariableName(pair) == "query") {
-                                    validateArgument(pair.value, unit, compiler, false)
-                                }
-                            }
-                            break
-                        case jpa("NamedQueries"):
-                            annotation.memberValue.expressions.each { ann ->
-                                ann.memberValuePairs.each { pair ->
-                                    if (simpleVariableName(pair) == "query") {
-                                        validateArgument(pair.value, unit, compiler, false)
-                                    }
-                                }
-                            }
-                            break
-                    }
-                }
-                type.methods.each { method ->
-                    validateStatements(method.statements, unit, compiler)
-                }
-            }
-        }
-    }
-
-    private void validateStatements(statements, unit, compiler) {
-        statements.each { statement -> validateStatement(statement, unit, compiler) }
-    }
-
-    Set<Integer> setParameterLabels = new HashSet<>()
-    Set<String> setParameterNames = new HashSet<>()
-
-    private void validateStatement(statement, unit, compiler) {
-        if (statement != null) switch (statement.class.simpleName) {
-            case "MessageSend":
-                switch (simpleMethodName(statement)) {
-                    case "createQuery":
-                        statement.arguments.each { arg ->
-                            if (arg.class.simpleName == "StringLiteral") {
-                                validateArgument(arg, unit, compiler, true)
-                            }
-                        }
-                        break
-                    case "setParameter":
-                        def arg = statement.arguments.first()
-                        switch (arg.class.simpleName) {
-                            case "IntLiteral":
-                                setParameterLabels.add(arg.value)
-                                break
-                            case "StringLiteral":
-                                setParameterNames.add(new String((char[]) arg.source()))
-                                break
-                        }
-                        break
-                }
-                validateStatement(statement.receiver, unit, compiler)
-                setParameterLabels.clear()
-                setParameterNames.clear()
-                validateStatements(statement.arguments, unit, compiler)
-                break
-            case "AbstractVariableDeclaration":
-                validateStatement(statement.initialization, unit, compiler)
-                break
-            case "AssertStatement":
-                validateStatement(statement.assertExpression, unit, compiler)
-                break
-            case "Block":
-                validateStatements(statement.statements, unit, compiler)
-                break
-            case "SwitchStatement":
-                validateStatement(statement.expression, unit, compiler)
-                validateStatements(statement.statements, unit, compiler)
-                break
-            case "ForStatement":
-                validateStatement(statement.action, unit, compiler)
-                break
-            case "ForeachStatement":
-                validateStatement(statement.collection, unit, compiler)
-                validateStatement(statement.action, unit, compiler)
-                break
-            case "DoStatement":
-            case "WhileStatement":
-                validateStatement(statement.condition, unit, compiler)
-                validateStatement(statement.action, unit, compiler)
-                break
-            case "IfStatement":
-                validateStatement(statement.condition, unit, compiler)
-                validateStatement(statement.thenStatement, unit, compiler)
-                validateStatement(statement.elseStatement, unit, compiler)
-                break
-            case "TryStatement":
-                validateStatement(statement.tryBlock, unit, compiler)
-                validateStatements(statement.catchBlocks, unit, compiler)
-                validateStatement(statement.finallyBlock, unit, compiler)
-                break
-            case "SynchronizedStatement":
-                validateStatement(statement.expression, unit, compiler)
-                validateStatement(statement.block, unit, compiler)
-                break
-            case "BinaryExpression":
-                validateStatement(statement.left, unit, compiler)
-                validateStatement(statement.right, unit, compiler)
-                break
-            case "UnaryExpression":
-            case "CastExpression":
-            case "InstanceOfExpression":
-                validateStatement(statement.expression, unit, compiler)
-                break
-            case "ConditionalExpression":
-                validateStatement(statement.condition, unit, compiler)
-                validateStatement(statement.valueIfTrue, unit, compiler)
-                validateStatement(statement.valueIfFalse, unit, compiler)
-                break
-            case "LambdaExpression":
-                validateStatement(statement.body, unit, compiler)
-                break
-            case "ArrayInitializer":
-                validateStatements(statement.expressions, unit, compiler)
-                break
-            case "ArrayAllocationExpression":
-                validateStatements(statement.initializer, unit, compiler)
-                break
-            case "Assignment":
-                validateStatement(statement.lhs, unit, compiler)
-                validateStatement(statement.expression, unit, compiler)
-                break
-            case "AllocationExpression":
-                validateStatements(statement.arguments, unit, compiler)
-                break
-            case "ReturnStatement":
-                validateStatement(statement.expression, unit, compiler)
-                break
-            case "ThrowStatement":
-                validateStatement(statement.exception, unit, compiler)
-                break
-            case "LabeledStatement":
-                validateStatement(statement.statement, unit, compiler)
-                break
-        }
-    }
-
-    void validateArgument(arg, unit, compiler, boolean checkParams) {
-        String hql = new String((char[]) arg.source())
-        ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
-        validate(hql, checkParams, setParameterLabels, setParameterNames, handler,
-                new EclipseSessionFactory(handler, unit))
-    }
-
     @Override
     SourceVersion getSupportedSourceVersion() {
         return SourceVersion.latestSupported()
     }
 
-    class ErrorReporter implements ParseErrorHandler {
+    static class Checker {
+
+        Set<Integer> setParameterLabels = new HashSet<>()
+        Set<String> setParameterNames = new HashSet<>()
+        boolean immediatelyCalled = false;
+
+        private def unit
+        private def compiler
+
+        Checker(unit, compiler) {
+            this.compiler = compiler
+            this.unit = unit
+        }
+
+        private void checkHQL() {
+            for (type in unit.types) {
+                if (isCheckable(type.binding, unit)) {
+                    type.annotations.each { annotation ->
+                        switch (qualifiedTypeName(annotation.resolvedType)) {
+                            case jpa("NamedQuery"):
+                                annotation.memberValuePairs.each { pair ->
+                                    if (simpleVariableName(pair) == "query") {
+                                        validateArgument(pair.value, false)
+                                    }
+                                }
+                                break
+                            case jpa("NamedQueries"):
+                                annotation.memberValue.expressions.each { ann ->
+                                    ann.memberValuePairs.each { pair ->
+                                        if (simpleVariableName(pair) == "query") {
+                                            validateArgument(pair.value, false)
+                                        }
+                                    }
+                                }
+                                break
+                        }
+                    }
+                    type.methods.each { method ->
+                        validateStatements(method.statements)
+                    }
+                }
+            }
+        }
+
+        private void validateStatements(statements) {
+            statements.each { statement -> validateStatement(statement) }
+        }
+
+        private void validateStatement(statement) {
+            if (statement != null) switch (statement.class.simpleName) {
+                case "MessageSend":
+                    boolean ic = immediatelyCalled;
+                    switch (simpleMethodName(statement)) {
+                        case "getResultList":
+                        case "getSingleResult":
+                            immediatelyCalled = true;
+                            break;
+                        case "createQuery":
+                            statement.arguments.each { arg ->
+                                if (arg.class.simpleName == "StringLiteral") {
+                                    validateArgument(arg, true)
+                                }
+                            }
+                            break
+                        case "setParameter":
+                            def arg = statement.arguments.first()
+                            switch (arg.class.simpleName) {
+                                case "IntLiteral":
+                                    setParameterLabels.add(parseInt(new String((char[])arg.source())))
+                                    break
+                                case "StringLiteral":
+                                    setParameterNames.add(new String((char[])arg.source()))
+                                    break
+                            }
+                            break
+                    }
+                    validateStatement(statement.receiver)
+                    setParameterLabels.clear()
+                    setParameterNames.clear()
+                    immediatelyCalled = ic;
+                    validateStatements(statement.arguments)
+                    break
+                case "AbstractVariableDeclaration":
+                    validateStatement(statement.initialization)
+                    break
+                case "AssertStatement":
+                    validateStatement(statement.assertExpression)
+                    break
+                case "Block":
+                    validateStatements(statement.statements)
+                    break
+                case "SwitchStatement":
+                    validateStatement(statement.expression)
+                    validateStatements(statement.statements)
+                    break
+                case "ForStatement":
+                    validateStatement(statement.action)
+                    break
+                case "ForeachStatement":
+                    validateStatement(statement.collection)
+                    validateStatement(statement.action)
+                    break
+                case "DoStatement":
+                case "WhileStatement":
+                    validateStatement(statement.condition)
+                    validateStatement(statement.action)
+                    break
+                case "IfStatement":
+                    validateStatement(statement.condition)
+                    validateStatement(statement.thenStatement)
+                    validateStatement(statement.elseStatement)
+                    break
+                case "TryStatement":
+                    validateStatement(statement.tryBlock)
+                    validateStatements(statement.catchBlocks)
+                    validateStatement(statement.finallyBlock)
+                    break
+                case "SynchronizedStatement":
+                    validateStatement(statement.expression)
+                    validateStatement(statement.block)
+                    break
+                case "BinaryExpression":
+                    validateStatement(statement.left)
+                    validateStatement(statement.right)
+                    break
+                case "UnaryExpression":
+                case "CastExpression":
+                case "InstanceOfExpression":
+                    validateStatement(statement.expression)
+                    break
+                case "ConditionalExpression":
+                    validateStatement(statement.condition)
+                    validateStatement(statement.valueIfTrue)
+                    validateStatement(statement.valueIfFalse)
+                    break
+                case "LambdaExpression":
+                    validateStatement(statement.body)
+                    break
+                case "ArrayInitializer":
+                    validateStatements(statement.expressions)
+                    break
+                case "ArrayAllocationExpression":
+                    validateStatements(statement.initializer)
+                    break
+                case "Assignment":
+                    validateStatement(statement.lhs)
+                    validateStatement(statement.expression)
+                    break
+                case "AllocationExpression":
+                    validateStatements(statement.arguments)
+                    break
+                case "ReturnStatement":
+                    validateStatement(statement.expression)
+                    break
+                case "ThrowStatement":
+                    validateStatement(statement.exception)
+                    break
+                case "LabeledStatement":
+                    validateStatement(statement.statement)
+                    break
+            }
+        }
+
+        void validateArgument(arg, boolean inCreateQueryMethod) {
+            String hql = new String((char[]) arg.source())
+            ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
+            validate(hql, inCreateQueryMethod && immediatelyCalled,
+                    setParameterLabels, setParameterNames, handler,
+                    new EclipseSessionFactory(handler, unit))
+        }
+
+    }
+
+    static class ErrorReporter implements ParseErrorHandler {
 
         private def literal
         private def unit
@@ -254,7 +275,7 @@ class EclipseProcessor extends AbstractProcessor {
             report(0, text, 0)
         }
 
-        int getLineNumber(int position, int[] lineEnds, int g, int d) {
+        static int getLineNumber(int position, int[] lineEnds, int g, int d) {
             if (lineEnds == null)
                 return 1
             if (d == -1)
@@ -276,7 +297,7 @@ class EclipseProcessor extends AbstractProcessor {
             return m + 2
         }
 
-        int searchColumnNumber(int[] startLineIndexes, int lineNumber, int position) {
+        static int searchColumnNumber(int[] startLineIndexes, int lineNumber, int position) {
             switch (lineNumber) {
                 case 1:
                     return position + 1

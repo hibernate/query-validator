@@ -95,6 +95,9 @@ public class GoodQueries {
         createQuery("select function('bit_length', e.name) from Employee e"); //JPQL "function()" passthrough
 
         createQuery("from Person p where p.sex = test.Sex.FEMALE");
+
+        createQuery("from Person p where p.name = ?1 and p.id > ?2"); //JPQL positional args
+        createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
     }
 
     @SuppressWarnings("hql.unknown-function")

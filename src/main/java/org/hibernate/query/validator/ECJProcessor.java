@@ -21,6 +21,7 @@ import javax.lang.model.element.TypeElement;
 import java.util.HashSet;
 import java.util.Set;
 
+import static java.lang.Integer.parseInt;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
@@ -57,9 +58,7 @@ public class ECJProcessor extends AbstractProcessor {
                 type.traverse(new ASTVisitor() {
                     Set<Integer> setParameterLabels = new HashSet<>();
                     Set<String> setParameterNames = new HashSet<>();
-                    boolean inSetParameterMethod = false;
-                    boolean inCreateQueryMethod = false;
-                    boolean inNamedQueryAnnotation = false;
+                    boolean immediatelyCalled;
                     boolean strict = true;
 
                     @Override
@@ -92,11 +91,34 @@ public class ECJProcessor extends AbstractProcessor {
                     public boolean visit(MessageSend messageSend, BlockScope scope) {
                         String name = charToString(messageSend.selector);
                         switch (name) {
+                            case "getResultList":
+                            case "getSingleResult":
+                                immediatelyCalled = true;
+                                break;
                             case "createQuery":
-                                inCreateQueryMethod = true;
+                                for (Expression argument : messageSend.arguments) {
+                                    if (argument instanceof StringLiteral) {
+                                        check((StringLiteral) argument, true);
+                                    }
+                                    break;
+                                }
                                 break;
                             case "setParameter":
-                                inSetParameterMethod = true;
+                                for (Expression argument : messageSend.arguments) {
+                                    if (argument instanceof StringLiteral) {
+                                        String paramName =
+                                                charToString(((StringLiteral) argument)
+                                                        .source());
+                                        setParameterNames.add(paramName);
+                                    }
+                                    else if (argument instanceof IntLiteral) {
+                                        int paramLabel = parseInt(new String(((IntLiteral) argument).source()));
+                                        setParameterLabels.add(paramLabel);
+                                    }
+                                    //the remaining parameters aren't parameter ids!
+                                    break;
+                                }
+
                                 break;
                         }
                         return true;
@@ -104,62 +126,41 @@ public class ECJProcessor extends AbstractProcessor {
 
                     @Override
                     public void endVisit(MessageSend messageSend, BlockScope scope) {
-                        inCreateQueryMethod = false;
+                        String name = charToString(messageSend.selector);
+                        switch (name) {
+                            case "getResultList":
+                            case "getSingleResult":
+                                immediatelyCalled = false;
+                                break;
+                        }
                     }
 
                     @Override
                     public boolean visit(MemberValuePair pair, BlockScope scope) {
                         if (qualifiedName(pair.binding)
                                 .equals(jpa("NamedQuery.query"))) {
-                            inNamedQueryAnnotation = true;
+                            if (pair.value instanceof StringLiteral) {
+                                check((StringLiteral) pair.value, false);
+                            }
                         }
                         return true;
                     }
 
-                    @Override
-                    public void endVisit(MemberValuePair pair, BlockScope scope) {
-                        inNamedQueryAnnotation = false;
-                    }
-
-                    @Override
-                    public void endVisit(StringLiteral stringLiteral, BlockScope scope) {
-                        if (inCreateQueryMethod || inNamedQueryAnnotation) {
-                            String hql = charToString(stringLiteral.source());
-                            ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
-                            validate(hql, inCreateQueryMethod,
-                                    setParameterLabels, setParameterNames, handler,
-                                    new ECJSessionFactory(handler, unit) {
-                                        @Override
-                                        void unknownSqlFunction(String functionName) {
-                                            if (strict) {
-                                                super.unknownSqlFunction(functionName);
-                                            }
+                    void check(StringLiteral stringLiteral, boolean inCreateQueryMethod) {
+                        String hql = charToString(stringLiteral.source());
+                        ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
+                        validate(hql, inCreateQueryMethod && immediatelyCalled,
+                                setParameterLabels, setParameterNames, handler,
+                                new ECJSessionFactory(handler, unit) {
+                                    @Override
+                                    void unknownSqlFunction(String functionName) {
+                                        if (strict) {
+                                            super.unknownSqlFunction(functionName);
                                         }
-                                    });
-                        }
+                                    }
+                                });
                     }
 
-                    @Override
-                    public boolean visit(StringLiteral stringLiteral, BlockScope scope) {
-                        if (inSetParameterMethod) {
-                            String paramName = charToString(stringLiteral.source());
-                            setParameterNames.add(paramName);
-                            //the remaining parameters aren't parameter names!
-                            inSetParameterMethod = false;
-                        }
-                        return true;
-                    }
-
-                    @Override
-                    public boolean visit(IntLiteral intLiteral, BlockScope scope) {
-                        if (inSetParameterMethod) {
-                            int paramLabel = intLiteral.value;
-                            setParameterLabels.add(paramLabel);
-                            //the remaining parameters aren't parameter names!
-                            inSetParameterMethod = false;
-                        }
-                        return true;
-                    }
                 }, unit.scope);
             }
         }
