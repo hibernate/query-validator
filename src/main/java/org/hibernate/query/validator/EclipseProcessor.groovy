@@ -9,7 +9,6 @@ import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
 
-import static java.util.Collections.emptySet
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
 import static org.hibernate.query.validator.HQLProcessor.jpa
@@ -50,7 +49,7 @@ class EclipseProcessor extends AbstractProcessor {
                         case jpa("NamedQuery"):
                             annotation.memberValuePairs.each { pair ->
                                 if (simpleVariableName(pair) == "query") {
-                                    validateArgument(pair.value, unit, compiler)
+                                    validateArgument(pair.value, unit, compiler, false)
                                 }
                             }
                             break
@@ -58,7 +57,7 @@ class EclipseProcessor extends AbstractProcessor {
                             annotation.memberValue.expressions.each { ann ->
                                 ann.memberValuePairs.each { pair ->
                                     if (simpleVariableName(pair) == "query") {
-                                        validateArgument(pair.value, unit, compiler)
+                                        validateArgument(pair.value, unit, compiler, false)
                                     }
                                 }
                             }
@@ -76,17 +75,35 @@ class EclipseProcessor extends AbstractProcessor {
         statements.each { statement -> validateStatement(statement, unit, compiler) }
     }
 
+    Set<Integer> setParameterLabels = new HashSet<>()
+    Set<String> setParameterNames = new HashSet<>()
+
     private void validateStatement(statement, unit, compiler) {
         if (statement != null) switch (statement.class.simpleName) {
             case "MessageSend":
-                if (simpleMethodName(statement) == "createQuery") {
-                    statement.arguments.each { arg ->
-                        if (arg.class.simpleName == "StringLiteral") {
-                            validateArgument(arg, unit, compiler)
+                switch (simpleMethodName(statement)) {
+                    case "createQuery":
+                        statement.arguments.each { arg ->
+                            if (arg.class.simpleName == "StringLiteral") {
+                                validateArgument(arg, unit, compiler, true)
+                            }
                         }
-                    }
+                        break
+                    case "setParameter":
+                        def arg = statement.arguments.first()
+                        switch (arg.class.simpleName) {
+                            case "IntLiteral":
+                                setParameterLabels.add(arg.value)
+                                break
+                            case "StringLiteral":
+                                setParameterNames.add(new String((char[]) arg.source()))
+                                break
+                        }
+                        break
                 }
                 validateStatement(statement.receiver, unit, compiler)
+                setParameterLabels.clear()
+                setParameterNames.clear()
                 validateStatements(statement.arguments, unit, compiler)
                 break
             case "AbstractVariableDeclaration":
@@ -170,10 +187,10 @@ class EclipseProcessor extends AbstractProcessor {
         }
     }
 
-    void validateArgument(arg, unit, compiler) {
+    void validateArgument(arg, unit, compiler, boolean checkParams) {
         String hql = new String((char[]) arg.source())
         ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
-        validate(hql, emptySet(), emptySet(), handler,
+        validate(hql, checkParams, setParameterLabels, setParameterNames, handler,
                 new EclipseSessionFactory(handler, unit))
     }
 
