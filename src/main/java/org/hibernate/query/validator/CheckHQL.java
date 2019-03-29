@@ -8,7 +8,7 @@ import static java.lang.annotation.RetentionPolicy.CLASS;
 
 /**
  * <p>
- * Indicates that a package, type, or method contains HQL
+ * Indicates that a package or toplevel type contains HQL
  * or JPQL queries encoded as static strings that should
  * be validated at compile time.
  * </p>
@@ -27,8 +27,8 @@ import static java.lang.annotation.RetentionPolicy.CLASS;
  * </ul>
  *
  * <p>
- * is interpreted as HQL/JPQL and validated. Errors in
- * the query are reported by the Java compiler.
+ * is interpreted as HQL/JPQL and validated. Errors in the
+ * query are reported by the Java compiler.
  * </p>
  *
  * <p>
@@ -51,6 +51,6 @@ import static java.lang.annotation.RetentionPolicy.CLASS;
  * @see javax.persistence.NamedQuery
  * @see javax.persistence.EntityManager#createQuery(String)
  */
-@Target({PACKAGE, TYPE, METHOD, CONSTRUCTOR, FIELD})
+@Target({PACKAGE, TYPE})
 @Retention(CLASS)
 public @interface CheckHQL {}

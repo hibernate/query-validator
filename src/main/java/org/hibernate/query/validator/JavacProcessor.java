@@ -38,15 +38,13 @@ public class JavacProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-        for (TypeElement annotation : annotations) {
-            for (Element element : roundEnv.getElementsAnnotatedWith(annotation)) {
-                if (element instanceof PackageElement) {
-                    for (Element member : element.getEnclosedElements()) {
-                        checkHQL(member);
-                    }
-                } else {
-                    checkHQL(element);
+        for (Element element : roundEnv.getRootElements()) {
+            if (element instanceof PackageElement) {
+                for (Element member : element.getEnclosedElements()) {
+                    checkHQL(member);
                 }
+            } else {
+                checkHQL(element);
             }
         }
         return false;
@@ -54,7 +52,7 @@ public class JavacProcessor extends AbstractProcessor {
 
     private void checkHQL(Element element) {
         Elements elementUtils = processingEnv.getElementUtils();
-        if (elementUtils instanceof JavacElements) {
+        if (isCheckable(element)) {
             JCTree tree = ((JavacElements) elementUtils).getTree(element);
             if (tree != null) {
                 tree.accept(new TreeScanner() {
@@ -80,7 +78,7 @@ public class JavacProcessor extends AbstractProcessor {
                     }
 
                     JCTree.JCLiteral firstArgument(JCTree.JCMethodInvocation call) {
-                        for (JCTree.JCExpression e: call.args) {
+                        for (JCTree.JCExpression e : call.args) {
                             return e instanceof JCTree.JCLiteral ?
                                     (JCTree.JCLiteral) e : null;
                         }
@@ -99,7 +97,7 @@ public class JavacProcessor extends AbstractProcessor {
                                 break;
                             case "createQuery":
                                 JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
-                                if (queryArg!=null && queryArg.value instanceof String) {
+                                if (queryArg != null && queryArg.value instanceof String) {
                                     String hql = (String) queryArg.value;
                                     check(queryArg, hql, true);
                                 }
@@ -107,10 +105,12 @@ public class JavacProcessor extends AbstractProcessor {
                                 break;
                             case "setParameter":
                                 JCTree.JCLiteral paramArg = firstArgument(jcMethodInvocation);
-                                if (paramArg!=null && paramArg.value instanceof String) {
-                                    setParameterNames.add((String) paramArg.value);
-                                } else if (paramArg.value instanceof Integer) {
-                                    setParameterLabels.add((Integer) paramArg.value);
+                                if (paramArg != null) {
+                                    if (paramArg.value instanceof String) {
+                                        setParameterNames.add((String) paramArg.value);
+                                    } else if (paramArg.value instanceof Integer) {
+                                        setParameterLabels.add((Integer) paramArg.value);
+                                    }
                                 }
                                 super.visitApply(jcMethodInvocation);
                                 break;
@@ -121,7 +121,7 @@ public class JavacProcessor extends AbstractProcessor {
                     }
 
                     @Override
-                    public void visitAnnotation (JCTree.JCAnnotation jcAnnotation){
+                    public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
                         AnnotationMirror annotation = jcAnnotation.attribute;
                         String name = annotation.getAnnotationType().toString();
                         if (SuppressWarnings.class.getName().equals(name)) {
@@ -172,6 +172,11 @@ public class JavacProcessor extends AbstractProcessor {
                 });
             }
         }
+    }
+
+    private static boolean isCheckable(Element element) {
+        return element.getAnnotation(CheckHQL.class)!=null ||
+                element.getEnclosingElement().getAnnotation(CheckHQL.class)!=null;
     }
 
     private static String getMethodName(ExpressionTree select) {

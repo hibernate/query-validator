@@ -27,14 +27,14 @@ you prefer.
 1. Put `query-validator-1.0-SNAPSHOT-all.jar` in the 
    compile-time classpath of your project. (Or depend on
    `org.hibernate:query-validator:1.0-SNAPSHOT`.)
-2. Annotate a package, class, or method with `@CheckHQL`.
+2. Annotate a package or toplevel class with `@CheckHQL`.
 
 Then the validator will check any static string argument of
 
 - the `createQuery()` method or
 - the `@NamedQuery()` annotation
 
-which occurs in the annotated package, class, or method. 
+which occurs in the annotated package or class. 
 
 A compile-time error is produced if
 

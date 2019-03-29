@@ -260,8 +260,8 @@ class JavacSessionFactory extends MockSessionFactory {
                 new ArrayList<>(syms.packages.values())) {
             try {
                 for (Symbol type: pack.members()
-                        .getElements(symbol -> isMatchingEntity(
-                                symbol, entityName))) {
+                        .getElements(symbol ->
+                                isMatchingEntity(symbol, entityName))) {
                     return (Symbol.ClassSymbol) type;
                 }
             }
