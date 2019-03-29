@@ -54,6 +54,15 @@ method containing the query:
 
     @SuppressWarnings("hql.unknown-function")
 
+Additionally, any JPA `Query` instance that is created and 
+immediately invoked in a single expression will have its 
+parameter bindings validated. A warning is produced if
+
+- the query string has a parameter with no argument specified 
+  using `setParameter()`, or
+- an argument is specified using `setParameter()`, but there 
+  is no matching parameter in the query string.
+
 ### Usage from command line
 
 Just compile your code with `javac`, `mvn`, or even with ECJ,
