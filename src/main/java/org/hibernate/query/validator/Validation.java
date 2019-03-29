@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
 import static java.lang.Integer.parseInt;
 import static java.util.Collections.emptyMap;
 import static java.util.regex.Pattern.compile;
+import static java.util.stream.Stream.concat;
 import static org.hibernate.internal.util.StringHelper.qualifier;
 import static org.hibernate.internal.util.StringHelper.unqualify;
 
@@ -111,14 +112,12 @@ class Validation {
                         int label = parseInt(labels.group(1));
                         setParameterLabels.remove(label);
                     }
-                    if (!setParameterNames.isEmpty() || !setParameterLabels.isEmpty()) {
-                        String missingParams = ':'
-                                + setParameterNames.stream()
-                                .reduce((list, name) -> list + ", :" + name)
-                                .orElse("")
-                                + setParameterLabels.stream().map(Object::toString)
-                                .reduce((list, label) -> list + ", ?" + label)
-                                .orElse("");
+                    String missingParams =
+                        concat(setParameterNames.stream().map(name->':'+name),
+                                setParameterLabels.stream().map(label -> "?" + label))
+                                .reduce((x, y)->x + ", " + y)
+                                .orElse(null);
+                    if (missingParams!=null) {
                         String notOccur =
                                 setParameterNames.size()+setParameterLabels.size() == 1 ?
                                 " does not occur in the query" :
