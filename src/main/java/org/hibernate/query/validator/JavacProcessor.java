@@ -63,6 +63,7 @@ public class JavacProcessor extends AbstractProcessor {
                     Set<String> setParameterNames = new HashSet<>();
                     boolean inSetParameterMethod = false;
                     boolean inCreateQueryMethod = false;
+                    boolean inNamedQueryAnnotation = false;
                     boolean strict = true;
 
                     @Override
@@ -106,9 +107,9 @@ public class JavacProcessor extends AbstractProcessor {
                                 if (arg instanceof JCTree.JCAssign) {
                                     JCTree.JCAssign assign = (JCTree.JCAssign) arg;
                                     if ("query".equals(assign.lhs.toString())) {
-                                        inCreateQueryMethod = true;
+                                        inNamedQueryAnnotation = true;
                                         super.visitAssign(assign);
-                                        inCreateQueryMethod = false;
+                                        inNamedQueryAnnotation = false;
                                     }
                                 }
                             }
@@ -121,10 +122,11 @@ public class JavacProcessor extends AbstractProcessor {
                     public void visitLiteral(JCTree.JCLiteral jcLiteral) {
                         Object literalValue = jcLiteral.value;
                         if (literalValue instanceof String) {
-                            if (inCreateQueryMethod) {
+                            if (inCreateQueryMethod || inNamedQueryAnnotation) {
                                 String hql = (String) literalValue;
                                 ErrorReporter handler = new ErrorReporter(jcLiteral, element);
-                                validate(hql, setParameterLabels, setParameterNames, handler,
+                                validate(hql, inCreateQueryMethod,
+                                        setParameterLabels, setParameterNames, handler,
                                         new JavacSessionFactory(handler,
                                                 (JavacProcessingEnvironment) processingEnv) {
                                             @Override

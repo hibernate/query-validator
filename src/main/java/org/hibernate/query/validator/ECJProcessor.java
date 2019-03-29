@@ -59,6 +59,7 @@ public class ECJProcessor extends AbstractProcessor {
                     Set<String> setParameterNames = new HashSet<>();
                     boolean inSetParameterMethod = false;
                     boolean inCreateQueryMethod = false;
+                    boolean inNamedQueryAnnotation = false;
                     boolean strict = true;
 
                     @Override
@@ -110,23 +111,24 @@ public class ECJProcessor extends AbstractProcessor {
                     public boolean visit(MemberValuePair pair, BlockScope scope) {
                         if (qualifiedName(pair.binding)
                                 .equals(jpa("NamedQuery.query"))) {
-                            inCreateQueryMethod = true;
+                            inNamedQueryAnnotation = true;
                         }
                         return true;
                     }
 
                     @Override
                     public void endVisit(MemberValuePair pair, BlockScope scope) {
-                        inCreateQueryMethod = false;
+                        inNamedQueryAnnotation = false;
                     }
 
                     @Override
                     public void endVisit(StringLiteral stringLiteral, BlockScope scope) {
-                        if (inCreateQueryMethod) {
+                        if (inCreateQueryMethod || inNamedQueryAnnotation) {
                             String hql = charToString(stringLiteral.source());
                             ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
-                            validate(hql, setParameterLabels, setParameterNames, handler,
-                                    new ECJSessionFactory(handler, unit){
+                            validate(hql, inCreateQueryMethod,
+                                    setParameterLabels, setParameterNames, handler,
+                                    new ECJSessionFactory(handler, unit) {
                                         @Override
                                         void unknownSqlFunction(String functionName) {
                                             if (strict) {
@@ -135,22 +137,28 @@ public class ECJProcessor extends AbstractProcessor {
                                         }
                                     });
                         }
-                        else if (inSetParameterMethod) {
+                    }
+
+                    @Override
+                    public boolean visit(StringLiteral stringLiteral, BlockScope scope) {
+                        if (inSetParameterMethod) {
                             String paramName = charToString(stringLiteral.source());
                             setParameterNames.add(paramName);
                             //the remaining parameters aren't parameter names!
                             inSetParameterMethod = false;
                         }
+                        return true;
                     }
 
                     @Override
-                    public void endVisit(IntLiteral intLiteral, BlockScope scope) {
+                    public boolean visit(IntLiteral intLiteral, BlockScope scope) {
                         if (inSetParameterMethod) {
                             int paramLabel = intLiteral.value;
                             setParameterLabels.add(paramLabel);
                             //the remaining parameters aren't parameter names!
                             inSetParameterMethod = false;
                         }
+                        return true;
                     }
                 }, unit.scope);
             }
