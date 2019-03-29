@@ -20,6 +20,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import java.util.Set;
 
+import static java.util.Collections.emptySet;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
@@ -88,7 +89,8 @@ public class ECJProcessor extends AbstractProcessor {
                         if (inCreateQueryMethod) {
                             String hql = charToString(stringLiteral.source());
                             ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
-                            validate(hql, handler, new ECJSessionFactory(handler, unit));
+                            validate(hql, emptySet(), emptySet(), handler,
+                                    new ECJSessionFactory(handler, unit));
                         }
 
                     }

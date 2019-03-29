@@ -21,6 +21,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.*;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -58,6 +59,9 @@ public class JavacProcessor extends AbstractProcessor {
             JCTree tree = ((JavacElements) elementUtils).getTree(element);
             if (tree != null) {
                 tree.accept(new TreeScanner() {
+                    Set<Integer> setParameterLabels = new HashSet<>();
+                    Set<String> setParameterNames = new HashSet<>();
+                    boolean inSetParameterMethod = false;
                     boolean inCreateQueryMethod = false;
                     boolean strict = true;
 
@@ -79,13 +83,21 @@ public class JavacProcessor extends AbstractProcessor {
                     @Override
                     public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
                         String name = getMethodName(jcMethodInvocation.meth);
-                        if ("createQuery".equals(name)) {
-                            inCreateQueryMethod = true;
-                            super.visitApply(jcMethodInvocation);
-                            inCreateQueryMethod = false;
-                        }
-                        else {
-                            super.visitApply(jcMethodInvocation); //needed!
+                        switch (name) {
+                            case "createQuery":
+                                inCreateQueryMethod = true;
+                                super.visitApply(jcMethodInvocation);
+                                inCreateQueryMethod = false;
+                                break;
+                            case "setParameter":
+                                inSetParameterMethod = true;
+                                super.visitApply(jcMethodInvocation);
+                                inSetParameterMethod = false;
+                                break;
+                            default:
+                                super.visitApply(jcMethodInvocation); //needed!
+
+                                break;
                         }
                     }
 
@@ -112,6 +124,41 @@ public class JavacProcessor extends AbstractProcessor {
                     }
 
                     @Override
+                    public void visitLiteral(JCTree.JCLiteral jcLiteral) {
+                        Object literalValue = jcLiteral.value;
+                        if (literalValue instanceof String) {
+                            if (inCreateQueryMethod) {
+                                String hql = (String) literalValue;
+                                ErrorReporter handler = new ErrorReporter(jcLiteral, element);
+                                validate(hql, setParameterLabels, setParameterNames, handler,
+                                        new JavacSessionFactory(handler,
+                                                (JavacProcessingEnvironment) processingEnv) {
+                                            @Override
+                                            void unknownSqlFunction(String functionName) {
+                                                if (strict) {
+                                                    super.unknownSqlFunction(functionName);
+                                                }
+                                            }
+                                        });
+                            }
+                            else if (inSetParameterMethod) {
+                                String paramName = (String) literalValue;
+                                setParameterNames.add(paramName);
+                                //the remaining parameters aren't parameter names!
+                                inSetParameterMethod = false;
+                            }
+                        }
+                        if (literalValue instanceof Integer) {
+                            if (inSetParameterMethod) {
+                                int paramLabel = (Integer) literalValue;
+                                setParameterLabels.add(paramLabel);
+                                //the remaining parameters aren't parameter names!
+                                inSetParameterMethod = false;
+                            }
+                        }
+                    }
+
+                    @Override
                     public void visitClassDef(JCTree.JCClassDecl jcClassDecl) {
                         boolean s = strict;
                         super.visitClassDef(jcClassDecl);
@@ -125,24 +172,6 @@ public class JavacProcessor extends AbstractProcessor {
                         strict = s;
                     }
 
-                    @Override
-                    public void visitLiteral(JCTree.JCLiteral jcLiteral) {
-                        Object literalValue = jcLiteral.value;
-                        if (inCreateQueryMethod && literalValue instanceof String) {
-                            String hql = (String) literalValue;
-                            ErrorReporter handler = new ErrorReporter(jcLiteral, element);
-                            validate(hql, handler,
-                                    new JavacSessionFactory(handler,
-                                            (JavacProcessingEnvironment) processingEnv) {
-                                        @Override
-                                        void unknownSqlFunction(String functionName) {
-                                            if (strict) {
-                                                super.unknownSqlFunction(functionName);
-                                            }
-                                        }
-                                    });
-                        }
-                    }
                 });
             }
         }

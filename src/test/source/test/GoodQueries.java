@@ -73,8 +73,8 @@ public class GoodQueries {
         createQuery("select e.address from Person p join p.emails e");
         createQuery("select e from Person p join p.emails e where e.address is not null and length(e.address)>0");
 
-        createQuery("from Person p where p.name = ?1 and p.id > ?2"); //JPQL positional args
-        createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
+
+
 
         createQuery("from Person p where treat(p.emergencyContact as Employee).employeeId = 2"); //JPQL "treat as" operator
         createQuery("from Person p join treat(p.emergencyContact as Employee) c where c.employeeId = 2"); //JPQL "treat as" operator

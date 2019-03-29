@@ -10,8 +10,13 @@ import org.hibernate.hql.internal.antlr.HqlTokenTypes;
 import org.hibernate.hql.internal.ast.*;
 import org.hibernate.hql.internal.ast.util.ASTUtil;
 import org.hibernate.hql.internal.ast.util.NodeTraverser;
+import org.hibernate.param.NamedParameterSpecification;
+import org.hibernate.param.ParameterSpecification;
+import org.hibernate.param.PositionalParameterSpecification;
 
 import java.lang.reflect.Field;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,7 +27,10 @@ import static org.hibernate.internal.util.StringHelper.unqualify;
 
 class Validation {
 
-    static void validate(String hql, ParseErrorHandler handler,
+    static void validate(String hql,
+                         Set<Integer> setParameterLabels,
+                         Set<String> setParameterNames,
+                         ParseErrorHandler handler,
                          SessionFactoryImplementor factory) {
 
         handler = new Filter(handler);
@@ -63,9 +71,63 @@ class Validation {
                     ;
                 }
 
-                //don't use this much simpler implementation
-                //because it does too much stuff (generates SQL)
-                //  queryTranslator.compile(null, false);
+
+                try {
+                    List<ParameterSpecification> specs = walker.getParameterSpecs();
+                    String unsetParams = null;
+                    String notSet = null;
+                    for (ParameterSpecification spec : specs) {
+                        if (spec instanceof NamedParameterSpecification) {
+                            String name = ((NamedParameterSpecification) spec).getName();
+                            if (!setParameterNames.contains(name)) {
+                                notSet = unsetParams==null ? " is not set" : " are not set";
+                                unsetParams = unsetParams==null ? "" : unsetParams + ", ";
+                                unsetParams += ':' + name;
+                                //TODO: report the error at the correct offset
+                                //int loc = walker.getNamedParameterLocations(name)[0];
+                            }
+                        }
+                        else if (spec instanceof PositionalParameterSpecification) {
+                            int label = ((PositionalParameterSpecification) spec).getLabel();
+                            if (!setParameterLabels.contains(label)) {
+                                notSet = unsetParams==null ? " is not set" : " are not set";
+                                unsetParams = unsetParams==null ? "" : unsetParams + ", ";
+                                unsetParams += "?" + label;
+                                //TODO: report the error at the correct offset
+                                //int loc = walker.getNamedParameterLocations(name)[0];
+                            }
+                        }
+                    }
+                    if (unsetParams!=null) {
+                        handler.reportWarning(unsetParams + notSet);
+                    }
+                    for (ParameterSpecification spec : specs) {
+                        if (spec instanceof NamedParameterSpecification) {
+                            String name = ((NamedParameterSpecification) spec).getName();
+                            setParameterNames.remove(name);
+                        }
+                        else if (spec instanceof PositionalParameterSpecification) {
+                            int label = ((PositionalParameterSpecification) spec).getLabel();
+                            setParameterLabels.remove(label);
+                        }
+                    }
+                    if (!setParameterNames.isEmpty() || !setParameterLabels.isEmpty()) {
+                        String missingParams = ':'
+                                + setParameterNames.stream()
+                                .reduce((names, name) -> names + ", :" + name)
+                                .orElse("")
+                                + setParameterLabels.stream().map(Object::toString)
+                                .reduce((names, label) -> names + ", ?" + label)
+                                .orElse("");
+                        String notOccur = setParameterNames.size()+setParameterLabels.size() == 1 ?
+                                " does not occur in the query" :
+                                " do not occur in the query";
+                        handler.reportWarning(missingParams + notOccur);
+                    }
+                }
+                finally {
+                    setParameterNames.clear();
+                }
             }
 
         } catch (Exception e) {

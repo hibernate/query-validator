@@ -9,6 +9,7 @@ import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
 
+import static java.util.Collections.emptySet
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
 import static org.hibernate.query.validator.HQLProcessor.jpa
@@ -172,7 +173,8 @@ class EclipseProcessor extends AbstractProcessor {
     void validateArgument(arg, unit, compiler) {
         String hql = new String((char[]) arg.source())
         ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
-        validate(hql, handler, new EclipseSessionFactory(handler, unit))
+        validate(hql, emptySet(), emptySet(), handler,
+                new EclipseSessionFactory(handler, unit))
     }
 
     @Override

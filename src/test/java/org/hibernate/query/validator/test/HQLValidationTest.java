@@ -65,6 +65,10 @@ public class HQLValidationTest {
 //        assertTrue(errors.contains("BadQueries.java:41:"));
 
         assertTrue(errors.contains("Person.java:22: error: Person has no mapped x"));
+
+        assertTrue(errors.contains("BadQueries.java:43: warning: ?1, ?2 are not set"));
+        assertTrue(errors.contains("BadQueries.java:44: warning: :name, :minId are not set"));
+
     }
 
     @Test
