@@ -65,21 +65,6 @@ public class JavacProcessor extends AbstractProcessor {
                     boolean inCreateQueryMethod = false;
                     boolean strict = true;
 
-                    private void setStrictFromSuppressWarnings(
-                            AnnotationMirror annotation) {
-                        for (AnnotationValue value:
-                                annotation.getElementValues().values()) {
-                            @SuppressWarnings("unchecked")
-                            List<Attribute> list = (List) value.getValue();
-                            for (Attribute val: list) {
-                                if (val.getValue().toString()
-                                        .equals("hql.unknown-function")) {
-                                    strict = false;
-                                }
-                            }
-                        }
-                    }
-
                     @Override
                     public void visitApply(JCTree.JCMethodInvocation jcMethodInvocation) {
                         String name = getMethodName(jcMethodInvocation.meth);
@@ -96,7 +81,6 @@ public class JavacProcessor extends AbstractProcessor {
                                 break;
                             default:
                                 super.visitApply(jcMethodInvocation); //needed!
-
                                 break;
                         }
                     }
@@ -106,7 +90,17 @@ public class JavacProcessor extends AbstractProcessor {
                         AnnotationMirror annotation = jcAnnotation.attribute;
                         String name = annotation.getAnnotationType().toString();
                         if (SuppressWarnings.class.getName().equals(name)) {
-                            setStrictFromSuppressWarnings(annotation);
+                            for (AnnotationValue value:
+                                    annotation.getElementValues().values()) {
+                                @SuppressWarnings("unchecked")
+                                List<Attribute> list = (List) value.getValue();
+                                for (Attribute val: list) {
+                                    if (val.getValue().toString()
+                                            .equals("hql.unknown-function")) {
+                                        strict = false;
+                                    }
+                                }
+                            }
                         } else if (name.equals(jpa("NamedQuery"))) {
                             for (JCTree.JCExpression arg : jcAnnotation.args) {
                                 if (arg instanceof JCTree.JCAssign) {
