@@ -557,20 +557,20 @@ class EclipseSessionFactory extends MockSessionFactory {
                     method.parameters.length == argumentTypes.size()) {
                 boolean argumentsCheckOut = true
                 for (int i = 0; i < argumentTypes.size(); i++) {
-                    Type type = argumentTypes.get(i)
+                    Type param = argumentTypes.get(i)
                     def typeClass
-                    if (type instanceof EntityType) {
-                        String entityName = type.getAssociatedEntityName()
+                    if (param instanceof EntityType) {
+                        String entityName = param.getAssociatedEntityName()
                         typeClass = findEntityClass(entityName)
-                    } else if (type instanceof CompositeCustomType) {
-                        typeClass = type.getUserType().type
-                    } else if (type instanceof BasicType) {
+                    } else if (param instanceof CompositeCustomType) {
+                        typeClass = param.getUserType().type
+                    } else if (param instanceof BasicType) {
                         String className
                         //sadly there is no way to get the classname
                         //from a Hibernate Type without trying to load
                         //the class!
                         try {
-                            className = type.getReturnedClass().getName()
+                            className = param.getReturnedClass().getName()
                         } catch (Exception e) {
                             continue
                         }
