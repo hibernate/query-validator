@@ -113,6 +113,9 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("Person has no mapped x") && errors.contains("Person.java (at line 22)"));
 
+        assertTrue(errors.contains("?1, ?2 are not set") && errors.contains("BadQueries.java (at line 43)"));
+        assertTrue(errors.contains(":name, :minId are not set") && errors.contains("BadQueries.java (at line 44)"));
+
     }
 
     @Test

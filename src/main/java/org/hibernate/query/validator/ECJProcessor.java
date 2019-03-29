@@ -18,9 +18,9 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
+import java.util.HashSet;
 import java.util.Set;
 
-import static java.util.Collections.emptySet;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
@@ -55,13 +55,50 @@ public class ECJProcessor extends AbstractProcessor {
         for (TypeDeclaration type : unit.types) {
             if (isCheckable(type.binding, unit)) {
                 type.traverse(new ASTVisitor() {
+                    Set<Integer> setParameterLabels = new HashSet<>();
+                    Set<String> setParameterNames = new HashSet<>();
+                    boolean inSetParameterMethod = false;
                     boolean inCreateQueryMethod = false;
+                    boolean strict = true;
+
+                    @Override
+                    public boolean visit(SingleMemberAnnotation annotation, BlockScope scope) {
+                        if (qualifiedName(annotation.type.resolvedType)
+                                .equals(SuppressWarnings.class.getName())) {
+
+                            Expression memberValue = annotation.memberValue;
+                            if (memberValue instanceof StringLiteral) {
+                                setNonStrict((StringLiteral) memberValue);
+                            }
+                            else if (memberValue instanceof ArrayInitializer) {
+                                for (Expression e: ((ArrayInitializer) memberValue).expressions) {
+                                    if (e instanceof StringLiteral) {
+                                        setNonStrict((StringLiteral) e);
+                                    }
+                                }
+                            }
+                        }
+                        return true;
+                    }
+
+                    private void setNonStrict(StringLiteral memberValue) {
+                        if (new String(memberValue.source())
+                                .equals("hql.unknown-function")) {
+                            strict = false;
+                        }
+                    }
 
                     @Override
                     public boolean visit(MessageSend messageSend, BlockScope scope) {
-                        inCreateQueryMethod =
-                                charToString(messageSend.selector)
-                                        .equals("createQuery");
+                        String name = charToString(messageSend.selector);
+                        switch (name) {
+                            case "createQuery":
+                                inCreateQueryMethod = true;
+                                break;
+                            case "setParameter":
+                                inSetParameterMethod = true;
+                                break;
+                        }
                         return true;
                     }
 
@@ -89,10 +126,32 @@ public class ECJProcessor extends AbstractProcessor {
                         if (inCreateQueryMethod) {
                             String hql = charToString(stringLiteral.source());
                             ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
-                            validate(hql, emptySet(), emptySet(), handler,
-                                    new ECJSessionFactory(handler, unit));
+                            validate(hql, setParameterLabels, setParameterNames, handler,
+                                    new ECJSessionFactory(handler, unit){
+                                        @Override
+                                        void unknownSqlFunction(String functionName) {
+                                            if (strict) {
+                                                super.unknownSqlFunction(functionName);
+                                            }
+                                        }
+                                    });
                         }
+                        else if (inSetParameterMethod) {
+                            String paramName = charToString(stringLiteral.source());
+                            setParameterNames.add(paramName);
+                            //the remaining parameters aren't parameter names!
+                            inSetParameterMethod = false;
+                        }
+                    }
 
+                    @Override
+                    public void endVisit(IntLiteral intLiteral, BlockScope scope) {
+                        if (inSetParameterMethod) {
+                            int paramLabel = intLiteral.value;
+                            setParameterLabels.add(paramLabel);
+                            //the remaining parameters aren't parameter names!
+                            inSetParameterMethod = false;
+                        }
                     }
                 }, unit.scope);
             }
