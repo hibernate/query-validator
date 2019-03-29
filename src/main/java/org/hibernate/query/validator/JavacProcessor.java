@@ -24,6 +24,7 @@ import javax.tools.JavaFileObject;
 import java.util.List;
 import java.util.Set;
 
+import static org.hibernate.query.validator.HQLProcessor.jpa;
 import static org.hibernate.query.validator.Validation.validate;
 
 /**
@@ -33,7 +34,6 @@ import static org.hibernate.query.validator.Validation.validate;
  * @see CheckHQL
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
-//@AutoService(Processor.class)
 public class JavacProcessor extends AbstractProcessor {
 
     @Override
@@ -92,24 +92,22 @@ public class JavacProcessor extends AbstractProcessor {
                     @Override
                     public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
                         AnnotationMirror annotation = jcAnnotation.attribute;
-                        switch (annotation.getAnnotationType().toString()) {
-                            case "java.lang.SuppressWarnings":
-                                setStrictFromSuppressWarnings(annotation);
-                                break;
-                            case "javax.persistence.NamedQuery":
-                                for (JCTree.JCExpression arg: jcAnnotation.args) {
-                                    if (arg instanceof JCTree.JCAssign) {
-                                        JCTree.JCAssign assign = (JCTree.JCAssign) arg;
-                                        if ("query".equals(assign.lhs.toString())) {
-                                            inCreateQueryMethod = true;
-                                            super.visitAssign(assign);
-                                            inCreateQueryMethod = false;
-                                        }
+                        String name = annotation.getAnnotationType().toString();
+                        if (SuppressWarnings.class.getName().equals(name)) {
+                            setStrictFromSuppressWarnings(annotation);
+                        } else if (name.equals(jpa("NamedQuery"))) {
+                            for (JCTree.JCExpression arg : jcAnnotation.args) {
+                                if (arg instanceof JCTree.JCAssign) {
+                                    JCTree.JCAssign assign = (JCTree.JCAssign) arg;
+                                    if ("query".equals(assign.lhs.toString())) {
+                                        inCreateQueryMethod = true;
+                                        super.visitAssign(assign);
+                                        inCreateQueryMethod = false;
                                     }
                                 }
-                                break;
-                            default:
-                                super.visitAnnotation(jcAnnotation); //needed!
+                            }
+                        } else {
+                            super.visitAnnotation(jcAnnotation); //needed!
                         }
                     }
 
@@ -169,6 +167,8 @@ public class JavacProcessor extends AbstractProcessor {
 
     class ErrorReporter implements ParseErrorHandler {
 
+        private static final String KEY = "proc.messager";
+
         private Log log;
         private JCTree.JCLiteral literal;
 
@@ -196,18 +196,18 @@ public class JavacProcessor extends AbstractProcessor {
 
         @Override
         public void reportError(RecognitionException e) {
-            log.error(literal.pos + e.column, "proc.messager",
+            log.error(literal.pos + e.column, KEY,
                     e.getMessage());
         }
 
         @Override
         public void reportError(String text) {
-            log.error(literal, "proc.messager", text);
+            log.error(literal, KEY, text);
         }
 
         @Override
         public void reportWarning(String text) {
-            log.warning(literal, "proc.messager", text);
+            log.warning(literal, KEY, text);
         }
 
     }

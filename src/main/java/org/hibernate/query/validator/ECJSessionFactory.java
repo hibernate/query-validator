@@ -14,6 +14,7 @@ import java.util.List;
 import static java.util.Arrays.stream;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.hibernate.internal.util.StringHelper.*;
+import static org.hibernate.query.validator.HQLProcessor.jpa;
 
 class ECJSessionFactory extends MockSessionFactory {
 
@@ -380,12 +381,12 @@ class ECJSessionFactory extends MockSessionFactory {
         }
         else if (member instanceof FieldBinding) {
             return accessType == AccessType.FIELD
-                    || hasAnnotation(member, "javax.persistence.Access");
+                    || hasAnnotation(member, jpa("Access"));
         }
         else if (member instanceof MethodBinding) {
             return isGetterMethod((MethodBinding) member)
                     && (accessType == AccessType.PROPERTY
-                    || hasAnnotation(member, "javax.persistence.Access"));
+                    || hasAnnotation(member, jpa("Access")));
         }
         else {
             return false;
@@ -434,48 +435,48 @@ class ECJSessionFactory extends MockSessionFactory {
                 return true;
             }
         }
-        return hasAnnotation(member, "javax.persistence.Transient");
+        return hasAnnotation(member, jpa("Transient"));
     }
 
     private static boolean isEmbeddableType(TypeBinding type) {
-        return hasAnnotation(type, "javax.persistence.Embeddable");
+        return hasAnnotation(type, jpa("Embeddable"));
     }
 
     private static boolean isEmbeddedProperty(Binding member) {
-        return hasAnnotation(member, "javax.persistence.Embedded")
-                || hasAnnotation(getMemberType(member), "javax.persistence.Embeddable");
+        return hasAnnotation(member, jpa("Embedded"))
+                || hasAnnotation(getMemberType(member), jpa("Embeddable"));
     }
 
     private static boolean isElementCollectionProperty(Binding member) {
-        return hasAnnotation(member, "javax.persistence.ElementCollection");
+        return hasAnnotation(member, jpa("ElementCollection"));
     }
 
     private static boolean isToOneAssociation(Binding member) {
-        return hasAnnotation(member, "javax.persistence.ManyToOne")
-                || hasAnnotation(member, "javax.persistence.OneToOne");
+        return hasAnnotation(member, jpa("ManyToOne"))
+                || hasAnnotation(member, jpa("OneToOne"));
     }
 
     private static boolean isToManyAssociation(Binding member) {
-        return hasAnnotation(member, "javax.persistence.ManyToMany")
-                || hasAnnotation(member, "javax.persistence.OneToMany");
+        return hasAnnotation(member, jpa("ManyToMany"))
+                || hasAnnotation(member, jpa("OneToMany"));
     }
 
     private static AnnotationBinding toOneAnnotation(Binding member) {
         AnnotationBinding manyToOne =
-                getAnnotation(member, "javax.persistence.ManyToOne");
+                getAnnotation(member, jpa("ManyToOne"));
         if (manyToOne!=null) return manyToOne;
         AnnotationBinding oneToOne =
-                getAnnotation(member, "javax.persistence.OneToOne");
+                getAnnotation(member, jpa("OneToOne"));
         if (oneToOne!=null) return oneToOne;
         return null;
     }
 
     private static AnnotationBinding toManyAnnotation(Binding member) {
         AnnotationBinding manyToMany =
-                getAnnotation(member, "javax.persistence.ManyToMany");
+                getAnnotation(member, jpa("ManyToMany"));
         if (manyToMany!=null) return manyToMany;
         AnnotationBinding oneToMany =
-                getAnnotation(member, "javax.persistence.OneToMany");
+                getAnnotation(member, jpa("OneToMany"));
         if (oneToMany!=null) return oneToMany;
         return null;
     }
@@ -522,7 +523,7 @@ class ECJSessionFactory extends MockSessionFactory {
 
     private static TypeBinding getElementCollectionElementType(Binding property) {
         AnnotationBinding annotation = getAnnotation(property,
-                "javax.persistence.ElementCollection");
+                jpa("ElementCollection"));
         TypeBinding classType = (TypeBinding)
                 getAnnotationMember(annotation, "getElementCollectionClass");
         return classType == null || classType.id == TypeIds.T_void ?
@@ -531,22 +532,22 @@ class ECJSessionFactory extends MockSessionFactory {
     }
 
     private static boolean isMappedClass(TypeBinding type) {
-        return hasAnnotation(type, "javax.persistence.Entity")
-                || hasAnnotation(type, "javax.persistence.Embeddable")
-                || hasAnnotation(type, "javax.persistence.MappedSuperclass");
+        return hasAnnotation(type, jpa("Entity"))
+                || hasAnnotation(type, jpa("Embeddable"))
+                || hasAnnotation(type, jpa("MappedSuperclass"));
     }
 
     private static boolean isEntity(TypeBinding member) {
-        return hasAnnotation(member, "javax.persistence.Entity");
+        return hasAnnotation(member, jpa("Entity"));
     }
 
     private static boolean isId(Binding member) {
-        return hasAnnotation(member, "javax.persistence.Id");
+        return hasAnnotation(member, jpa("Id"));
     }
 
     private static String getEntityName(TypeBinding type) {
         AnnotationBinding entityAnnotation =
-                getAnnotation(type, "javax.persistence.Entity");
+                getAnnotation(type, jpa("Entity"));
         if (entityAnnotation==null) {
             //not an entity!
             return null;
@@ -560,7 +561,7 @@ class ECJSessionFactory extends MockSessionFactory {
     private static AccessType getAccessType(TypeBinding type,
                                     AccessType defaultAccessType) {
         AnnotationBinding annotation =
-                getAnnotation(type, "javax.persistence.Access");
+                getAnnotation(type, jpa("Access"));
         if (annotation==null) {
             return defaultAccessType;
         }

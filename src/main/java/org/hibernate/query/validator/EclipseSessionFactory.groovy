@@ -8,14 +8,15 @@ import java.beans.Introspector
 
 import static java.util.Arrays.stream
 import static org.hibernate.internal.util.StringHelper.*
+import static org.hibernate.query.validator.HQLProcessor.jpa
 
 class EclipseSessionFactory extends MockSessionFactory {
 
-    final def unit;
+    final def unit
 
     EclipseSessionFactory(ParseErrorHandler handler, unit) {
         super(handler)
-        this.unit = unit;
+        this.unit = unit
     }
 
     @Override
@@ -343,7 +344,7 @@ class EclipseSessionFactory extends MockSessionFactory {
         } else if (symbol.class.simpleName == "FieldBinding") {
             return simpleVariableName(symbol)
         } else {
-            return null;
+            return null
         }
     }
 
@@ -352,11 +353,11 @@ class EclipseSessionFactory extends MockSessionFactory {
             return false
         } else if (member.class.simpleName == "FieldBinding") {
             return accessType == AccessType.FIELD ||
-                    hasAnnotation(member, "javax.persistence.Access")
+                    hasAnnotation(member, jpa("Access"))
         } else if (member.class.simpleName == "MethodBinding") {
             return isGetterMethod(member) &&
                     (accessType == AccessType.PROPERTY ||
-                            hasAnnotation(member, "javax.persistence.Access"))
+                            hasAnnotation(member, jpa("Access")))
         } else {
             return false
         }
@@ -393,44 +394,44 @@ class EclipseSessionFactory extends MockSessionFactory {
         if ((member.modifiers & 0x0080) != 0) {
             return true
         }
-        return hasAnnotation(member, "javax.persistence.Transient")
+        return hasAnnotation(member, jpa("Transient"))
     }
 
     private static boolean isEmbeddableType(type) {
-        return hasAnnotation(type, "javax.persistence.Embeddable")
+        return hasAnnotation(type, jpa("Embeddable"))
     }
 
     private static boolean isEmbeddedProperty(member) {
-        return hasAnnotation(member, "javax.persistence.Embedded") ||
-                hasAnnotation(getMemberType(member), "javax.persistence.Embeddable")
+        return hasAnnotation(member, jpa("Embedded")) ||
+                hasAnnotation(getMemberType(member), jpa("Embeddable"))
     }
 
     private static boolean isElementCollectionProperty(member) {
-        return hasAnnotation(member, "javax.persistence.ElementCollection")
+        return hasAnnotation(member, jpa("ElementCollection"))
     }
 
     private static boolean isToOneAssociation(member) {
-        return hasAnnotation(member, "javax.persistence.ManyToOne") ||
-                hasAnnotation(member, "javax.persistence.OneToOne")
+        return hasAnnotation(member, jpa("ManyToOne")) ||
+                hasAnnotation(member, jpa("OneToOne"))
     }
 
     private static boolean isToManyAssociation(member) {
-        return hasAnnotation(member, "javax.persistence.ManyToMany") ||
-                hasAnnotation(member, "javax.persistence.OneToMany")
+        return hasAnnotation(member, jpa("ManyToMany")) ||
+                hasAnnotation(member, jpa("OneToMany"))
     }
 
     private static def toOneAnnotation(member) {
-        def manyToOne = getAnnotation(member, "javax.persistence.ManyToOne")
+        def manyToOne = getAnnotation(member, jpa("ManyToOne"))
         if (manyToOne != null) return manyToOne
-        def oneToOne = getAnnotation(member, "javax.persistence.OneToOne")
+        def oneToOne = getAnnotation(member, jpa("OneToOne"))
         if (oneToOne != null) return oneToOne
         return null
     }
 
     private static def toManyAnnotation(member) {
-        def manyToMany = getAnnotation(member, "javax.persistence.ManyToMany")
+        def manyToMany = getAnnotation(member, jpa("ManyToMany"))
         if (manyToMany != null) return manyToMany
-        def oneToMany = getAnnotation(member, "javax.persistence.OneToMany")
+        def oneToMany = getAnnotation(member, jpa("OneToMany"))
         if (oneToMany != null) return oneToMany
         return null
     }
@@ -474,7 +475,7 @@ class EclipseSessionFactory extends MockSessionFactory {
 
     private static def getElementCollectionElementType(property) {
         def annotation = getAnnotation(property,
-                "javax.persistence.ElementCollection")
+                jpa("ElementCollection"))
         def classType = getAnnotationMember(annotation, "getElementCollectionClass")
         return classType == null || classType.id == 6 ?
                 getCollectionElementType(property) :
@@ -482,22 +483,22 @@ class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private static boolean isMappedClass(type) {
-        return hasAnnotation(type, "javax.persistence.Entity") ||
-                hasAnnotation(type, "javax.persistence.Embeddable") ||
-                hasAnnotation(type, "javax.persistence.MappedSuperclass")
+        return hasAnnotation(type, jpa("Entity")) ||
+                hasAnnotation(type, jpa("Embeddable")) ||
+                hasAnnotation(type, jpa("MappedSuperclass"))
     }
 
     private static boolean isEntity(member) {
-        return hasAnnotation(member, "javax.persistence.Entity")
+        return hasAnnotation(member, jpa("Entity"))
     }
 
     private static boolean isId(member) {
-        return hasAnnotation(member, "javax.persistence.Id")
+        return hasAnnotation(member, jpa("Id"))
     }
 
     private static String getEntityName(type) {
         def entityAnnotation =
-                getAnnotation(type, "javax.persistence.Entity")
+                getAnnotation(type, jpa("Entity"))
         if (entityAnnotation == null) {
             //not an entity!
             return null
@@ -510,7 +511,7 @@ class EclipseSessionFactory extends MockSessionFactory {
     private static AccessType getAccessType(type,
                                             AccessType defaultAccessType) {
         def annotation =
-                getAnnotation(type, "javax.persistence.Access")
+                getAnnotation(type, jpa("Access"))
         if (annotation == null) {
             return defaultAccessType
         } else {

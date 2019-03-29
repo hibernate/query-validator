@@ -12,10 +12,17 @@ import java.io.StringWriter;
 import java.util.Set;
 
 @SupportedAnnotationTypes("*")
-//@AutoService(Processor.class)
 public class HQLProcessor extends AbstractProcessor {
 
     static final String CHECK_HQL = "org.hibernate.query.validator.CheckHQL";
+
+    static String jpa(String name) {
+        //sneak it past shadow
+        return new StringBuilder("javax.")
+                .append("persistence.")
+                .append(name)
+                .toString();
+    }
 
     public static boolean forceEclipseForTesting = false;
 

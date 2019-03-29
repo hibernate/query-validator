@@ -26,6 +26,7 @@ import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
 import static org.hibernate.query.validator.ECJSessionFactory.hasAnnotation;
 import static org.hibernate.query.validator.ECJSessionFactory.qualifiedName;
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
+import static org.hibernate.query.validator.HQLProcessor.jpa;
 import static org.hibernate.query.validator.Validation.validate;
 
 /**
@@ -35,7 +36,6 @@ import static org.hibernate.query.validator.Validation.validate;
  * @see CheckHQL
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
-//@AutoService(Processor.class)
 public class ECJProcessor extends AbstractProcessor {
 
     @Override
@@ -72,7 +72,7 @@ public class ECJProcessor extends AbstractProcessor {
                     @Override
                     public boolean visit(MemberValuePair pair, BlockScope scope) {
                         if (qualifiedName(pair.binding)
-                                .equals("javax.persistence.NamedQuery.query")) {
+                                .equals(jpa("NamedQuery.query"))) {
                             inCreateQueryMethod = true;
                         }
                         return true;

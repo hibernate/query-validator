@@ -56,6 +56,8 @@ shadowJar {
         exclude 'org.hibernate.query.validator.*'
     }
     relocate 'org.jboss', 'org.hibernate.query.validator'
+    relocate 'javax.persistence', 'org.hibernate.query.validator.jpa'
+    relocate 'javax.transaction', 'org.hibernate.query.validator.jta'
     relocate 'net', 'org.hibernate.query.validator'
     relocate 'antlr', 'org.hibernate.query.validator.antlr'
     relocate 'org.apache.groovy', 'org.hibernate.query.validator.groovy'

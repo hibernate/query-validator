@@ -11,6 +11,7 @@ import javax.lang.model.element.TypeElement
 
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
+import static org.hibernate.query.validator.HQLProcessor.jpa
 import static org.hibernate.query.validator.Validation.validate
 
 /**
@@ -20,7 +21,6 @@ import static org.hibernate.query.validator.Validation.validate
  * @see CheckHQL
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
-//@AutoService(Processor.class)
 class EclipseProcessor extends AbstractProcessor {
 
     @Override
@@ -46,14 +46,14 @@ class EclipseProcessor extends AbstractProcessor {
             if (isCheckable(type.binding, unit)) {
                 type.annotations.each { annotation ->
                     switch (qualifiedTypeName(annotation.resolvedType)) {
-                        case "javax.persistence.NamedQuery":
+                        case jpa("NamedQuery"):
                             annotation.memberValuePairs.each { pair ->
                                 if (simpleVariableName(pair) == "query") {
                                     validateArgument(pair.value, unit, compiler)
                                 }
                             }
                             break
-                        case "javax.persistence.NamedQueries":
+                        case jpa("NamedQueries"):
                             annotation.memberValue.expressions.each { ann ->
                                 ann.memberValuePairs.each { pair ->
                                     if (simpleVariableName(pair) == "query") {

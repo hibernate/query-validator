@@ -20,6 +20,7 @@ import java.util.Map;
 
 import static java.util.Arrays.stream;
 import static org.hibernate.internal.util.StringHelper.*;
+import static org.hibernate.query.validator.HQLProcessor.jpa;
 
 class JavacSessionFactory extends MockSessionFactory {
 
@@ -341,64 +342,64 @@ class JavacSessionFactory extends MockSessionFactory {
     }
 
     private static boolean isMappedClass(Symbol.TypeSymbol type) {
-        return hasAnnotation(type, "javax.persistence.Entity")
-                || hasAnnotation(type, "javax.persistence.Embeddable")
-                || hasAnnotation(type, "javax.persistence.MappedSuperclass");
+        return hasAnnotation(type, jpa("Entity"))
+                || hasAnnotation(type, jpa("Embeddable"))
+                || hasAnnotation(type, jpa("MappedSuperclass"));
     }
 
     private static boolean isEntity(Symbol.TypeSymbol member) {
         return member instanceof Symbol.ClassSymbol
-                && hasAnnotation(member, "javax.persistence.Entity");
+                && hasAnnotation(member, jpa("Entity"));
     }
 
     private static boolean isId(Symbol member) {
-        return hasAnnotation(member, "javax.persistence.Id");
+        return hasAnnotation(member, jpa("Id"));
     }
 
     private static boolean isTransient(Symbol member) {
-        return hasAnnotation(member, "javax.persistence.Transient")
+        return hasAnnotation(member, jpa("Transient"))
                 || (member.flags() & Flags.TRANSIENT)!=0;
     }
 
     private static boolean isEmbeddableType(Symbol.TypeSymbol type) {
-        return hasAnnotation(type, "javax.persistence.Embeddable");
+        return hasAnnotation(type, jpa("Embeddable"));
     }
 
     private static boolean isEmbeddedProperty(Symbol member) {
-        return hasAnnotation(member, "javax.persistence.Embedded")
-                || hasAnnotation(member.type.tsym, "javax.persistence.Embeddable");
+        return hasAnnotation(member, jpa("Embedded"))
+                || hasAnnotation(member.type.tsym, jpa("Embeddable"));
     }
 
     private static boolean isElementCollectionProperty(Symbol member) {
-        return hasAnnotation(member, "javax.persistence.ElementCollection");
+        return hasAnnotation(member, jpa("ElementCollection"));
     }
 
     private static boolean isToOneAssociation(Symbol member) {
-        return hasAnnotation(member, "javax.persistence.ManyToOne")
-                || hasAnnotation(member, "javax.persistence.OneToOne");
+        return hasAnnotation(member, jpa("ManyToOne"))
+                || hasAnnotation(member, jpa("OneToOne"));
     }
 
     private static boolean isToManyAssociation(Symbol member) {
-        return hasAnnotation(member, "javax.persistence.ManyToMany")
-                || hasAnnotation(member, "javax.persistence.OneToMany");
+        return hasAnnotation(member, jpa("ManyToMany"))
+                || hasAnnotation(member, jpa("OneToMany"));
     }
 
     private static AnnotationMirror toOneAnnotation(Symbol member) {
         AnnotationMirror manyToOne =
-                getAnnotation(member, "javax.persistence.ManyToOne");
+                getAnnotation(member, jpa("ManyToOne"));
         if (manyToOne!=null) return manyToOne;
         AnnotationMirror oneToOne =
-                getAnnotation(member, "javax.persistence.OneToOne");
+                getAnnotation(member, jpa("OneToOne"));
         if (oneToOne!=null) return oneToOne;
         return null;
     }
 
     private static AnnotationMirror toManyAnnotation(Symbol member) {
         AnnotationMirror manyToMany =
-                getAnnotation(member, "javax.persistence.ManyToMany");
+                getAnnotation(member, jpa("ManyToMany"));
         if (manyToMany!=null) return manyToMany;
         AnnotationMirror oneToMany =
-                getAnnotation(member, "javax.persistence.OneToMany");
+                getAnnotation(member, jpa("OneToMany"));
         if (oneToMany!=null) return oneToMany;
         return null;
     }
@@ -422,7 +423,7 @@ class JavacSessionFactory extends MockSessionFactory {
     private static AccessType getAccessType(Symbol.TypeSymbol type,
                                     AccessType defaultAccessType) {
         AnnotationMirror annotation =
-                getAnnotation(type, "javax.persistence.Access");
+                getAnnotation(type, jpa("Access"));
         if (annotation==null) {
             return defaultAccessType;
         }
@@ -445,7 +446,7 @@ class JavacSessionFactory extends MockSessionFactory {
 
     private static String getEntityName(Symbol.TypeSymbol type) {
         AnnotationMirror entityAnnotation =
-                getAnnotation(type, "javax.persistence.Entity");
+                getAnnotation(type, jpa("Entity"));
         if (entityAnnotation==null) {
             //not an entity!
             return null;
@@ -483,7 +484,7 @@ class JavacSessionFactory extends MockSessionFactory {
 
     private com.sun.tools.javac.code.Type getElementCollectionElementType(Symbol property) {
         AnnotationMirror annotation = getAnnotation(property,
-                "javax.persistence.ElementCollection");
+                jpa("ElementCollection"));
         com.sun.tools.javac.code.Type classType = (com.sun.tools.javac.code.Type)
                 getAnnotationMember(annotation, "getElementCollectionClass");
         return classType == null || classType.getKind() == TypeKind.VOID ?
@@ -499,8 +500,8 @@ class JavacSessionFactory extends MockSessionFactory {
     @Override
     boolean isFieldDefined(String qualifiedClassName, String fieldName) {
         Symbol.ClassSymbol type = findClassByQualifiedName(qualifiedClassName);
-        if (type==null) return false;
-        return type.members().lookup(names.fromString(fieldName)).sym != null;
+        return type != null
+                && type.members().lookup(names.fromString(fieldName)).sym != null;
     }
 
     @Override
@@ -595,12 +596,12 @@ class JavacSessionFactory extends MockSessionFactory {
         }
         else if (member instanceof Symbol.VarSymbol) {
             return accessType == AccessType.FIELD
-                    || hasAnnotation(member, "javax.persistence.Access");
+                    || hasAnnotation(member, jpa("Access"));
         }
         else if (member instanceof Symbol.MethodSymbol) {
             return isGetterMethod((Symbol.MethodSymbol) member)
                     && (accessType == AccessType.PROPERTY
-                    || hasAnnotation(member, "javax.persistence.Access"));
+                    || hasAnnotation(member, jpa("Access")));
         }
         else {
             return false;
