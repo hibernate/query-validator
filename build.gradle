@@ -60,7 +60,14 @@ shadowJar {
     relocate 'javax.transaction', 'org.hibernate.query.validator.jta'
     relocate 'net', 'org.hibernate.query.validator'
     relocate 'antlr', 'org.hibernate.query.validator.antlr'
-    relocate 'org.apache.groovy', 'org.hibernate.query.validator.groovy'
+    relocate 'org.apache.groovy', 'org.hibernate.query.validator.groovy.apache'
+    relocate ('org.codehaus.groovy', 'org.hibernate.query.validator.groovy.codehaus') {
+        exclude 'org.codehaus.groovy.runtime.*'
+        exclude 'org.codehaus.groovy.runtime.callsite.*'
+    }
+    relocate ('groovy', 'org.hibernate.query.validator.groovy.groovy') {
+        exclude 'groovy.lang.*'
+    }
     relocate 'groovyjarjarantlr', 'org.hibernate.query.validator.groovy.antlr'
     relocate 'groovyjarjarasm', 'org.hibernate.query.validator.asm'
     relocate 'groovyjarjarcommonscli', 'org.hibernate.query.validator.cli'
