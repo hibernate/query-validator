@@ -44,6 +44,8 @@ public class BadQueries {
                 .setParameter(1, "").getResultList(); //JPQL positional args
         createQuery("from Person p where p.name = :name and p.id >= :minId")
                 .setParameter("minId", 12).getResultList(); //JPQL named args
+
+        createQuery("from Person p").setParameter("hello", "world").getResultList();
     }
 
     private static Query createQuery(String s) { return new Query(); }

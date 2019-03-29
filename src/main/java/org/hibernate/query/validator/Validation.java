@@ -72,54 +72,56 @@ class Validation {
                     ;
                 }
 
-                if (checkParams
-                        && (hql.indexOf(':')>0 || hql.indexOf('?')>0))
-                try {
-                    String unsetParams = null;
-                    String notSet = null;
-                    Matcher names = NAMED_PARAMETERS.matcher(hql);
-                    while (names.find()) {
-                        String name = names.group(1);
-                        if (!setParameterNames.contains(name)) {
-                            notSet = unsetParams==null ? " is not set" : " are not set";
-                            unsetParams = unsetParams==null ? "" : unsetParams + ", ";
-                            unsetParams += ':' + name;
-                            //TODO: report the error at the correct offset
-                            //int loc = walker.getNamedParameterLocations(name)[0];
+                if (checkParams) try {
+                    if (hql.indexOf(':')>0 || hql.indexOf('?')>0) {
+                        String unsetParams = null;
+                        String notSet = null;
+                        Matcher names = NAMED_PARAMETERS.matcher(hql);
+                        while (names.find()) {
+                            String name = names.group(1);
+                            if (!setParameterNames.contains(name)) {
+                                notSet = unsetParams == null ? " is not set" : " are not set";
+                                unsetParams = unsetParams == null ? "" : unsetParams + ", ";
+                                unsetParams += ':' + name;
+                                //TODO: report the error at the correct offset
+                                //int loc = walker.getNamedParameterLocations(name)[0];
+                            }
                         }
-                    }
-                    Matcher labels = LABELED_PARAMETERS.matcher(hql);
-                    while (labels.find()) {
-                        int label = parseInt(labels.group(1));
-                        if (!setParameterLabels.contains(label)) {
-                            notSet = unsetParams==null ? " is not set" : " are not set";
-                            unsetParams = unsetParams==null ? "" : unsetParams + ", ";
-                            unsetParams += "?" + label;
-                            //TODO: report the error at the correct offset
+                        Matcher labels = LABELED_PARAMETERS.matcher(hql);
+                        while (labels.find()) {
+                            int label = parseInt(labels.group(1));
+                            if (!setParameterLabels.contains(label)) {
+                                notSet = unsetParams == null ? " is not set" : " are not set";
+                                unsetParams = unsetParams == null ? "" : unsetParams + ", ";
+                                unsetParams += "?" + label;
+                                //TODO: report the error at the correct offset
+                            }
                         }
-                    }
-                    if (unsetParams!=null) {
-                        handler.reportWarning(unsetParams + notSet);
+                        if (unsetParams != null) {
+                            handler.reportWarning(unsetParams + notSet);
+                        }
+
+                        names.reset();
+                        while (names.find()) {
+                            String name = names.group(1);
+                            setParameterNames.remove(name);
+                        }
+                        labels.reset();
+                        while (labels.find()) {
+                            int label = parseInt(labels.group(1));
+                            setParameterLabels.remove(label);
+                        }
                     }
 
-                    names.reset();
-                    while (names.find()) {
-                        String name = names.group(1);
-                        setParameterNames.remove(name);
-                    }
-                    labels.reset();
-                    while (labels.find()) {
-                        int label = parseInt(labels.group(1));
-                        setParameterLabels.remove(label);
-                    }
-                    String missingParams =
-                        concat(setParameterNames.stream().map(name->':'+name),
-                                setParameterLabels.stream().map(label -> "?" + label))
-                                .reduce((x, y)->x + ", " + y)
-                                .orElse(null);
-                    if (missingParams!=null) {
+                    int count = setParameterNames.size() + setParameterLabels.size();
+                    if (count>0) {
+                        String missingParams =
+                            concat(setParameterNames.stream().map(name->':'+name),
+                                    setParameterLabels.stream().map(label -> "?" + label))
+                                    .reduce((x, y) -> x + ", " + y)
+                                    .orElse(null);
                         String notOccur =
-                                setParameterNames.size()+setParameterLabels.size() == 1 ?
+                                count == 1 ?
                                 " does not occur in the query" :
                                 " do not occur in the query";
                         handler.reportWarning(missingParams + notOccur);

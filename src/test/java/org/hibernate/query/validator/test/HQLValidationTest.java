@@ -69,6 +69,8 @@ public class HQLValidationTest {
         assertTrue(errors.contains("BadQueries.java:43: warning: ?2 is not set"));
         assertTrue(errors.contains("BadQueries.java:45: warning: :name is not set"));
 
+        assertTrue(errors.contains("BadQueries.java:48: warning: :hello does not occur in the query"));
+
     }
 
     @Test
@@ -115,6 +117,8 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("?2 is not set") && errors.contains("BadQueries.java (at line 43)"));
         assertTrue(errors.contains(":name is not set") && errors.contains("BadQueries.java (at line 45)"));
+
+        assertTrue(errors.contains(":hello does not occur in the query") && errors.contains("BadQueries.java (at line 48)"));
 
     }
 
@@ -163,6 +167,8 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("?2 is not set") && errors.contains("BadQueries.java (at line 43)"));
         assertTrue(errors.contains(":name is not set") && errors.contains("BadQueries.java (at line 45)"));
+
+        assertTrue(errors.contains(":hello does not occur in the query") && errors.contains("BadQueries.java (at line 48)"));
 
         HQLProcessor.forceEclipseForTesting = false;
     }
