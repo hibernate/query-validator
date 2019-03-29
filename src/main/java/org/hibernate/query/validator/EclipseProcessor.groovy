@@ -2,7 +2,6 @@ package org.hibernate.query.validator
 
 import antlr.RecognitionException
 import org.hibernate.QueryException
-import org.hibernate.hql.internal.ast.ParseErrorHandler
 
 import javax.annotation.processing.AbstractProcessor
 import javax.annotation.processing.RoundEnvironment
@@ -220,7 +219,7 @@ class EclipseProcessor extends AbstractProcessor {
 
     }
 
-    static class ErrorReporter implements ParseErrorHandler {
+    static class ErrorReporter implements Validation.Handler {
 
         private def literal
         private def unit
@@ -240,12 +239,24 @@ class EclipseProcessor extends AbstractProcessor {
         @Override
         void throwQueryException() throws QueryException {}
 
-        private void report(int severity, String message, int offset) {
+        @Override
+        public void error(int start, int end, String message) {
+            report(1, message, start, end);
+        }
+
+        @Override
+        public void warn(int start, int end, String message) {
+            report(0, message, start, end);
+        }
+
+        private void report(int severity, String message, int offset, int endOffset) {
             def result = unit.compilationResult()
             char[] fileName = result.fileName
             int[] lineEnds = result.getLineSeparatorPositions()
-            int startPosition = literal.sourceStart + offset + 1
-            int endPosition = literal.sourceEnd - 1 //search for the end of the token!
+            int startPosition = literal.sourceStart + offset
+            int endPosition = endOffset<0 ?
+                    literal.sourceEnd - 1 :
+                    literal.sourceStart + endOffset
             int lineNumber = startPosition >= 0 ?
                     getLineNumber(startPosition, lineEnds, 0, lineEnds.length - 1) : 0
             int columnNumber = startPosition >= 0 ?
@@ -262,17 +273,17 @@ class EclipseProcessor extends AbstractProcessor {
 
         @Override
         void reportError(RecognitionException e) {
-            report(1, e.getMessage(), e.getColumn() - 1)
+            report(1, e.getMessage(), e.getColumn(), -1)
         }
 
         @Override
         void reportError(String text) {
-            report(1, text, 0)
+            report(1, text, 1, -1)
         }
 
         @Override
         void reportWarning(String text) {
-            report(0, text, 0)
+            report(0, text, 1, -1)
         }
 
         static int getLineNumber(int position, int[] lineEnds, int g, int d) {

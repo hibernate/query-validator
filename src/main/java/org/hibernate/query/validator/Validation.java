@@ -25,13 +25,18 @@ import static org.hibernate.internal.util.StringHelper.unqualify;
 
 class Validation {
 
+    interface Handler extends ParseErrorHandler {
+        void error(int start, int end, String message);
+        void warn(int start, int end, String message);
+    }
+
     private static final Pattern NAMED_PARAMETERS = Pattern.compile(":(\\w+)\\b");
     private static final Pattern LABELED_PARAMETERS = Pattern.compile("\\?(\\d+)\\b");
 
     static void validate(String hql, boolean checkParams,
                          Set<Integer> setParameterLabels,
                          Set<String> setParameterNames,
-                         ParseErrorHandler handler,
+                         Handler handler,
                          SessionFactoryImplementor factory) {
 
         handler = new Filter(handler);
@@ -76,6 +81,8 @@ class Validation {
                     if (hql.indexOf(':')>0 || hql.indexOf('?')>0) {
                         String unsetParams = null;
                         String notSet = null;
+                        int start = -1;
+                        int end = -1;
                         Matcher names = NAMED_PARAMETERS.matcher(hql);
                         while (names.find()) {
                             String name = names.group(1);
@@ -83,8 +90,8 @@ class Validation {
                                 notSet = unsetParams == null ? " is not set" : " are not set";
                                 unsetParams = unsetParams == null ? "" : unsetParams + ", ";
                                 unsetParams += ':' + name;
-                                //TODO: report the error at the correct offset
-                                //int loc = walker.getNamedParameterLocations(name)[0];
+                                if (start==-1) start = names.start(1);
+                                end = names.end(1);
                             }
                         }
                         Matcher labels = LABELED_PARAMETERS.matcher(hql);
@@ -94,11 +101,12 @@ class Validation {
                                 notSet = unsetParams == null ? " is not set" : " are not set";
                                 unsetParams = unsetParams == null ? "" : unsetParams + ", ";
                                 unsetParams += "?" + label;
-                                //TODO: report the error at the correct offset
+                                if (start==-1) start = labels.start(1);
+                                end = labels.end(1);
                             }
                         }
                         if (unsetParams != null) {
-                            handler.reportWarning(unsetParams + notSet);
+                            handler.warn(start, end, unsetParams + notSet);
                         }
 
                         names.reset();
@@ -195,11 +203,11 @@ class Validation {
         }
     }
 
-    private static class Filter implements ParseErrorHandler {
-        private ParseErrorHandler delegate;
+    private static class Filter implements Handler {
+        private Handler delegate;
         private int errorCount;
 
-        private Filter(ParseErrorHandler delegate) {
+        private Filter(Handler delegate) {
             this.delegate = delegate;
         }
 
@@ -209,7 +217,16 @@ class Validation {
         }
 
         @Override
-        public void throwQueryException() throws QueryException {
+        public void throwQueryException() throws QueryException {}
+
+        @Override
+        public void error(int start, int end, String message) {
+            delegate.error(start, end, message);
+        }
+
+        @Override
+        public void warn(int start, int end, String message) {
+            delegate.warn(start, end, message);
         }
 
         @Override

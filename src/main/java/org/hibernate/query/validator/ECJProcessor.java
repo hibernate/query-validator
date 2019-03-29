@@ -12,7 +12,6 @@ import org.eclipse.jdt.internal.compiler.lookup.BlockScope;
 import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
 import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
 import org.hibernate.QueryException;
-import org.hibernate.hql.internal.ast.ParseErrorHandler;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -176,7 +175,7 @@ public class ECJProcessor extends AbstractProcessor {
         return SourceVersion.latestSupported();
     }
 
-    class ErrorReporter implements ParseErrorHandler {
+    class ErrorReporter implements Validation.Handler {
 
         private StringLiteral literal;
         private CompilationUnitDeclaration unit;
@@ -196,15 +195,26 @@ public class ECJProcessor extends AbstractProcessor {
         }
 
         @Override
-        public void throwQueryException() throws QueryException {
+        public void throwQueryException() throws QueryException {}
+
+        @Override
+        public void error(int start, int end, String message) {
+            report(ProblemSeverities.Error, message, start, end);
         }
 
-        private void report(int severity, String message, int offset) {
+        @Override
+        public void warn(int start, int end, String message) {
+            report(ProblemSeverities.Warning, message, start, end);
+        }
+
+        private void report(int severity, String message, int offset, int endOffset) {
             CompilationResult result = unit.compilationResult();
             char[] fileName = result.fileName;
             int[] lineEnds = result.getLineSeparatorPositions();
-            int startPosition = literal.sourceStart + offset + 1;
-            int endPosition = literal.sourceEnd - 1; //search for the end of the token!
+            int startPosition = literal.sourceStart + offset;
+            int endPosition = endOffset<0 ?
+                    literal.sourceEnd - 1 :
+                    literal.sourceStart + endOffset;
             int lineNumber = startPosition >= 0
                     ? getLineNumber(startPosition, lineEnds, 0, lineEnds.length - 1)
                     : 0;
@@ -225,17 +235,17 @@ public class ECJProcessor extends AbstractProcessor {
 
         @Override
         public void reportError(RecognitionException e) {
-            report(ProblemSeverities.Error, e.getMessage(), e.getColumn() - 1);
+            report(ProblemSeverities.Error, e.getMessage(), e.getColumn(), -1);
         }
 
         @Override
         public void reportError(String text) {
-            report(ProblemSeverities.Error, text, 0);
+            report(ProblemSeverities.Error, text, 1, -1);
         }
 
         @Override
         public void reportWarning(String text) {
-            report(ProblemSeverities.Warning, text, 0);
+            report(ProblemSeverities.Warning, text, 1, -1);
         }
 
     }

@@ -13,7 +13,6 @@ import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Log;
 import com.sun.tools.javac.util.Pair;
 import org.hibernate.QueryException;
-import org.hibernate.hql.internal.ast.ParseErrorHandler;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -100,7 +99,7 @@ public class JavacProcessor extends AbstractProcessor {
                                 break;
                             case "createQuery":
                                 JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
-                                if (queryArg.value instanceof String) {
+                                if (queryArg!=null && queryArg.value instanceof String) {
                                     String hql = (String) queryArg.value;
                                     check(queryArg, hql, true);
                                 }
@@ -108,7 +107,7 @@ public class JavacProcessor extends AbstractProcessor {
                                 break;
                             case "setParameter":
                                 JCTree.JCLiteral paramArg = firstArgument(jcMethodInvocation);
-                                if (paramArg.value instanceof String) {
+                                if (paramArg!=null && paramArg.value instanceof String) {
                                     setParameterNames.add((String) paramArg.value);
                                 } else if (paramArg.value instanceof Integer) {
                                     setParameterLabels.add((Integer) paramArg.value);
@@ -192,7 +191,7 @@ public class JavacProcessor extends AbstractProcessor {
         return SourceVersion.latestSupported();
     }
 
-    class ErrorReporter implements ParseErrorHandler {
+    class ErrorReporter implements Validation.Handler {
 
         private static final String KEY = "proc.messager";
 
@@ -222,9 +221,18 @@ public class JavacProcessor extends AbstractProcessor {
         public void throwQueryException() throws QueryException {}
 
         @Override
+        public void error(int start, int end, String message) {
+            log.error(literal.pos + start, KEY, message);
+        }
+
+        @Override
+        public void warn(int start, int end, String message) {
+            log.warning(literal.pos + start, KEY, message);
+        }
+
+        @Override
         public void reportError(RecognitionException e) {
-            log.error(literal.pos + e.column, KEY,
-                    e.getMessage());
+            log.error(literal.pos + e.column, KEY, e.getMessage());
         }
 
         @Override
