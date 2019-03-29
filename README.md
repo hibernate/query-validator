@@ -6,10 +6,14 @@ Compile time validation for queries written in HQL and JPQL.
 
 ## Building
 
-Type `mvn install` from the project directory.
+Type `gradle` from this project directory.
 
-This will produce an artifact with the Maven coordinates 
-`org.hibernate:query-validator:1.0-SNAPSHOT`.
+This produces an artifact with the Maven coordinates 
+`org.hibernate:query-validator:1.0-SNAPSHOT` in your local
+Maven repository.
+
+It also creates a far jar `query-validator-1.0-SNAPSHOT-all.jar`
+in the `build/libs` directory of this project.
 
 ## Usage
 
@@ -20,8 +24,9 @@ basic JPA metadata annotations like `@Entity`, `@ManyToOne`,
 mapping information like table and column names if that's what 
 you prefer.
 
-1. Put `query-validator-1.0-SNAPSHOT.jar` in the compile-time 
-   classpath of your project.
+1. Put `query-validator-1.0-SNAPSHOT-all.jar` in the 
+   compile-time classpath of your project. (Or depend on
+   `org.hibernate:query-validator:1.0-SNAPSHOT`.)
 2. Annotate a package, class, or method with `@CheckHQL`.
 
 Then the validator will check any static string argument of
@@ -79,8 +84,8 @@ manually.
    processing**. 
 2. Then go to **Java Compiler > Annotation Processing > 
    Factory Path** and click **Add External JARs...** and
-   add `target/query-validator-1.0-SNAPSHOT.jar` from this 
-   project directory.
+   add `build/libs/query-validator-1.0-SNAPSHOT-all.jar` 
+   from this project directory.
 
 Eclipse runs annotation processors during every incremental
 build (that is, every time you `Save`), so you'll see errors
