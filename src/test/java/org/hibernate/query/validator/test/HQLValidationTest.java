@@ -174,7 +174,7 @@ public class HQLValidationTest {
         files.add("-classpath");
         StringBuilder cp = new StringBuilder();
         cp.append("build/libs/query-validator-1.0-SNAPSHOT.jar");
-        cp.append(":out/classes");
+        cp.append(":out/production/query-validator");
         Files.list(Paths.get("lib"))
                 .map(Path::toString)
                 .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
@@ -211,7 +211,7 @@ public class HQLValidationTest {
         files.add("-classpath");
         StringBuilder cp = new StringBuilder();
         cp.append("build/libs/query-validator-1.0-SNAPSHOT.jar");
-        cp.append(":out/classes");
+        cp.append(":out/production/query-validator");
         Files.list(Paths.get("lib"))
                 .map(Path::toString)
                 .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
