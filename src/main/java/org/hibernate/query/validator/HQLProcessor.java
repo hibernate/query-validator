@@ -84,8 +84,10 @@ public class HQLProcessor extends AbstractProcessor {
             delegate.process(annotations, roundEnv);
         }
         catch (Throwable e) {
+            String message = e.getMessage();
+            if (message==null) message = e.getClass().getName();
             processingEnv.getMessager()
-                    .printMessage(Diagnostic.Kind.MANDATORY_WARNING, e.getMessage());
+                    .printMessage(Diagnostic.Kind.MANDATORY_WARNING, message);
             StringWriter writer = new StringWriter();
             e.printStackTrace(new PrintWriter(writer));
             processingEnv.getMessager()
