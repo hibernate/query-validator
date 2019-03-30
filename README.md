@@ -74,14 +74,47 @@ parameter bindings validated. A warning is produced if
 
 ### Usage from command line
 
-Just compile your code with `javac`, `mvn`, or even with ECJ,
-`java -jar ecj-4.6.1.jar`, with the query validator `jar` in 
-the compile-time classpath.
+When using a command line compiler, `gradle`, or `mvn`, errors 
+from the query validator are displayed in the compiler output 
+alongside other compilation errors.
 
-Errors from the query validator will be displayed in the 
-compiler output alongside other compilation errors.
+#### `javac` and ECJ
 
-### Usage in IntelliJ
+Just compile your code with `javac`, or even with ECJ
+(`java -jar ecj-4.6.1.jar`), with the query validator `jar` in 
+the classpath: 
+
+    -classpath query-validator-1.0-SNAPSHOT-all.jar
+
+#### Gradle
+
+Annoyingly, Gradle requires that the dependency on the query
+validator be declared *twice*:
+
+    dependencies {
+        implementation 'org.hibernate:query-validator:1.0-SNAPSHOT'
+        annotationProcessor 'org.hibernate:query-validator:1.0-SNAPSHOT'
+    }
+
+#### Maven
+
+Maven handles annotation processors correctly. Just declare 
+the dependency to the query validator.
+
+    <dependencies>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>query-validator</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    <dependencies>
+
+## Usage in IDEs
+
+Both IntelliJ and Eclipse require that annotation processing
+be explicitly enabled.
+
+### IntelliJ
 
 Select **Enable annotation processing** in IntelliJ IDEA 
 preferences under **Build, Execution, Deployment > Compiler > 
@@ -91,7 +124,7 @@ IntelliJ only runs annotation processors during a build (that
 is, when you `Run` your code or explicitly `Build Project`). 
 So you won't see errors in your Java editor as you're typing.
 
-### Usage in Eclipse
+### Eclipse
 
 Eclipse IDE doesn't load annotation processors from the 
 project classpath. So you'll need to add the query validator
