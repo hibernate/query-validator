@@ -151,7 +151,9 @@ The query validator was developed and tested with:
 - ECJ 4.6.1
 
 Other versions of `javac`, ECJ, and Hibernate may or may not 
-work.
+work. The query validator depends on internal compiler APIs in 
+`javac` and ECJ, and is therefore sensitive to changes in the 
+compilers.
 
 ## Caveats
 
