@@ -53,8 +53,8 @@ A compile-time warning is produced if
 - the query calls a function which isn't defined by the JPA 
   specification or by HQL.
 
-These warnings may be suppressed by annotating adding the
-function name to the `whitelist`:
+The warnings may be suppressed by adding the function name to 
+the `whitelist`:
 
     @CheckHQL(whitelist={"stddev", "variance", "md5"})
 
