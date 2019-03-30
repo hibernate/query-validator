@@ -33,8 +33,10 @@ public class HQLValidationTest {
         assertTrue(errors.contains("BadQueries.java:10: error: missing from clause or select list"));
 
         assertTrue(errors.contains("BadQueries.java:12: error: test.Nil does not exist"));
-        assertTrue(errors.contains("BadQueries.java:13: error: test.Pair has no suitable constructor"));
-        assertTrue(errors.contains("BadQueries.java:14: error: test.Pair has no suitable constructor"));
+        assertTrue(errors.contains("BadQueries.java:13: error: test.Pair has no suitable constructor for types (Person)"));
+        assertTrue(errors.contains("BadQueries.java:14: error: test.Pair has no suitable constructor for types (Person, string)"));
+        assertTrue(errors.contains("BadQueries.java:50: error: test.Pair has no suitable constructor for types (integer, integer)"));
+        assertTrue(errors.contains("BadQueries.java:51: error: test.Pair has no suitable constructor for types (string, string)"));
 
         assertTrue(errors.contains("BadQueries.java:16: error: People is not mapped"));
         assertTrue(errors.contains("BadQueries.java:17: error: Person has no mapped firstName"));
@@ -87,7 +89,10 @@ public class HQLValidationTest {
         assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 10)"));
 
         assertTrue(errors.contains("test.Nil does not exist"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor"));
+        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person)"));
+        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person, string)"));
+        assertTrue(errors.contains("test.Pair has no suitable constructor for types (string, string)"));
+        assertTrue(errors.contains("test.Pair has no suitable constructor for types (integer, integer)"));
 
         assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 16)"));
         assertTrue(errors.contains("Person has no mapped firstName") && errors.contains("BadQueries.java (at line 17)"));
@@ -137,7 +142,10 @@ public class HQLValidationTest {
         assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 10)"));
 
         assertTrue(errors.contains("test.Nil does not exist"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor"));
+        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person)"));
+        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person, string)"));
+        assertTrue(errors.contains("test.Pair has no suitable constructor for types (string, string)"));
+        assertTrue(errors.contains("test.Pair has no suitable constructor for types (integer, integer)"));
 
         assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 16)"));
         assertTrue(errors.contains("Person has no mapped firstName") && errors.contains("BadQueries.java (at line 17)"));

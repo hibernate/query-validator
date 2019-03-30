@@ -8,6 +8,8 @@ import org.hibernate.type.Type;
 
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
+
 public class WorkaroundConstructorNode extends ConstructorNode {
     @Override
     public void prepare() throws SemanticException {
@@ -26,8 +28,12 @@ public class WorkaroundConstructorNode extends ConstructorNode {
             @SuppressWarnings("unchecked")
             List<Type> argumentTypes = getConstructorArgumentTypeList();
             if (!factory.isConstructorDefined(path, argumentTypes)) {
+                List<String> typeNames = argumentTypes.stream()
+                        .map(Type::getName)
+                        .collect(toList());
                 throw new DetailedSemanticException(path
-                        + " has no suitable constructor");
+                        + " has no suitable constructor for types ("
+                        + String.join(", ", typeNames) + ")");
             }
         }
     }
