@@ -1,7 +1,6 @@
 package org.hibernate.query.validator.test;
 
 import org.eclipse.jdt.core.compiler.batch.BatchCompiler;
-import org.hibernate.query.validator.HQLProcessor;
 import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -14,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static javax.tools.ToolProvider.getSystemJavaCompiler;
+import static org.hibernate.query.validator.HQLProcessor.forceEclipseForTesting;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -126,7 +126,7 @@ public class HQLValidationTest {
 
     @Test
     public void testEclipse() throws Exception {
-        HQLProcessor.forceEclipseForTesting = true;
+        forceEclipseForTesting = true;
         String errors = compileWithECJ("test");
 
         assertFalse(errors.contains("GoodQueries.java"));
@@ -174,7 +174,7 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains(":hello does not occur in the query") && errors.contains("BadQueries.java (at line 48)"));
 
-        HQLProcessor.forceEclipseForTesting = false;
+        forceEclipseForTesting = false;
     }
 
     private String compileWithJavac(String pack) throws IOException {
@@ -226,6 +226,9 @@ public class HQLValidationTest {
 
         files.add("-classpath");
         StringBuilder cp = new StringBuilder();
+        if (forceEclipseForTesting) {
+            cp.append("build/libs/query-validator-1.0-SNAPSHOT-all.jar");;
+        }
         cp.append("build/libs/query-validator-1.0-SNAPSHOT.jar");
         cp.append(":out/production/query-validator");
         Files.list(Paths.get("lib"))
