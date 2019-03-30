@@ -558,38 +558,78 @@ class EclipseSessionFactory extends MockSessionFactory {
                     method.parameters.length == argumentTypes.size()) {
                 boolean argumentsCheckOut = true
                 for (int i = 0; i < argumentTypes.size(); i++) {
-                    Type param = argumentTypes.get(i)
-                    def typeClass
-                    if (param instanceof EntityType) {
-                        String entityName = param.getAssociatedEntityName()
-                        typeClass = findEntityClass(entityName)
-                    } else if (param instanceof CompositeCustomType) {
-                        typeClass = param.getUserType().type
-                    } else if (param instanceof BasicType) {
-                        String className
-                        //sadly there is no way to get the classname
-                        //from a Hibernate Type without trying to load
-                        //the class!
+                    Type argType = argumentTypes.get(i)
+                    def paramType = method.parameters[i]
+                    if (argType instanceof PrimitiveType
+                            && paramType.isPrimitiveType()) {
+                        Class primitive;
                         try {
-                            className = param.getReturnedClass().getName()
+                            primitive = ((PrimitiveType) argType).getPrimitiveClass()
                         } catch (Exception e) {
+                            continue;
+                        }
+                        if (!toPrimitiveClass(paramType).equals(primitive)) {
+                            argumentsCheckOut = false;
+                            break;
+                        }
+                    }
+                    else {
+                        def argTypeClass
+                        if (argType instanceof EntityType) {
+                            String entityName = argType.getAssociatedEntityName()
+                            argTypeClass = findEntityClass(entityName)
+                        } else if (argType instanceof CompositeCustomType) {
+                            argTypeClass = argType.getUserType().type
+                        } else if (argType instanceof BasicType) {
+                            String className
+                            //sadly there is no way to get the classname
+                            //from a Hibernate Type without trying to load
+                            //the class!
+                            try {
+                                className = argType.getReturnedClass().getName()
+                            } catch (Exception e) {
+                                continue
+                            }
+                            argTypeClass = findClassByQualifiedName(className)
+                        } else {
+                            //TODO: what other Hibernate Types do we
+                            //      need to consider here?
                             continue
                         }
-                        typeClass = findClassByQualifiedName(className)
-                    } else {
-                        //TODO: what other Hibernate Types do we
-                        //      need to consider here?
-                        continue
-                    }
-                    if (typeClass != null && !typeClass.isSubtypeOf(param)) {
-                        argumentsCheckOut = false
-                        break
+                        if (argTypeClass != null &&
+                                !argTypeClass.isSubtypeOf(paramType)) {
+                            argumentsCheckOut = false
+                            break
+                        }
                     }
                 }
                 if (argumentsCheckOut) return true //matching constructor found!
             }
         }
         return false
+    }
+
+    private static Class toPrimitiveClass(param) {
+        switch (param.id) {
+            case 10:
+                return int.class;
+            case 7:
+                return long.class;
+            case 4:
+                return short.class;
+            case 3:
+                return byte.class;
+            case 9:
+                return float.class;
+            case 8:
+                return double.class;
+            case 5:
+                return boolean.class;
+            case 2:
+                return char.class;
+            default:
+                return Object.class;
+        }
     }
 
     def findClassByQualifiedName(String path) {

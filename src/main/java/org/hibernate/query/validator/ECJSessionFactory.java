@@ -612,39 +612,78 @@ class ECJSessionFactory extends MockSessionFactory {
                     && method.parameters.length == argumentTypes.size()) {
                 boolean argumentsCheckOut = true;
                 for (int i = 0; i < argumentTypes.size(); i++) {
-                    Type type = argumentTypes.get(i);
-                    TypeBinding param = method.parameters[i];
-                    TypeBinding typeClass;
-                    if (type instanceof EntityType) {
-                        String entityName = ((EntityType) type).getAssociatedEntityName();
-                        typeClass = findEntityClass(entityName);
-                    } else if (type instanceof CompositeCustomType) {
-                        typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
-                    } else if (type instanceof BasicType) {
-                        String className;
-                        //sadly there is no way to get the classname
-                        //from a Hibernate Type without trying to load
-                        //the class!
+                    Type argType = argumentTypes.get(i);
+                    TypeBinding paramType = method.parameters[i];
+                    if (argType instanceof PrimitiveType
+                            && paramType.isPrimitiveType()) {
+                        Class primitive;
                         try {
-                            className = type.getReturnedClass().getName();
+                            primitive = ((PrimitiveType) argType).getPrimitiveClass();
                         } catch (Exception e) {
                             continue;
                         }
-                        typeClass = findClassByQualifiedName(className);
-                    } else {
-                        //TODO: what other Hibernate Types do we
-                        //      need to consider here?
-                        continue;
+                        if (!toPrimitiveClass(paramType).equals(primitive)) {
+                            argumentsCheckOut = false;
+                            break;
+                        }
                     }
-                    if (typeClass != null && !typeClass.isSubtypeOf(param)) {
-                        argumentsCheckOut = false;
-                        break;
+                    else {
+                        TypeBinding argTypeClass;
+                        if (argType instanceof EntityType) {
+                            String entityName = ((EntityType) argType).getAssociatedEntityName();
+                            argTypeClass = findEntityClass(entityName);
+                        } else if (argType instanceof CompositeCustomType) {
+                            argTypeClass = ((Component) ((CompositeCustomType) argType).getUserType()).type;
+                        } else if (argType instanceof BasicType) {
+                            String className;
+                            //sadly there is no way to get the classname
+                            //from a Hibernate Type without trying to load
+                            //the class!
+                            try {
+                                className = argType.getReturnedClass().getName();
+                            } catch (Exception e) {
+                                continue;
+                            }
+                            argTypeClass = findClassByQualifiedName(className);
+                        } else {
+                            //TODO: what other Hibernate Types do we
+                            //      need to consider here?
+                            continue;
+                        }
+                        if (argTypeClass != null
+                                && !argTypeClass.isSubtypeOf(paramType)) {
+                            argumentsCheckOut = false;
+                            break;
+                        }
                     }
                 }
                 if (argumentsCheckOut) return true; //matching constructor found!
             }
         }
         return false;
+    }
+
+    private static Class toPrimitiveClass(TypeBinding param) {
+        switch (param.id) {
+            case TypeIds.T_int:
+                return int.class;
+            case TypeIds.T_long:
+                return long.class;
+            case TypeIds.T_short:
+                return short.class;
+            case TypeIds.T_byte:
+                return byte.class;
+            case TypeIds.T_float:
+                return float.class;
+            case TypeIds.T_double:
+                return double.class;
+            case TypeIds.T_boolean:
+                return boolean.class;
+            case TypeIds.T_char:
+                return char.class;
+            default:
+                return Object.class;
+        }
     }
 
     private TypeBinding findClassByQualifiedName(String path) {

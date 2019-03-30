@@ -86,9 +86,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("unexpected token: from") && errors.contains("BadQueries.java (at line 10)"));
         assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 10)"));
 
-        //TODO: reenable once WorkaroundConstructorNode is fixed!
         assertTrue(errors.contains("test.Nil does not exist"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor"));
         assertTrue(errors.contains("test.Pair has no suitable constructor"));
 
         assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 16)"));
@@ -138,9 +136,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("unexpected token: from") && errors.contains("BadQueries.java (at line 10)"));
         assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 10)"));
 
-        //TODO: reenable once WorkaroundConstructorNode is fixed!
         assertTrue(errors.contains("test.Nil does not exist"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor"));
         assertTrue(errors.contains("test.Pair has no suitable constructor"));
 
         assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 16)"));

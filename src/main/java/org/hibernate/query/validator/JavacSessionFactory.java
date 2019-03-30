@@ -517,42 +517,75 @@ class JavacSessionFactory extends MockSessionFactory {
                 for (int i=0; i<argumentTypes.size(); i++) {
                     org.hibernate.type.Type type = argumentTypes.get(i);
                     Symbol.VarSymbol param = constructor.params.get(i);
-                    Symbol.TypeSymbol typeClass;
-                    if (type instanceof EntityType) {
-                        String entityName = ((EntityType) type).getAssociatedEntityName();
-                        typeClass = findEntityClass(entityName);
-                    }
-                    else if (type instanceof CompositeCustomType) {
-                        typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
-                    }
-                    else if (type instanceof BasicType) {
-                        String className;
-                        //sadly there is no way to get the classname
-                        //from a Hibernate Type without trying to load
-                        //the class!
+                    if (type instanceof PrimitiveType
+                            && param.type.isPrimitive()) {
+                        Class primitive;
                         try {
-                            className = type.getReturnedClass().getName();
-                        }
-                        catch (Exception e) {
+                            primitive = ((PrimitiveType) type).getPrimitiveClass();
+                        } catch (Exception e) {
                             continue;
                         }
-                        typeClass = findClassByQualifiedName(className);
-                    }
-                    else {
-                        //TODO: what other Hibernate Types do we
-                        //      need to consider here?
-                        continue;
-                    }
-                    if (typeClass!=null
-                            && !typeClass.isSubClass(param.type.tsym, types)) {
-                        argumentsCheckOut = false;
-                        break;
+                        if (!toPrimitiveClass(param).equals(primitive)) {
+                            argumentsCheckOut = false;
+                            break;
+                        }
+                    } else {
+                        Symbol.TypeSymbol typeClass;
+                        if (type instanceof EntityType) {
+                            String entityName = ((EntityType) type).getAssociatedEntityName();
+                            typeClass = findEntityClass(entityName);
+                        } else if (type instanceof CompositeCustomType) {
+                            typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
+                        } else if (type instanceof BasicType) {
+                            String className;
+                            //sadly there is no way to get the classname
+                            //from a Hibernate Type without trying to load
+                            //the class!
+                            try {
+                                className = type.getReturnedClass().getName();
+                            } catch (Exception e) {
+                                continue;
+                            }
+                            typeClass = findClassByQualifiedName(className);
+                        } else {
+                            //TODO: what other Hibernate Types do we
+                            //      need to consider here?
+                            continue;
+                        }
+                        if (typeClass != null
+                                && !typeClass.isSubClass(param.type.tsym, types)) {
+                            argumentsCheckOut = false;
+                            break;
+                        }
                     }
                 }
                 if (argumentsCheckOut) return true; //matching constructor found!
             }
         }
         return false;
+    }
+
+    private static Class toPrimitiveClass(Symbol.VarSymbol param) {
+        switch (param.type.getTag()) {
+            case BOOLEAN:
+                return boolean.class;
+            case CHAR:
+                return char.class;
+            case INT:
+                return int.class;
+            case SHORT:
+                return short.class;
+            case BYTE:
+                return byte.class;
+            case LONG:
+                return long.class;
+            case FLOAT:
+                return float.class;
+            case DOUBLE:
+                return double.class;
+            default:
+                return Object.class;
+        }
     }
 
     private Symbol.ClassSymbol findClassByQualifiedName(String path) {

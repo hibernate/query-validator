@@ -46,6 +46,10 @@ public class BadQueries {
                 .setParameter("minId", 12).getResultList(); //JPQL named args
 
         createQuery("from Person p").setParameter("hello", "world").getResultList();
+
+        createQuery("select new test.Pair(1,1) from Person p"); //"select new" with literals
+        createQuery("select new test.Pair('','') from Person p"); //"select new" with literals
+
     }
 
     private static Query createQuery(String s) { return new Query(); }

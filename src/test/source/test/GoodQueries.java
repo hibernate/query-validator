@@ -18,6 +18,7 @@ public class GoodQueries {
 
         createQuery("select new test.Pair(p,a) from Person p join p.address a"); //"select new"
         createQuery("select new test.Pair(p,p.address) from Person p join p.address a"); //"select new"
+        createQuery("select new test.Pair('',1) from Person p"); //"select new" with literals
 
         createQuery("from Person p where size(p.pastAddresses) = 0"); //JPQL "size()" function
         createQuery("from Person p where exists elements(p.pastAddresses)"); //HQL "exists" operator with "elements()" function
@@ -76,9 +77,6 @@ public class GoodQueries {
         createQuery("select e from Person p join p.emails e");
         createQuery("select e.address from Person p join p.emails e");
         createQuery("select e from Person p join p.emails e where e.address is not null and length(e.address)>0");
-
-
-
 
         createQuery("from Person p where treat(p.emergencyContact as Employee).employeeId = 2"); //JPQL "treat as" operator
         createQuery("from Person p join treat(p.emergencyContact as Employee) c where c.employeeId = 2"); //JPQL "treat as" operator
