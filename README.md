@@ -109,12 +109,12 @@ the dependency to the query validator.
         </dependency>
     <dependencies>
 
-## Usage in IDEs
+### Usage in IDEs
 
 Both IntelliJ and Eclipse require that annotation processing
 be explicitly enabled.
 
-### IntelliJ
+#### IntelliJ
 
 Select **Enable annotation processing** in IntelliJ IDEA 
 preferences under **Build, Execution, Deployment > Compiler > 
@@ -124,7 +124,7 @@ IntelliJ only runs annotation processors during a build (that
 is, when you `Run` your code or explicitly `Build Project`). 
 So you won't see errors in your Java editor as you're typing.
 
-### Eclipse
+#### Eclipse
 
 Eclipse IDE doesn't load annotation processors from the 
 project classpath. So you'll need to add the query validator
