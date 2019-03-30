@@ -57,6 +57,7 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
     private final Map<String,MockEntityPersister> entityPersistersByName = new HashMap<>();
     private final Map<String,MockCollectionPersister> collectionPersistersByName = new HashMap<>();
     private final Set<String> unknownFunctions = new HashSet<>();
+    private final List<String> functionWhitelist;
 
     private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
 
@@ -101,7 +102,8 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     private ParseErrorHandler handler;
 
-    MockSessionFactory(ParseErrorHandler handler) {
+    MockSessionFactory(List<String> functionWhitelist, ParseErrorHandler handler) {
+        this.functionWhitelist = functionWhitelist;
         this.handler = handler;
     }
 
@@ -348,7 +350,11 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                 }
                 SQLFunction sqlFunction = super.findSQLFunction(functionName);
                 if (sqlFunction==null) {
-                    unknownSqlFunction(functionName);
+                    if (!functionWhitelist.contains(functionName)
+                            && unknownFunctions.add(functionName)) {
+                        handler.reportWarning(functionName
+                                + " is not defined (add it to whitelist)");
+                    }
                     return UNKNOWN_SQL_FUNCTION;
                 }
                 else {
@@ -356,12 +362,6 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
                 }
             }
         };
-    }
-
-    void unknownSqlFunction(String functionName) {
-        if (unknownFunctions.add(functionName)) {
-            handler.reportWarning(functionName + " is not defined");
-        }
     }
 
     @Override

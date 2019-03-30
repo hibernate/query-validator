@@ -5,7 +5,6 @@ import antlr.RecognitionException;
 import antlr.collections.AST;
 import org.hibernate.HibernateException;
 import org.hibernate.QueryException;
-import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.hql.internal.antlr.HqlTokenTypes;
 import org.hibernate.hql.internal.ast.*;
 import org.hibernate.hql.internal.ast.util.ASTUtil;
@@ -37,7 +36,7 @@ class Validation {
                          Set<Integer> setParameterLabels,
                          Set<String> setParameterNames,
                          Handler handler,
-                         SessionFactoryImplementor factory) {
+                         MockSessionFactory factory) {
 
         handler = new Filter(handler);
 
@@ -74,10 +73,10 @@ class Validation {
                     //throw away NullPointerExceptions and the like
                     //since I guess they represent bugs in Hibernate
 //                    e.printStackTrace();
-                    ;
                 }
 
                 if (checkParams) try {
+                    //TODO: handle ? and : occurring in quoted strings!
                     if (hql.indexOf(':')>0 || hql.indexOf('?')>0) {
                         String unsetParams = null;
                         String notSet = null;
@@ -147,10 +146,10 @@ class Validation {
     }
 
     private static class JavaConstantConverter implements NodeTraverser.VisitationStrategy {
-        private final SessionFactoryImplementor factory;
+        private final MockSessionFactory factory;
         private AST dotRoot;
 
-        private JavaConstantConverter(SessionFactoryImplementor factory) {
+        private JavaConstantConverter(MockSessionFactory factory) {
             this.factory = factory;
         }
 
@@ -184,11 +183,10 @@ class Validation {
                 "[a-z\\d]+\\.([A-Z]{1}[a-z\\d]+)+\\$?([A-Z]{1}[a-z\\d]+)*\\.[A-Z_\\$]+",
                 Pattern.UNICODE_CHARACTER_CLASS);
 
-        private boolean isConstantValue(String name, SessionFactoryImplementor factory) {
+        private boolean isConstantValue(String name, MockSessionFactory factory) {
             return (!factory.getSessionFactoryOptions().isConventionalJavaConstants()
                     || JAVA_CONSTANT_PATTERN.matcher(name).matches())
-                && ((MockSessionFactory) factory).isFieldDefined(
-                    qualifier(name), unqualify(name));
+                && factory.isFieldDefined(qualifier(name), unqualify(name));
         }
     }
 

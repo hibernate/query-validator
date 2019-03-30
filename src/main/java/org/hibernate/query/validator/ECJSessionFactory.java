@@ -20,9 +20,10 @@ class ECJSessionFactory extends MockSessionFactory {
 
     private final CompilationUnitDeclaration unit;
 
-    ECJSessionFactory(ParseErrorHandler handler,
+    ECJSessionFactory(List<String> functionWhitelist,
+                      ParseErrorHandler handler,
                       CompilationUnitDeclaration unit) {
-        super(handler);
+        super(functionWhitelist, handler);
         this.unit = unit;
     }
 
@@ -287,7 +288,7 @@ class ECJSessionFactory extends MockSessionFactory {
         return false;
     }
 
-    private static AnnotationBinding getAnnotation(Binding annotations, String name) {
+    static AnnotationBinding getAnnotation(Binding annotations, String name) {
         for (AnnotationBinding ann: annotations.getAnnotations()) {
             if (qualifiedName(ann.getAnnotationType()).equals(name)) {
                 return ann;

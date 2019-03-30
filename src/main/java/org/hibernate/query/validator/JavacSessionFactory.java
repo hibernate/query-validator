@@ -28,9 +28,10 @@ class JavacSessionFactory extends MockSessionFactory {
     private final Types types;
     private final Symtab syms;
 
-    JavacSessionFactory(ParseErrorHandler handler,
+    JavacSessionFactory(List<String> functionWhitelist,
+                        ParseErrorHandler handler,
                         JavacProcessingEnvironment processingEnv) {
-        super(handler);
+        super(functionWhitelist, handler);
         Context context = processingEnv.getContext();
         names = Names.instance(context);
         types = Types.instance(context);
@@ -321,7 +322,7 @@ class JavacSessionFactory extends MockSessionFactory {
         return getAnnotation(member, annotationName)!=null;
     }
 
-    private static AnnotationMirror getAnnotation(Symbol member, String annotationName) {
+    static AnnotationMirror getAnnotation(Symbol member, String annotationName) {
         for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
             if (qualifiedName((com.sun.tools.javac.code.Type.ClassType) mirror.getAnnotationType())
                     .equals(annotationName)) {

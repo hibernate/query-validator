@@ -1,9 +1,12 @@
 package org.hibernate.query.validator;
 
+import org.hibernate.dialect.Dialect;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import static java.lang.annotation.ElementType.*;
+import static java.lang.annotation.ElementType.PACKAGE;
+import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.CLASS;
 
 /**
@@ -53,4 +56,17 @@ import static java.lang.annotation.RetentionPolicy.CLASS;
  */
 @Target({PACKAGE, TYPE})
 @Retention(CLASS)
-public @interface CheckHQL {}
+public @interface CheckHQL {
+    /**
+     * A list of SQL function names occurring in queries
+     * that will be passed through by the query compiler
+     * and interpreted by the database.
+     */
+    String[] whitelist() default {};
+
+    /**
+     * A Hibernate dialect to use when checking SQL
+     * function names.
+     */
+    Class<? extends Dialect> dialect() default GenericDialect.class;
+}

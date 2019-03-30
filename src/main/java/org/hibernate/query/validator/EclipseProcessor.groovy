@@ -2,6 +2,7 @@ package org.hibernate.query.validator
 
 import antlr.RecognitionException
 import org.hibernate.QueryException
+import org.hibernate.dialect.Dialect
 
 import javax.annotation.processing.AbstractProcessor
 import javax.annotation.processing.RoundEnvironment
@@ -9,6 +10,7 @@ import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
 
 import static java.lang.Integer.parseInt
+import static java.util.Collections.emptyList
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
 import static org.hibernate.query.validator.HQLProcessor.jpa
@@ -36,9 +38,54 @@ class EclipseProcessor extends AbstractProcessor {
     }
 
     private static boolean isCheckable(type, unit) {
+        return getCheckAnnotation(type, unit)!=null
+    }
+
+    private static List<String> getWhitelist(type, unit) {
+        def members = getCheckAnnotation(type, unit).getElementValuePairs()
+        if (members==null || members.length==0) {
+            return emptyList()
+        }
+        List<String> names = new ArrayList<>()
+        for (pair in members) {
+            def value = pair.value
+            if (value instanceof Object[]) {
+                for (literal in (Object[]) value) {
+                    if (literal.class.simpleName == "StringConstant") {
+                        names.add(literal.stringValue())
+                    }
+                }
+            } else if (value.class.simpleName == "StringConstant") {
+                names.add(value.stringValue())
+            } else if (value.class.simpleName == "BinaryTypeBinding") {
+                String name = qualifiedTypeName(value)
+                try {
+                    Dialect dialect = (Dialect) Class.forName(name).newInstance()
+                    names.addAll(dialect.getFunctions().keySet())
+                } catch (Exception e) {
+                    try {
+                        String hibernate =
+                                new StringBuilder("org.")
+                                        .append("hibernate.")
+                                        .toString()
+                        name = name.replace(hibernate + "dialect",
+                                hibernate + "query.validator.hibernate.dialect")
+                        Dialect dialect = (Dialect) Class.forName(name).newInstance()
+                        names.addAll(dialect.getFunctions().keySet())
+                    } catch (Exception e2) {
+                        e2.printStackTrace()
+                    }
+                }
+            }
+        }
+        return names
+    }
+
+    private static def getCheckAnnotation(type, unit) {
+        def result = getAnnotation(type, CHECK_HQL)
+        if (result!=null) return result
         def packInfo = unit.scope.getType("package-info".toCharArray())
-        return hasAnnotation(packInfo, CHECK_HQL) ||
-                hasAnnotation(type, CHECK_HQL)
+        return getAnnotation(packInfo, CHECK_HQL)
     }
 
     @Override
@@ -50,10 +97,11 @@ class EclipseProcessor extends AbstractProcessor {
 
         Set<Integer> setParameterLabels = new HashSet<>()
         Set<String> setParameterNames = new HashSet<>()
-        boolean immediatelyCalled = false;
+        boolean immediatelyCalled = false
 
         private def unit
         private def compiler
+        private List<String> whitelist
 
         Checker(unit, compiler) {
             this.compiler = compiler
@@ -63,6 +111,7 @@ class EclipseProcessor extends AbstractProcessor {
         private void checkHQL() {
             for (type in unit.types) {
                 if (isCheckable(type.binding, unit)) {
+                    whitelist = getWhitelist(type.binding, unit)
                     type.annotations.each { annotation ->
                         switch (qualifiedTypeName(annotation.resolvedType)) {
                             case jpa("NamedQuery"):
@@ -97,12 +146,12 @@ class EclipseProcessor extends AbstractProcessor {
         private void validateStatement(statement) {
             if (statement != null) switch (statement.class.simpleName) {
                 case "MessageSend":
-                    boolean ic = immediatelyCalled;
+                    boolean ic = immediatelyCalled
                     switch (simpleMethodName(statement)) {
                         case "getResultList":
                         case "getSingleResult":
-                            immediatelyCalled = true;
-                            break;
+                            immediatelyCalled = true
+                            break
                         case "createQuery":
                             statement.arguments.each { arg ->
                                 if (arg.class.simpleName == "StringLiteral") {
@@ -125,7 +174,7 @@ class EclipseProcessor extends AbstractProcessor {
                     validateStatement(statement.receiver)
                     setParameterLabels.clear()
                     setParameterNames.clear()
-                    immediatelyCalled = ic;
+                    immediatelyCalled = ic
                     validateStatements(statement.arguments)
                     break
                 case "AbstractVariableDeclaration":
@@ -214,7 +263,7 @@ class EclipseProcessor extends AbstractProcessor {
             ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
             validate(hql, inCreateQueryMethod && immediatelyCalled,
                     setParameterLabels, setParameterNames, handler,
-                    new EclipseSessionFactory(handler, unit))
+                    new EclipseSessionFactory(whitelist, handler, unit))
         }
 
     }
@@ -240,13 +289,13 @@ class EclipseProcessor extends AbstractProcessor {
         void throwQueryException() throws QueryException {}
 
         @Override
-        public void error(int start, int end, String message) {
-            report(1, message, start, end);
+        void error(int start, int end, String message) {
+            report(1, message, start, end)
         }
 
         @Override
-        public void warn(int start, int end, String message) {
-            report(0, message, start, end);
+        void warn(int start, int end, String message) {
+            report(0, message, start, end)
         }
 
         private void report(int severity, String message, int offset, int endOffset) {

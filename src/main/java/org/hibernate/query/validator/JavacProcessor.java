@@ -13,17 +13,23 @@ import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Log;
 import com.sun.tools.javac.util.Pair;
 import org.hibernate.QueryException;
+import org.hibernate.dialect.Dialect;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.*;
+import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.PackageElement;
+import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.tools.JavaFileObject;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 import static org.hibernate.query.validator.Validation.validate;
 
@@ -52,29 +58,22 @@ public class JavacProcessor extends AbstractProcessor {
 
     private void checkHQL(Element element) {
         Elements elementUtils = processingEnv.getElementUtils();
-        if (isCheckable(element)) {
+        if (isCheckable(element) || isCheckable(element.getEnclosingElement())) {
+            List<String> whitelist = getWhitelist(element);
             JCTree tree = ((JavacElements) elementUtils).getTree(element);
             if (tree != null) {
                 tree.accept(new TreeScanner() {
                     Set<Integer> setParameterLabels = new HashSet<>();
                     Set<String> setParameterNames = new HashSet<>();
                     boolean immediatelyCalled;
-                    boolean strict = true;
 
                     private void check(JCTree.JCLiteral jcLiteral, String hql,
                                        boolean inCreateQueryMethod) {
                         ErrorReporter handler = new ErrorReporter(jcLiteral, element);
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
-                                new JavacSessionFactory(handler,
-                                        (JavacProcessingEnvironment) processingEnv) {
-                                    @Override
-                                    void unknownSqlFunction(String functionName) {
-                                        if (strict) {
-                                            super.unknownSqlFunction(functionName);
-                                        }
-                                    }
-                                });
+                                new JavacSessionFactory(whitelist, handler,
+                                        (JavacProcessingEnvironment) processingEnv));
                     }
 
                     JCTree.JCLiteral firstArgument(JCTree.JCMethodInvocation call) {
@@ -124,19 +123,7 @@ public class JavacProcessor extends AbstractProcessor {
                     public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
                         AnnotationMirror annotation = jcAnnotation.attribute;
                         String name = annotation.getAnnotationType().toString();
-                        if (SuppressWarnings.class.getName().equals(name)) {
-                            for (AnnotationValue value :
-                                    annotation.getElementValues().values()) {
-                                @SuppressWarnings("unchecked")
-                                List<Attribute> list = (List) value.getValue();
-                                for (Attribute val : list) {
-                                    if (val.getValue().toString()
-                                            .equals("hql.unknown-function")) {
-                                        strict = false;
-                                    }
-                                }
-                            }
-                        } else if (name.equals(jpa("NamedQuery"))) {
+                        if (name.equals(jpa("NamedQuery"))) {
                             for (JCTree.JCExpression arg : jcAnnotation.args) {
                                 if (arg instanceof JCTree.JCAssign) {
                                     JCTree.JCAssign assign = (JCTree.JCAssign) arg;
@@ -155,28 +142,57 @@ public class JavacProcessor extends AbstractProcessor {
                         }
                     }
 
-                    @Override
-                    public void visitClassDef(JCTree.JCClassDecl jcClassDecl) {
-                        boolean s = strict;
-                        super.visitClassDef(jcClassDecl);
-                        strict = s;
-                    }
-
-                    @Override
-                    public void visitMethodDef(JCTree.JCMethodDecl jcMethodDecl) {
-                        boolean s = strict;
-                        super.visitMethodDef(jcMethodDecl);
-                        strict = s;
-                    }
-
                 });
             }
         }
     }
 
+    private static boolean isCheckAnnotation(AnnotationMirror am) {
+        return am.getAnnotationType().asElement().toString().equals(CHECK_HQL);
+    }
+
     private static boolean isCheckable(Element element) {
-        return element.getAnnotation(CheckHQL.class)!=null ||
-                element.getEnclosingElement().getAnnotation(CheckHQL.class)!=null;
+        for (AnnotationMirror am: element.getAnnotationMirrors()) {
+            if (isCheckAnnotation(am)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static List<String> getWhitelist(Element element) {
+        List<String> list = new ArrayList<>();
+        element.getAnnotationMirrors().forEach(am -> {
+            if (isCheckAnnotation(am)) {
+                am.getElementValues().forEach((var, act) -> {
+                    switch (var.getSimpleName().toString()) {
+                        case "whitelist":
+                            if (act instanceof Attribute.Array) {
+                                for (Attribute a: ((Attribute.Array) act).values) {
+                                    Object value = a.getValue();
+                                    if (value instanceof String) {
+                                        list.add(value.toString());
+                                    }
+                                }
+                            }
+                            break;
+                        case "dialect":
+                            if (act instanceof Attribute.Class) {
+                                String name = act.getValue().toString().replace(".class","");
+                                try {
+                                    Dialect dialect = (Dialect) Class.forName(name).newInstance();
+                                    list.addAll(dialect.getFunctions().keySet());
+                                }
+                                catch (Exception e2) {
+                                    e2.printStackTrace();
+                                }
+                            }
+                            break;
+                    }
+                });
+            }
+        });
+        return list;
     }
 
     private static String getMethodName(ExpressionTree select) {

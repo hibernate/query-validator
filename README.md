@@ -36,6 +36,8 @@ Then the validator will check any static string argument of
 
 which occurs in the annotated package or class. 
 
+#### Errors
+
 A compile-time error is produced if
 
 - the query has syntax errors,
@@ -44,15 +46,22 @@ A compile-time error is produced if
 - a member name in the query doesn't reference a mapped field 
   or property of the entity.
 
+#### Warnings
+
 A compile-time warning is produced if
 
 - the query calls a function which isn't defined by the JPA 
   specification or by HQL.
 
-These warnings may be suppressed by annotating the class or 
-method containing the query:
+These warnings may be suppressed by annotating adding the
+function name to the `whitelist`:
 
-    @SuppressWarnings("hql.unknown-function")
+    @CheckHQL(whitelist={"stddev", "variance", "md5"})
+
+It's even possible to whitelist all the SQL functions known 
+to a certain Hibernate `Dialect`:
+
+    @CheckHQL(dialect=HSQLDialect.class)
 
 Additionally, any JPA `Query` instance that is created and 
 immediately invoked in a single expression will have its 
@@ -115,7 +124,7 @@ work.
 
 Please be aware of the following issues.
 
-### HQL is a superset of JPQL
+#### HQL is a superset of JPQL
 
 Queries are interpreted according to Hibernate's flavor of JPQL 
 (i.e. HQL), which is a superset of the query language defined by 
@@ -128,7 +137,7 @@ they're just regular identifiers, and you may even write a HQL
 query that directly calls a user-defined or non-portable SQL 
 function.
 
-### Function arguments are not checked
+#### Function arguments are not checked
 
 Hibernate's query translator never typechecks function arguments 
 and instead simply passes anything which looks like it might be 
@@ -137,14 +146,14 @@ a function call straight through to the database.
 Fixing this will require a nontrivial enhancement to Hibernate's
 HQL translator.
 
-### Explicit entity names are not supported in Eclipse/ECJ
+#### Explicit entity names are not supported in Eclipse/ECJ
 
 In ECJ, don't use `@Entity(name="Whatever")`, since during an
 incremental build, the processor won't be able to discover the
 entity named `Whatever`. (Just let the entity name default to
 the name of the class.) 
 
-### Some ugly error messages
+#### Some ugly error messages
 
 Sometimes Hibernate's HQL parser produces ugly error messages,
 which are passed on by the query validator.

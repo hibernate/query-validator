@@ -1,5 +1,9 @@
 package test;
 
+import org.hibernate.query.validator.CheckHQL;
+
+@CheckHQL(whitelist={"func", "current_thing", "custom"},
+        dialect=org.hibernate.dialect.HSQLDialect.class)
 public class GoodQueries {
 
     public void goodQueries() {
@@ -100,9 +104,8 @@ public class GoodQueries {
         createQuery("from Person p where p.name = :name and p.id >= :minId"); //JPQL named args
     }
 
-    @SuppressWarnings("hql.unknown-function")
     public void okQueries() {
-        createQuery("select xxx from Person"); //warning
+        createQuery("select current_thing from Person"); //warning
         createQuery("select func(p.name), year(current_date) from Person p"); //warning
         createQuery("from Person p where p.name = function('custom', p.id)"); //warning
     }

@@ -77,6 +77,8 @@ public class HQLValidationTest {
     public void testECJ() throws Exception {
         String errors = compileWithECJ("test");
 
+        assertFalse(errors.contains("GoodQueries.java"));
+
         assertTrue(errors.contains("unexpected token: do") && errors.contains("BadQueries.java (at line 6)"));
         assertTrue(errors.contains("unexpected token"));
         assertTrue(errors.contains("unexpected token: select") && errors.contains("BadQueries.java (at line 8)"));
@@ -126,6 +128,8 @@ public class HQLValidationTest {
     public void testEclipse() throws Exception {
         HQLProcessor.forceEclipseForTesting = true;
         String errors = compileWithECJ("test");
+
+        assertFalse(errors.contains("GoodQueries.java"));
 
         assertTrue(errors.contains("unexpected token: do") && errors.contains("BadQueries.java (at line 6)"));
         assertTrue(errors.contains("unexpected token"));

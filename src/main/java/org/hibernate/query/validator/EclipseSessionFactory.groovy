@@ -14,8 +14,9 @@ class EclipseSessionFactory extends MockSessionFactory {
 
     final def unit
 
-    EclipseSessionFactory(ParseErrorHandler handler, unit) {
-        super(handler)
+    EclipseSessionFactory(List<String> functionWhitelist,
+                          ParseErrorHandler handler, unit) {
+        super(functionWhitelist, handler)
         this.unit = unit
     }
 
@@ -271,7 +272,7 @@ class EclipseSessionFactory extends MockSessionFactory {
         return false
     }
 
-    private static def getAnnotation(annotations, String name) {
+    static def getAnnotation(annotations, String name) {
         for (ann in annotations.getAnnotations()) {
             if (qualifiedTypeName(ann.getAnnotationType()) == name) {
                 return ann

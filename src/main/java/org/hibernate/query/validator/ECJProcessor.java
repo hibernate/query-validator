@@ -7,24 +7,27 @@ import org.eclipse.jdt.internal.compiler.CompilationResult;
 import org.eclipse.jdt.internal.compiler.Compiler;
 import org.eclipse.jdt.internal.compiler.apt.dispatch.BaseProcessingEnvImpl;
 import org.eclipse.jdt.internal.compiler.ast.*;
-import org.eclipse.jdt.internal.compiler.lookup.Binding;
-import org.eclipse.jdt.internal.compiler.lookup.BlockScope;
-import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
+import org.eclipse.jdt.internal.compiler.impl.StringConstant;
+import org.eclipse.jdt.internal.compiler.lookup.*;
 import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
 import org.hibernate.QueryException;
+import org.hibernate.dialect.Dialect;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static java.lang.Integer.parseInt;
+import static java.util.Collections.emptyList;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
-import static org.hibernate.query.validator.ECJSessionFactory.hasAnnotation;
+import static org.hibernate.query.validator.ECJSessionFactory.getAnnotation;
 import static org.hibernate.query.validator.ECJSessionFactory.qualifiedName;
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
@@ -54,37 +57,11 @@ public class ECJProcessor extends AbstractProcessor {
     private void checkHQL(CompilationUnitDeclaration unit, Compiler compiler) {
         for (TypeDeclaration type : unit.types) {
             if (isCheckable(type.binding, unit)) {
+                List<String> whitelist = getWhitelist(type.binding, unit);
                 type.traverse(new ASTVisitor() {
                     Set<Integer> setParameterLabels = new HashSet<>();
                     Set<String> setParameterNames = new HashSet<>();
                     boolean immediatelyCalled;
-                    boolean strict = true;
-
-                    @Override
-                    public boolean visit(SingleMemberAnnotation annotation, BlockScope scope) {
-                        if (qualifiedName(annotation.type.resolvedType)
-                                .equals(SuppressWarnings.class.getName())) {
-                            Expression memberValue = annotation.memberValue;
-                            if (memberValue instanceof StringLiteral) {
-                                setNonStrict((StringLiteral) memberValue);
-                            }
-                            else if (memberValue instanceof ArrayInitializer) {
-                                for (Expression e: ((ArrayInitializer) memberValue).expressions) {
-                                    if (e instanceof StringLiteral) {
-                                        setNonStrict((StringLiteral) e);
-                                    }
-                                }
-                            }
-                        }
-                        return true;
-                    }
-
-                    private void setNonStrict(StringLiteral memberValue) {
-                        if (new String(memberValue.source())
-                                .equals("hql.unknown-function")) {
-                            strict = false;
-                        }
-                    }
 
                     @Override
                     public boolean visit(MessageSend messageSend, BlockScope scope) {
@@ -150,14 +127,7 @@ public class ECJProcessor extends AbstractProcessor {
                         ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
-                                new ECJSessionFactory(handler, unit) {
-                                    @Override
-                                    void unknownSqlFunction(String functionName) {
-                                        if (strict) {
-                                            super.unknownSqlFunction(functionName);
-                                        }
-                                    }
-                                });
+                                new ECJSessionFactory(whitelist, handler, unit));
                     }
 
                 }, unit.scope);
@@ -166,8 +136,48 @@ public class ECJProcessor extends AbstractProcessor {
     }
 
     private static boolean isCheckable(TypeBinding type, CompilationUnitDeclaration unit) {
+        return getCheckAnnotation(type, unit)!=null;
+    }
+
+    private static List<String> getWhitelist(TypeBinding type,
+                                             CompilationUnitDeclaration unit) {
+        ElementValuePair[] members =
+                getCheckAnnotation(type, unit).getElementValuePairs();
+        if (members==null || members.length==0) {
+            return emptyList();
+        }
+        List<String> names = new ArrayList<>();
+        for (ElementValuePair pair: members) {
+            Object value = pair.value;
+            if (value instanceof Object[]) {
+                for (Object literal : (Object[]) value) {
+                    if (literal instanceof StringConstant) {
+                        names.add(((StringConstant) literal).stringValue());
+                    }
+                }
+            }
+            else if (value instanceof StringConstant) {
+                names.add(((StringConstant) value).stringValue());
+            }
+            else if (value instanceof BinaryTypeBinding) {
+                String name = qualifiedName((BinaryTypeBinding) value);
+                try {
+                    Dialect dialect = (Dialect) Class.forName(name).newInstance();
+                    names.addAll(dialect.getFunctions().keySet());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return names;
+    }
+
+    private static AnnotationBinding getCheckAnnotation(TypeBinding type,
+                                                        CompilationUnitDeclaration unit) {
+        AnnotationBinding result = getAnnotation(type, CHECK_HQL);
+        if (result!=null) return result;
         Binding packInfo = unit.scope.getType("package-info".toCharArray());
-        return hasAnnotation(packInfo, CHECK_HQL) || hasAnnotation(type, CHECK_HQL);
+        return getAnnotation(packInfo, CHECK_HQL);
     }
 
     @Override
