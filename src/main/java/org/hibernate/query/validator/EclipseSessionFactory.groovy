@@ -182,8 +182,8 @@ class EclipseSessionFactory extends MockSessionFactory {
         @Override
         boolean isSubclassPersister(MockEntityPersister entityPersister) {
             EntityPersister persister = (EntityPersister) entityPersister
-            return persister.typeDeclaration.isSubtypeOf(
-                    typeDeclaration)
+            //isSubtypeOf missing in Eclipse
+            return persister.typeDeclaration.isCompatibleWith(typeDeclaration)
         }
 
         @Override
@@ -597,7 +597,8 @@ class EclipseSessionFactory extends MockSessionFactory {
                             continue
                         }
                         if (argTypeClass != null &&
-                                !argTypeClass.isSubtypeOf(paramType)) {
+                                //isSubtypeOf missing in Eclipse
+                                !argTypeClass.isCompatibleWith(paramType)) {
                             argumentsCheckOut = false
                             break
                         }
