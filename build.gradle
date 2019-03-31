@@ -6,7 +6,7 @@ plugins {
     id "com.github.johnrengelman.shadow" version "5.0.0"
 }
 
-defaultTasks 'build', 'publishToMavenLocal', 'shadowJar'
+defaultTasks 'assemble', 'publishToMavenLocal', 'shadowJar', 'test'
 
 repositories {
     mavenLocal()
@@ -80,6 +80,10 @@ publishing {
             from(components.java)
         }
     }
+}
+
+test {
+    systemProperty 'gradle', 'true'
 }
 
 tasks.withType(JavaCompile) {
