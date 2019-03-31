@@ -21,7 +21,7 @@ public class HQLValidationTest {
 
     @Test
     public void testJavac() throws Exception {
-        String errors = compileWithJavac("test");
+        String errors = compileWithJavac("test", "test.test");
 
         assertFalse(errors.contains("GoodQueries.java:"));
 
@@ -77,7 +77,7 @@ public class HQLValidationTest {
 
     @Test
     public void testECJ() throws Exception {
-        String errors = compileWithECJ("test");
+        String errors = compileWithECJ("test", "test.test");
 
         assertFalse(errors.contains("GoodQueries.java"));
 
@@ -130,7 +130,7 @@ public class HQLValidationTest {
     @Test
     public void testEclipse() throws Exception {
         forceEclipseForTesting = true;
-        String errors = compileWithECJ("test");
+        String errors = compileWithECJ("test", "test.test");
 
         assertFalse(errors.contains("GoodQueries.java"));
 
@@ -181,7 +181,7 @@ public class HQLValidationTest {
         forceEclipseForTesting = false;
     }
 
-    private String compileWithJavac(String pack) throws IOException {
+    private String compileWithJavac(String... packages) throws IOException {
         Path tempDir = Files.createTempDirectory("validator-test-out");
 
         List<String> files = new ArrayList<>();
@@ -211,10 +211,13 @@ public class HQLValidationTest {
         System.out.println(cp);
         files.add(cp.toString());
 
-        Files.list(Paths.get("src/test/source").resolve(pack))
-                .map(Path::toString)
-                .filter(s->s.endsWith(".java"))
-                .forEach(files::add);
+        for (String pack: packages) {
+            Files.list(Paths.get("src/test/source")
+                        .resolve(pack.replace('.', '/')))
+                    .map(Path::toString)
+                    .filter(s -> s.endsWith(".java"))
+                    .forEach(files::add);
+        }
 
         String[] args = files.toArray(new String[0]);
         ByteArrayOutputStream err = new ByteArrayOutputStream();
@@ -226,7 +229,7 @@ public class HQLValidationTest {
         return errors;
     }
 
-    private String compileWithECJ(String pack) throws IOException {
+    private String compileWithECJ(String... packages) throws IOException {
         Path tempDir = Files.createTempDirectory("validator-test-out");
 
         List<String> files = new ArrayList<>();
@@ -273,10 +276,13 @@ public class HQLValidationTest {
         System.out.println(cp);
         files.add(cp.toString());
 
-        Files.list(Paths.get("src/test/source").resolve(pack))
-                .map(Path::toString)
-                .filter(s->s.endsWith(".java"))
-                .forEach(files::add);
+        for (String pack: packages) {
+            Files.list(Paths.get("src/test/source")
+                        .resolve(pack.replace('.', '/')))
+                    .map(Path::toString)
+                    .filter(s -> s.endsWith(".java"))
+                    .forEach(files::add);
+        }
 
         String[] args = files.toArray(new String[0]);
         ByteArrayOutputStream err = new ByteArrayOutputStream();
