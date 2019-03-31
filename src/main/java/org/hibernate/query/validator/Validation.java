@@ -2,15 +2,21 @@ package org.hibernate.query.validator;
 
 import antlr.NoViableAltException;
 import antlr.RecognitionException;
+import antlr.Token;
+import antlr.TokenStream;
 import antlr.collections.AST;
 import org.hibernate.HibernateException;
 import org.hibernate.QueryException;
+import org.hibernate.hql.internal.antlr.HqlBaseLexer;
 import org.hibernate.hql.internal.antlr.HqlTokenTypes;
 import org.hibernate.hql.internal.ast.*;
 import org.hibernate.hql.internal.ast.util.ASTUtil;
 import org.hibernate.hql.internal.ast.util.NodeTraverser;
 
+import java.io.StringReader;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -28,9 +34,6 @@ class Validation {
         void error(int start, int end, String message);
         void warn(int start, int end, String message);
     }
-
-    private static final Pattern NAMED_PARAMETERS = Pattern.compile(":(\\w+)\\b");
-    private static final Pattern LABELED_PARAMETERS = Pattern.compile("\\?(\\d+)\\b");
 
     static void validate(String hql, boolean checkParams,
                          Set<Integer> setParameterLabels,
@@ -75,71 +78,86 @@ class Validation {
 //                    e.printStackTrace();
                 }
 
-                if (checkParams) try {
-                    //TODO: handle ? and : occurring in quoted strings!
-                    if (hql.indexOf(':')>0 || hql.indexOf('?')>0) {
+                if (checkParams) {
+                    try {
                         String unsetParams = null;
                         String notSet = null;
                         int start = -1;
                         int end = -1;
-                        Matcher names = NAMED_PARAMETERS.matcher(hql);
-                        while (names.find()) {
-                            String name = names.group(1);
-                            if (!setParameterNames.contains(name)) {
-                                notSet = unsetParams == null ? " is not set" : " are not set";
-                                unsetParams = unsetParams == null ? "" : unsetParams + ", ";
-                                unsetParams += ':' + name;
-                                if (start==-1) start = names.start(1);
-                                end = names.end(1);
-                            }
-                        }
-                        Matcher labels = LABELED_PARAMETERS.matcher(hql);
-                        while (labels.find()) {
-                            int label = parseInt(labels.group(1));
-                            if (!setParameterLabels.contains(label)) {
-                                notSet = unsetParams == null ? " is not set" : " are not set";
-                                unsetParams = unsetParams == null ? "" : unsetParams + ", ";
-                                unsetParams += "?" + label;
-                                if (start==-1) start = labels.start(1);
-                                end = labels.end(1);
+                        List<String> names = new ArrayList<>();
+                        List<Integer> labels = new ArrayList<>();
+                        TokenStream tokens = new HqlBaseLexer(new StringReader(hql));
+                        loop:
+                        while (true) {
+                            Token token = tokens.nextToken();
+                            switch (token.getType()) {
+                                case HqlTokenTypes.EOF:
+                                    break loop;
+                                case HqlTokenTypes.PARAM:
+                                case HqlTokenTypes.COLON:
+                                    Token next = tokens.nextToken();
+                                    String text = next.getText();
+                                    switch (token.getType()) {
+                                        case HqlTokenTypes.COLON:
+                                            if (next.getType() == HqlTokenTypes.IDENT) {
+                                                names.add(text);
+                                                if (setParameterNames.contains(text)) {
+                                                    continue;
+                                                }
+                                            }
+                                            break;
+                                        case HqlTokenTypes.PARAM:
+                                            if (next.getType() == HqlTokenTypes.NUM_INT) {
+                                                int label;
+                                                try {
+                                                    label = parseInt(text);
+                                                } catch (NumberFormatException nfe) {
+                                                    continue;
+                                                }
+                                                labels.add(label);
+                                                if (setParameterLabels.contains(label)) {
+                                                    continue;
+                                                }
+                                            }
+                                            break;
+                                        default:
+                                            continue;
+                                    }
+                                    notSet = unsetParams == null ? " is not set" : " are not set";
+                                    unsetParams = unsetParams == null ? "" : unsetParams + ", ";
+                                    unsetParams += token.getText() + text;
+                                    if (start == -1)
+                                        start = token.getColumn(); //TODO: wrong for multiline query strings!
+                                    end = token.getColumn() + text.length();
+                                    break;
                             }
                         }
                         if (unsetParams != null) {
                             handler.warn(start, end, unsetParams + notSet);
                         }
 
-                        names.reset();
-                        while (names.find()) {
-                            String name = names.group(1);
-                            setParameterNames.remove(name);
-                        }
-                        labels.reset();
-                        while (labels.find()) {
-                            int label = parseInt(labels.group(1));
-                            setParameterLabels.remove(label);
-                        }
-                    }
+                        setParameterNames.removeAll(names);
+                        setParameterLabels.removeAll(labels);
 
-                    int count = setParameterNames.size() + setParameterLabels.size();
-                    if (count>0) {
-                        String missingParams =
-                            concat(setParameterNames.stream().map(name->':'+name),
-                                    setParameterLabels.stream().map(label -> "?" + label))
-                                    .reduce((x, y) -> x + ", " + y)
-                                    .orElse(null);
-                        String notOccur =
-                                count == 1 ?
-                                " does not occur in the query" :
-                                " do not occur in the query";
-                        handler.reportWarning(missingParams + notOccur);
+                        int count = setParameterNames.size() + setParameterLabels.size();
+                        if (count > 0) {
+                            String missingParams =
+                                    concat(setParameterNames.stream().map(name -> ":" + name),
+                                            setParameterLabels.stream().map(label -> "?" + label))
+                                            .reduce((x, y) -> x + ", " + y)
+                                            .orElse(null);
+                            String notOccur =
+                                    count == 1 ?
+                                            " does not occur in the query" :
+                                            " do not occur in the query";
+                            handler.reportWarning(missingParams + notOccur);
+                        }
+                    } finally {
+                        setParameterNames.clear();
+                        setParameterLabels.clear();
                     }
-                }
-                finally {
-                    setParameterNames.clear();
-                    setParameterLabels.clear();
                 }
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
