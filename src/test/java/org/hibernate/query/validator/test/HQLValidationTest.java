@@ -197,8 +197,10 @@ public class HQLValidationTest {
         cp.append(":out/production/query-validator");
         Files.list(Paths.get("lib"))
                 .map(Path::toString)
-                .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
-                .forEach(s->cp.append(":").append(s));
+                .filter(s -> s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
+                .filter(s -> !s.contains("/ecj-") && ! s.contains("/org.eclipse.jdt.core_"))
+                .forEach(s -> cp.append(":").append(s));
+        System.out.println(cp);
         files.add(cp.toString());
 
         Files.list(Paths.get("src/test/source").resolve(pack))
@@ -237,8 +239,11 @@ public class HQLValidationTest {
         cp.append(":out/production/query-validator");
         Files.list(Paths.get("lib"))
                 .map(Path::toString)
-                .filter(s->s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
-                .forEach(s->cp.append(":").append(s));
+                .filter(s -> s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
+                .filter(s -> !s.contains(forceEclipseForTesting ?
+                        "/ecj-" : "/org.eclipse.jdt.core_"))
+                .forEach(s -> cp.append(":").append(s));
+        System.out.println(cp);
         files.add(cp.toString());
 
         Files.list(Paths.get("src/test/source").resolve(pack))

@@ -149,6 +149,7 @@ The query validator was developed and tested with:
 - JDK 1.8.0_92
 - Hibernate 5.4.2.Final
 - ECJ 4.6.1
+- Eclipse JDT Core 3.17.0
 
 Other versions of `javac`, ECJ, and Hibernate may or may not 
 work. The query validator depends on internal compiler APIs in 
