@@ -302,7 +302,8 @@ class EclipseSessionFactory extends MockSessionFactory {
 
     private def findEntityClass(String entityName) {
         if (entityName.indexOf('.')>0) {
-            return findClassByQualifiedName(entityName);
+            def type = findClassByQualifiedName(entityName)
+            return isEntity(type) ? type : null
         }
         def type = unit.scope.getType(entityName.toCharArray())
         return !missing(type) && isEntity(type) &&

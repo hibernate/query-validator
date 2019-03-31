@@ -258,7 +258,8 @@ class JavacSessionFactory extends MockSessionFactory {
 
     private Symbol.ClassSymbol findEntityClass(String entityName) {
         if (entityName.indexOf('.')>0) {
-            return findClassByQualifiedName(entityName);
+            Symbol.ClassSymbol type = findClassByQualifiedName(entityName);
+            return isEntity(type) ? type : null;
         }
         for (Symbol.PackageSymbol pack:
                 new ArrayList<>(syms.packages.values())) {

@@ -317,7 +317,8 @@ class ECJSessionFactory extends MockSessionFactory {
 
     private TypeBinding findEntityClass(String entityName) {
         if (entityName.indexOf('.')>0) {
-            return findClassByQualifiedName(entityName);
+            TypeBinding type = findClassByQualifiedName(entityName);
+            return isEntity(type) ? type : null;
         }
         TypeBinding type = unit.scope.getType(entityName.toCharArray());
         return !missing(type) && isEntity(type)
