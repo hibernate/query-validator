@@ -180,7 +180,7 @@ class Validation {
         }
 
         private static final Pattern JAVA_CONSTANT_PATTERN = Pattern.compile(
-                "[a-z\\d]+\\.([A-Z]{1}[a-z\\d]+)+\\$?([A-Z]{1}[a-z\\d]+)*\\.[A-Z_\\$]+",
+                "([a-z\\d]+\\.)+([A-Z]{1}[a-z\\d]+)+\\$?([A-Z]{1}[a-z\\d]+)*\\.[A-Z_\\$]+",
                 Pattern.UNICODE_CHARACTER_CLASS);
 
         private boolean isConstantValue(String name, MockSessionFactory factory) {

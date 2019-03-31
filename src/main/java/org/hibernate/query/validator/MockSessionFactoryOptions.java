@@ -208,7 +208,7 @@ class MockSessionFactoryOptions implements SessionFactoryOptions {
 
     @Override
     public boolean isConventionalJavaConstants() {
-        return true;
+        return false;
     }
 
     @Override
