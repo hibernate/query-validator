@@ -47,9 +47,9 @@ public class JavacProcessor extends AbstractProcessor {
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         for (Element element : roundEnv.getRootElements()) {
             if (element instanceof PackageElement) {
-                for (Element member : element.getEnclosedElements()) {
-                    checkHQL(member);
-                }
+//                for (Element member : element.getEnclosedElements()) {
+//                    checkHQL(member);
+//                }
             } else {
                 checkHQL(element);
             }
