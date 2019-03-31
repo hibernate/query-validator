@@ -557,20 +557,20 @@ class EclipseSessionFactory extends MockSessionFactory {
             if (method.isConstructor() &&
                     method.parameters.length == argumentTypes.size()) {
                 boolean argumentsCheckOut = true
-                for (int i = 0; i < argumentTypes.size(); i++) {
+                for (int i=0; i<argumentTypes.size(); i++) {
                     Type argType = argumentTypes.get(i)
                     def paramType = method.parameters[i]
-                    if (argType instanceof PrimitiveType
-                            && paramType.isPrimitiveType()) {
-                        Class primitive;
+                    if (argType instanceof PrimitiveType &&
+                            paramType.isPrimitiveType()) {
+                        Class primitive
                         try {
                             primitive = ((PrimitiveType) argType).getPrimitiveClass()
                         } catch (Exception e) {
-                            continue;
+                            continue
                         }
                         if (!toPrimitiveClass(paramType).equals(primitive)) {
-                            argumentsCheckOut = false;
-                            break;
+                            argumentsCheckOut = false
+                            break
                         }
                     }
                     else {
