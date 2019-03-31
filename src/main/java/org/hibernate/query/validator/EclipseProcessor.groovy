@@ -61,10 +61,11 @@ class EclipseProcessor extends AbstractProcessor {
                 def dialect
                 try {
                     dialect = Class.forName(name).newInstance()
-                    names.addAll(dialect.getFunctions().keySet())
+                    dialect.getFunctions()
                 } catch (Exception e) {
                     try {
                         dialect = Class.forName(shadow(name)).newInstance()
+                        dialect.getFunctions()
                     } catch (Exception e2) {
                         //TODO: this error doesn't have location info!!
                         new ErrorReporter(null, unit, compiler)
