@@ -207,6 +207,7 @@ public class HQLValidationTest {
                 .filter(s -> s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
                 .filter(s -> !s.contains("/ecj-") && ! s.contains("/org.eclipse.jdt.core_"))
                 .forEach(s -> cp.append(":").append(s));
+
         System.out.println(cp);
         files.add(cp.toString());
 
@@ -240,25 +241,35 @@ public class HQLValidationTest {
         files.add("-classpath");
         StringBuilder cp = new StringBuilder();
 
+        boolean useFatjar;
         if (System.getProperty("gradle")!=null) {
-            if (forceEclipseForTesting) {
-                cp.append("build/libs/query-validator-1.0-SNAPSHOT-all.jar");;
+            useFatjar = forceEclipseForTesting
+                    && Files.exists(Paths.get("build/libs/query-validator-1.0-SNAPSHOT-all.jar"));
+            if (useFatjar) {
+                cp.append("build/libs/query-validator-1.0-SNAPSHOT-all.jar");
             }
             else {
                 cp.append("build/libs/query-validator-1.0-SNAPSHOT.jar");
+                cp.append(":build/classes/java/main:build/classes/groovy/main");
             }
-            cp.append(":build/classes/java/main:build/classes/groovy/main");
         }
         else {
+            useFatjar = false;
             cp.append("out/production/query-validator");
         }
 
         Files.list(Paths.get("lib"))
                 .map(Path::toString)
-                .filter(s -> s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
-                .filter(s -> !s.contains(forceEclipseForTesting ?
-                        "/ecj-" : "/org.eclipse.jdt.core_"))
+                .filter(s -> s.endsWith(".jar") && !s.endsWith("-sources.jar"))
+                .filter(s -> useFatjar ?
+                        s.contains("/javax.persistence")
+                            || s.contains("/hibernate-core")
+                            || s.contains("/org.eclipse.jdt.core_") :
+                        !s.contains(forceEclipseForTesting ?
+                            "/ecj-" : "/org.eclipse.jdt.core_"))
+
                 .forEach(s -> cp.append(":").append(s));
+
         System.out.println(cp);
         files.add(cp.toString());
 
