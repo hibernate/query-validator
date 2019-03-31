@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 
 import static java.util.Collections.*;
 import static org.hibernate.internal.util.StringHelper.isEmpty;
+import static org.hibernate.query.validator.MockSessionFactoryOptions.OPTIONS;
 
 abstract class MockSessionFactory implements SessionFactoryImplementor {
 
@@ -210,23 +211,23 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public String getUuid() {
-        return MockSessionFactoryOptions.INSTANCE.getUuid();
+        return OPTIONS.getUuid();
     }
 
     @Override
     public String getName() {
-        return MockSessionFactoryOptions.INSTANCE.getSessionFactoryName();
+        return OPTIONS.getSessionFactoryName();
     }
 
     @Override
     public SessionFactoryOptions getSessionFactoryOptions() {
-        return MockSessionFactoryOptions.INSTANCE;
+        return OPTIONS;
     }
 
     @SuppressWarnings("deprecation")
     @Override
     public Settings getSettings() {
-        return new Settings(MockSessionFactoryOptions.INSTANCE);
+        return new Settings(OPTIONS);
     }
 
     @Override
@@ -326,23 +327,23 @@ abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public EntityNotFoundDelegate getEntityNotFoundDelegate() {
-        return MockSessionFactoryOptions.INSTANCE.getEntityNotFoundDelegate();
+        return OPTIONS.getEntityNotFoundDelegate();
     }
 
     @Override
     public CustomEntityDirtinessStrategy getCustomEntityDirtinessStrategy() {
-        return MockSessionFactoryOptions.INSTANCE.getCustomEntityDirtinessStrategy();
+        return OPTIONS.getCustomEntityDirtinessStrategy();
     }
 
     @Override
     public CurrentTenantIdentifierResolver getCurrentTenantIdentifierResolver() {
-        return MockSessionFactoryOptions.INSTANCE.getCurrentTenantIdentifierResolver();
+        return OPTIONS.getCurrentTenantIdentifierResolver();
     }
 
     @Override
     public SQLFunctionRegistry getSqlFunctionRegistry() {
         return new SQLFunctionRegistry(getJdbcServices().getDialect(),
-                MockSessionFactoryOptions.INSTANCE.getCustomSqlFunctionMap()) {
+                OPTIONS.getCustomSqlFunctionMap()) {
             @Override
             public SQLFunction findSQLFunction(String functionName) {
                 if (isEmpty(functionName)) {
