@@ -7,6 +7,8 @@ import org.hibernate.query.validator.CheckHQL;
 public class GoodQueries {
 
     public void goodQueries() {
+        createQuery("from Person");
+        createQuery("from test.Person"); //allowed by HQL
         createQuery("from Person p where lower(p.name)='gavin'");
         createQuery("from Employee p where p.name='gavin' and p.employeeId=111");
         createQuery("from Person p join p.address a where a.city='barcelona'");
