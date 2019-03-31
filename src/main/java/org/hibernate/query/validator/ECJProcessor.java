@@ -161,12 +161,14 @@ public class ECJProcessor extends AbstractProcessor {
             }
             else if (value instanceof BinaryTypeBinding) {
                 String name = qualifiedName((BinaryTypeBinding) value);
+                Dialect dialect;
                 try {
-                    Dialect dialect = (Dialect) Class.forName(name).newInstance();
-                    names.addAll(dialect.getFunctions().keySet());
+                    dialect = (Dialect) Class.forName(name).newInstance();
                 } catch (Exception e) {
                     e.printStackTrace();
+                    continue;
                 }
+                names.addAll(dialect.getFunctions().keySet());
             }
         }
         return names;

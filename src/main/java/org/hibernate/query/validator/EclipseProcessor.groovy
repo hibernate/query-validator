@@ -59,26 +59,32 @@ class EclipseProcessor extends AbstractProcessor {
                 names.add(value.stringValue())
             } else if (value.class.simpleName == "BinaryTypeBinding") {
                 String name = qualifiedTypeName(value)
+                Dialect dialect
                 try {
-                    Dialect dialect = (Dialect) Class.forName(name).newInstance()
+                    dialect = (Dialect) Class.forName(name).newInstance()
                     names.addAll(dialect.getFunctions().keySet())
                 } catch (Exception e) {
                     try {
-                        String hibernate =
-                                new StringBuilder("org.")
-                                        .append("hibernate.")
-                                        .toString()
-                        name = name.replace(hibernate + "dialect",
-                                hibernate + "query.validator.hibernate.dialect")
-                        Dialect dialect = (Dialect) Class.forName(name).newInstance()
-                        names.addAll(dialect.getFunctions().keySet())
+                        dialect = (Dialect) Class.forName(unShadow(name)).newInstance()
                     } catch (Exception e2) {
                         e2.printStackTrace()
+                        continue
                     }
                 }
+                names.addAll(dialect.getFunctions().keySet())
             }
         }
         return names
+    }
+
+    private final static String ORG_HIBERNATE =
+            new StringBuilder("org.")
+                    .append("hibernate.")
+                    .toString()
+
+    private static String unShadow(String name) {
+        return name.replace(ORG_HIBERNATE + "dialect",
+                ORG_HIBERNATE + "query.validator.hibernate.dialect")
     }
 
     private static def getCheckAnnotation(type, unit) {

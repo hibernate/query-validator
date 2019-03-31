@@ -23,7 +23,8 @@ public class WorkaroundConstructorNode extends ConstructorNode {
             MockSessionFactory factory = (MockSessionFactory)
                     getSessionFactoryHelper().getFactory();
             if (!factory.isClassDefined(path)) {
-                throw new DetailedSemanticException(path + " does not exist");
+                throw new DetailedSemanticException(path
+                        + " does not exist");
             }
             @SuppressWarnings("unchecked")
             List<Type> argumentTypes = getConstructorArgumentTypeList();
