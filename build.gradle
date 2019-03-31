@@ -6,7 +6,7 @@ plugins {
     id "com.github.johnrengelman.shadow" version "5.0.0"
 }
 
-defaultTasks 'build', 'shadowJar', 'publishToMavenLocal'
+defaultTasks 'build', 'publishToMavenLocal', 'shadowJar'
 
 repositories {
     mavenLocal()
