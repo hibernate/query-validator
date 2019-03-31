@@ -57,7 +57,7 @@ public class ECJProcessor extends AbstractProcessor {
     private void checkHQL(CompilationUnitDeclaration unit, Compiler compiler) {
         for (TypeDeclaration type : unit.types) {
             if (isCheckable(type.binding, unit)) {
-                List<String> whitelist = getWhitelist(type.binding, unit);
+                List<String> whitelist = getWhitelist(type.binding, unit, compiler);
                 type.traverse(new ASTVisitor() {
                     Set<Integer> setParameterLabels = new HashSet<>();
                     Set<String> setParameterNames = new HashSet<>();
@@ -140,7 +140,8 @@ public class ECJProcessor extends AbstractProcessor {
     }
 
     private static List<String> getWhitelist(TypeBinding type,
-                                             CompilationUnitDeclaration unit) {
+                                             CompilationUnitDeclaration unit,
+                                             Compiler compiler) {
         ElementValuePair[] members =
                 getCheckAnnotation(type, unit).getElementValuePairs();
         if (members==null || members.length==0) {
@@ -165,7 +166,9 @@ public class ECJProcessor extends AbstractProcessor {
                 try {
                     dialect = (Dialect) Class.forName(name).newInstance();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    //TODO: this error doesn't have location info!!
+                    new ErrorReporter(null, unit, compiler)
+                            .reportError("could not create dialect " + name);
                     continue;
                 }
                 names.addAll(dialect.getFunctions().keySet());
@@ -187,16 +190,16 @@ public class ECJProcessor extends AbstractProcessor {
         return SourceVersion.latestSupported();
     }
 
-    class ErrorReporter implements Validation.Handler {
+    static class ErrorReporter implements Validation.Handler {
 
-        private StringLiteral literal;
+        private ASTNode node;
         private CompilationUnitDeclaration unit;
         private Compiler compiler;
 
-        ErrorReporter(StringLiteral literal,
+        ErrorReporter(ASTNode node,
                       CompilationUnitDeclaration unit,
                       Compiler compiler) {
-            this.literal = literal;
+            this.node = node;
             this.unit = unit;
             this.compiler = compiler;
         }
@@ -223,10 +226,18 @@ public class ECJProcessor extends AbstractProcessor {
             CompilationResult result = unit.compilationResult();
             char[] fileName = result.fileName;
             int[] lineEnds = result.getLineSeparatorPositions();
-            int startPosition = literal.sourceStart + offset;
-            int endPosition = endOffset<0 ?
-                    literal.sourceEnd - 1 :
-                    literal.sourceStart + endOffset;
+            int startPosition;
+            int endPosition;
+            if (node!=null) {
+                startPosition = node.sourceStart + offset;
+                endPosition = endOffset < 0 ?
+                        node.sourceEnd - 1 :
+                        node.sourceStart + endOffset;
+            }
+            else {
+                startPosition = 0;
+                endPosition = 0;
+            }
             int lineNumber = startPosition >= 0
                     ? getLineNumber(startPosition, lineEnds, 0, lineEnds.length - 1)
                     : 0;

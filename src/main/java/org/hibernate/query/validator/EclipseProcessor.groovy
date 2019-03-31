@@ -2,7 +2,6 @@ package org.hibernate.query.validator
 
 import antlr.RecognitionException
 import org.hibernate.QueryException
-import org.hibernate.dialect.Dialect
 
 import javax.annotation.processing.AbstractProcessor
 import javax.annotation.processing.RoundEnvironment
@@ -41,7 +40,7 @@ class EclipseProcessor extends AbstractProcessor {
         return getCheckAnnotation(type, unit)!=null
     }
 
-    private static List<String> getWhitelist(type, unit) {
+    private static List<String> getWhitelist(type, unit, compiler) {
         def members = getCheckAnnotation(type, unit).getElementValuePairs()
         if (members==null || members.length==0) {
             return emptyList()
@@ -59,15 +58,17 @@ class EclipseProcessor extends AbstractProcessor {
                 names.add(value.stringValue())
             } else if (value.class.simpleName == "BinaryTypeBinding") {
                 String name = qualifiedTypeName(value)
-                Dialect dialect
+                def dialect
                 try {
-                    dialect = (Dialect) Class.forName(name).newInstance()
+                    dialect = Class.forName(name).newInstance()
                     names.addAll(dialect.getFunctions().keySet())
                 } catch (Exception e) {
                     try {
-                        dialect = (Dialect) Class.forName(unShadow(name)).newInstance()
+                        dialect = Class.forName(shadow(name)).newInstance()
                     } catch (Exception e2) {
-                        e2.printStackTrace()
+                        //TODO: this error doesn't have location info!!
+                        new ErrorReporter(null, unit, compiler)
+                                .reportError("could not create dialect " + name);
                         continue
                     }
                 }
@@ -82,7 +83,7 @@ class EclipseProcessor extends AbstractProcessor {
                     .append("hibernate.")
                     .toString()
 
-    private static String unShadow(String name) {
+    private static String shadow(String name) {
         return name.replace(ORG_HIBERNATE + "dialect",
                 ORG_HIBERNATE + "query.validator.hibernate.dialect")
     }
@@ -114,10 +115,10 @@ class EclipseProcessor extends AbstractProcessor {
             this.unit = unit
         }
 
-        private void checkHQL() {
+        void checkHQL() {
             for (type in unit.types) {
                 if (isCheckable(type.binding, unit)) {
-                    whitelist = getWhitelist(type.binding, unit)
+                    whitelist = getWhitelist(type.binding, unit, compiler)
                     type.annotations.each { annotation ->
                         switch (qualifiedTypeName(annotation.resolvedType)) {
                             case jpa("NamedQuery"):
@@ -276,13 +277,13 @@ class EclipseProcessor extends AbstractProcessor {
 
     static class ErrorReporter implements Validation.Handler {
 
-        private def literal
+        private def node
         private def unit
         private def compiler
 
-        ErrorReporter(literal, unit, compiler) {
+        ErrorReporter(node, unit, compiler) {
             this.compiler = compiler
-            this.literal = literal
+            this.node = node
             this.unit = unit
         }
 
@@ -308,10 +309,18 @@ class EclipseProcessor extends AbstractProcessor {
             def result = unit.compilationResult()
             char[] fileName = result.fileName
             int[] lineEnds = result.getLineSeparatorPositions()
-            int startPosition = literal.sourceStart + offset
-            int endPosition = endOffset<0 ?
-                    literal.sourceEnd - 1 :
-                    literal.sourceStart + endOffset
+            int startPosition
+            int endPosition
+            if (node!=null) {
+                startPosition = node.sourceStart + offset
+                endPosition = endOffset < 0 ?
+                        node.sourceEnd - 1 :
+                        node.sourceStart + endOffset
+            }
+            else {
+                startPosition = 0
+                endPosition = 0;
+            }
             int lineNumber = startPosition >= 0 ?
                     getLineNumber(startPosition, lineEnds, 0, lineEnds.length - 1) : 0
             int columnNumber = startPosition >= 0 ?

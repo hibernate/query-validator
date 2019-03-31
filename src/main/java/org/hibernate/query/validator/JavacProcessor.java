@@ -23,6 +23,7 @@ import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
+import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -160,7 +161,7 @@ public class JavacProcessor extends AbstractProcessor {
         return false;
     }
 
-    private static List<String> getWhitelist(Element element) {
+    private List<String> getWhitelist(Element element) {
         List<String> list = new ArrayList<>();
         element.getAnnotationMirrors().forEach(am -> {
             if (isCheckAnnotation(am)) {
@@ -184,7 +185,10 @@ public class JavacProcessor extends AbstractProcessor {
                                     list.addAll(dialect.getFunctions().keySet());
                                 }
                                 catch (Exception e2) {
-                                    e2.printStackTrace();
+                                    processingEnv.getMessager()
+                                            .printMessage(Diagnostic.Kind.ERROR,
+                                                    "could not create dialect " + name,
+                                                    element, am, act);
                                 }
                             }
                             break;
@@ -222,7 +226,7 @@ public class JavacProcessor extends AbstractProcessor {
         ErrorReporter(JCTree.JCLiteral literal, Element element) {
             this.literal = literal;
 
-            Context context = ((JavacProcessingEnvironment) processingEnv).getContext();
+            Context context = getContext();
             log = Log.instance(context);
             Pair pair = JavacElements.instance(context)
                     .getTreeAndTopLevel(element, null, null);
@@ -266,5 +270,9 @@ public class JavacProcessor extends AbstractProcessor {
             log.warning(literal, KEY, text);
         }
 
+    }
+
+    private Context getContext() {
+        return ((JavacProcessingEnvironment) processingEnv).getContext();
     }
 }

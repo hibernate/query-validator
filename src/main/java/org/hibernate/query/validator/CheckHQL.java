@@ -67,6 +67,8 @@ public @interface CheckHQL {
     /**
      * A Hibernate dialect to use when checking SQL
      * function names.
+     *
+     * @see Dialect
      */
-    Class<? extends Dialect> dialect() default GenericDialect.class;
+    Class<?> dialect() default GenericDialect.class;
 }
