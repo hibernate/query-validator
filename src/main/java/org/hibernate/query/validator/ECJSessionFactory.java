@@ -199,7 +199,7 @@ class ECJSessionFactory extends MockSessionFactory {
         @Override
         boolean isSubclassPersister(MockEntityPersister entityPersister) {
             EntityPersister persister = (EntityPersister) entityPersister;
-            return persister.type.isSubtypeOf(type);
+            return persister.type.isCompatibleWith(type);
         }
 
         @Override
@@ -651,7 +651,7 @@ class ECJSessionFactory extends MockSessionFactory {
                             continue;
                         }
                         if (argTypeClass != null
-                                && !argTypeClass.isSubtypeOf(paramType)) {
+                                && !argTypeClass.isCompatibleWith(paramType)) {
                             argumentsCheckOut = false;
                             break;
                         }
