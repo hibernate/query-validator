@@ -29,8 +29,7 @@ import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
 import static org.hibernate.query.validator.ECJSessionFactory.getAnnotation;
 import static org.hibernate.query.validator.ECJSessionFactory.qualifiedName;
-import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
-import static org.hibernate.query.validator.HQLProcessor.jpa;
+import static org.hibernate.query.validator.HQLProcessor.*;
 import static org.hibernate.query.validator.Validation.validate;
 
 /**
@@ -41,6 +40,30 @@ import static org.hibernate.query.validator.Validation.validate;
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
 public class ECJProcessor extends AbstractProcessor {
+
+	/**
+	 * Checks if the given annotation has a {@code nativeQuery} attribute that is set as true.
+	 *
+	 * @param annotation NormalAnnotation
+	 * @return true only if {@code nativeQuery} exists and {@code nativeQuery}'s value is {@code true}
+	 */
+	static boolean isNativeQuery(NormalAnnotation annotation) {
+		for (MemberValuePair memberValuePair : annotation.memberValuePairs()) {
+			if (new String(memberValuePair.name).intern().equals("nativeQuery")) {
+				return memberValuePair.value.constant.stringValue().equals("true");
+			}
+		}
+		return false;
+	}
+
+	static Expression getMemberValueOfAnnotation(NormalAnnotation annotation) {
+		for (MemberValuePair memberValuePair : annotation.memberValuePairs()) {
+			if (new String(memberValuePair.name).intern().equals("value")) {
+				return memberValuePair.value;
+			}
+		}
+		return null;
+	}
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -122,6 +145,33 @@ public class ECJProcessor extends AbstractProcessor {
                         return true;
                     }
 
+					@Override
+					public boolean visit(SingleMemberAnnotation annotation, BlockScope scope) {
+						if (qualifiedName(annotation.resolvedType)
+								.equals(SPRING_QUERY_ANNOTATION)) {
+							// As this is a SingleMemberAnnotation it's guaranteed that this is not a nativeQuery
+							if (annotation.memberValue instanceof StringLiteral) {
+								check((StringLiteral) annotation.memberValue, false);
+							}
+						}
+						return super.visit(annotation, scope);
+					}
+
+					@Override
+					public boolean visit(NormalAnnotation annotation, BlockScope scope) {
+						if (qualifiedName(annotation.resolvedType)
+								.equals(SPRING_QUERY_ANNOTATION)) {
+							// We need to make sure that the query is not a native query
+							if (!isNativeQuery(annotation)) {
+								final Expression memberValue = getMemberValueOfAnnotation(annotation);
+								if (memberValue instanceof StringLiteral) {
+									check((StringLiteral) memberValue, false);
+								}
+							}
+						}
+						return super.visit(annotation, scope);
+					}
+
                     void check(StringLiteral stringLiteral, boolean inCreateQueryMethod) {
                         String hql = charToString(stringLiteral.source());
                         ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
@@ -129,7 +179,6 @@ public class ECJProcessor extends AbstractProcessor {
                                 setParameterLabels, setParameterNames, handler,
                                 new ECJSessionFactory(whitelist, handler, unit));
                     }
-
                 }, unit.scope);
             }
         }

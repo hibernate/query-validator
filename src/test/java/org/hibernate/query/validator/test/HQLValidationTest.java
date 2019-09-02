@@ -21,7 +21,7 @@ public class HQLValidationTest {
 
     @Test
     public void testJavac() throws Exception {
-        String errors = compileWithJavac("test", "test.test");
+        String errors = compileWithJavac("test", "test.test", "test.spring");
 
         assertFalse(errors.contains("GoodQueries.java:"));
 
@@ -73,11 +73,16 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("BadQueries.java:48: warning: :hello does not occur in the query"));
 
+        // Spring Data @Query annotation checks
+		assertTrue(errors.contains("AddressRepository.java:13: error: unexpected token: *"));
+		assertTrue(errors.contains("AddressRepository.java:16: error: Address has no mapped citi"));
+		assertTrue(errors.contains("AddressRepository.java:19: error: Address has no mapped zix"));
+		assertFalse(errors.contains("AddressRepositoryGoodQueries.java:"));
     }
 
     @Test
     public void testECJ() throws Exception {
-        String errors = compileWithECJ("test", "test.test");
+        String errors = compileWithECJ("test", "test.test", "test.spring");
 
         assertFalse(errors.contains("GoodQueries.java"));
 
@@ -125,12 +130,17 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains(":hello does not occur in the query") && errors.contains("BadQueries.java (at line 48)"));
 
+		// Spring Data @Query annotation checks
+		assertTrue(errors.contains("AddressRepository.java (at line 13)") && errors.contains("unexpected token: *"));
+		assertTrue(errors.contains("AddressRepository.java (at line 16)") && errors.contains("Address has no mapped citi"));
+		assertTrue(errors.contains("AddressRepository.java (at line 19)") && errors.contains("Address has no mapped zix"));
+		assertFalse(errors.contains("AddressRepositoryGoodQueries"));
     }
 
     @Test
     public void testEclipse() throws Exception {
         forceEclipseForTesting = true;
-        String errors = compileWithECJ("test", "test.test");
+        String errors = compileWithECJ("test", "test.test", "test.spring");
 
         assertFalse(errors.contains("GoodQueries.java"));
 
@@ -177,6 +187,12 @@ public class HQLValidationTest {
         assertTrue(errors.contains(":name is not set") && errors.contains("BadQueries.java (at line 45)"));
 
         assertTrue(errors.contains(":hello does not occur in the query") && errors.contains("BadQueries.java (at line 48)"));
+
+		// Spring Data @Query annotation checks
+		assertTrue(errors.contains("AddressRepository.java (at line 13)") && errors.contains("unexpected token: *"));
+		assertTrue(errors.contains("AddressRepository.java (at line 16)") && errors.contains("Address has no mapped citi"));
+		assertTrue(errors.contains("AddressRepository.java (at line 19)") && errors.contains("Address has no mapped zix"));
+		assertFalse(errors.contains("AddressRepositoryGoodQueries"));
 
         forceEclipseForTesting = false;
     }

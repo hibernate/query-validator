@@ -30,8 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
-import static org.hibernate.query.validator.HQLProcessor.jpa;
+import static org.hibernate.query.validator.HQLProcessor.*;
 import static org.hibernate.query.validator.Validation.validate;
 
 /**
@@ -76,6 +75,22 @@ public class JavacProcessor extends AbstractProcessor {
                                 new JavacSessionFactory(whitelist, handler,
                                         (JavacProcessingEnvironment) processingEnv));
                     }
+
+					private void checkAnnotation(String argName, List<JCTree.JCExpression> jcAnnotations) {
+						for (JCTree.JCExpression arg : jcAnnotations) {
+							if (arg instanceof JCTree.JCAssign) {
+								JCTree.JCAssign assign = (JCTree.JCAssign) arg;
+								if (argName.equals(assign.lhs.toString())
+										&& assign.rhs instanceof JCTree.JCLiteral) {
+									JCTree.JCLiteral jcLiteral =
+											(JCTree.JCLiteral) assign.rhs;
+									if (jcLiteral.value instanceof String) {
+										check(jcLiteral, (String) jcLiteral.value, false);
+									}
+								}
+							}
+						}
+					}
 
                     JCTree.JCLiteral firstArgument(JCTree.JCMethodInvocation call) {
                         for (JCTree.JCExpression e : call.args) {
@@ -124,21 +139,25 @@ public class JavacProcessor extends AbstractProcessor {
                     public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
                         AnnotationMirror annotation = jcAnnotation.attribute;
                         String name = annotation.getAnnotationType().toString();
-                        if (name.equals(jpa("NamedQuery"))) {
-                            for (JCTree.JCExpression arg : jcAnnotation.args) {
-                                if (arg instanceof JCTree.JCAssign) {
-                                    JCTree.JCAssign assign = (JCTree.JCAssign) arg;
-                                    if ("query".equals(assign.lhs.toString())
-                                            && assign.rhs instanceof JCTree.JCLiteral) {
-                                        JCTree.JCLiteral jcLiteral =
-                                                (JCTree.JCLiteral) assign.rhs;
-                                        if (jcLiteral.value instanceof String) {
-                                            check(jcLiteral, (String) jcLiteral.value, false);
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
+						if (name.equals(jpa("NamedQuery"))) {
+							checkAnnotation("query", jcAnnotation.args);
+						}
+						else if (name.equals(SPRING_QUERY_ANNOTATION)) {
+							// We need to make sure that the query is not a native query
+							for (JCTree.JCExpression arg : jcAnnotation.args) {
+								if (arg instanceof JCTree.JCAssign) {
+									JCTree.JCAssign assign = (JCTree.JCAssign) arg;
+									if ("nativeQuery".equals(assign.lhs.toString())) {
+										JCTree.JCLiteral jcLiteral = (JCTree.JCLiteral) assign.rhs;
+										Integer isNativeQuery = (Integer) jcLiteral.value;
+										if (isNativeQuery == 1) {
+											return; // need to skip check if it's a native query
+										}
+									}
+								}
+							}
+							checkAnnotation("value", jcAnnotation.args);
+						} else {
                             super.visitAnnotation(jcAnnotation); //needed!
                         }
                     }
