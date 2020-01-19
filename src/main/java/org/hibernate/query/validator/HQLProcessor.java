@@ -16,6 +16,8 @@ public class HQLProcessor extends AbstractProcessor {
 
     static final String CHECK_HQL = "org.hibernate.query.validator.CheckHQL";
 
+    static final String SPRING_QUERY_ANNOTATION = "org.springframework.data.jpa.repository.Query";
+
     static String jpa(String name) {
         //sneak it past shadow
         return new StringBuilder("javax.")

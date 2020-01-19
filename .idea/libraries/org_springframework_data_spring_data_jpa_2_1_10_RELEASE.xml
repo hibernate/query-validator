@@ -1,0 +1,27 @@
+<component name="libraryTable">
+  <library name="org.springframework.data:spring-data-jpa:2.1.10.RELEASE" type="repository">
+    <properties maven-id="org.springframework.data:spring-data-jpa:2.1.10.RELEASE">
+      <exclude>
+        <dependency maven-id="org.springframework:spring-orm" />
+        <dependency maven-id="org.springframework:spring-context" />
+        <dependency maven-id="org.springframework:spring-expression" />
+        <dependency maven-id="org.springframework:spring-aop" />
+        <dependency maven-id="org.springframework:spring-tx" />
+        <dependency maven-id="org.springframework:spring-beans" />
+        <dependency maven-id="org.springframework:spring-core" />
+        <dependency maven-id="org.springframework:spring-jcl" />
+        <dependency maven-id="org.aspectj:aspectjrt" />
+        <dependency maven-id="org.slf4j:slf4j-api" />
+      </exclude>
+    </properties>
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/spring-data-jpa-2.1.10.RELEASE.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/spring-data-commons-2.1.10.RELEASE.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/spring-data-jpa-2.1.10.RELEASE-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/spring-data-commons-2.1.10.RELEASE-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

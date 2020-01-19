@@ -33,6 +33,7 @@ Then the validator will check any static string argument of
 
 - the `createQuery()` method or
 - the `@NamedQuery()` annotation
+- the `@Query()` annotation (`org.springframework.data.jpa.repository.Query`)
 
 which occurs in the annotated package or class. 
 

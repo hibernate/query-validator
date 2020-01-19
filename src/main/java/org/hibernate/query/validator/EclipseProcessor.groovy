@@ -1,6 +1,10 @@
 package org.hibernate.query.validator
 
 import antlr.RecognitionException
+import org.eclipse.jdt.internal.compiler.ast.Expression
+import org.eclipse.jdt.internal.compiler.ast.NormalAnnotation
+import org.eclipse.jdt.internal.compiler.ast.SingleMemberAnnotation
+import org.eclipse.jdt.internal.compiler.ast.StringLiteral
 import org.hibernate.QueryException
 
 import javax.annotation.processing.AbstractProcessor
@@ -12,6 +16,7 @@ import static java.lang.Integer.parseInt
 import static java.util.Collections.emptyList
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
+import static org.hibernate.query.validator.HQLProcessor.SPRING_QUERY_ANNOTATION
 import static org.hibernate.query.validator.HQLProcessor.jpa
 import static org.hibernate.query.validator.Validation.validate
 
@@ -120,7 +125,9 @@ class EclipseProcessor extends AbstractProcessor {
             for (type in unit.types) {
                 if (isCheckable(type.binding, unit)) {
                     whitelist = getWhitelist(type.binding, unit, compiler)
-                    type.annotations.each { annotation ->
+                    getAnnotationsInType(type)
+                        .flatten()
+                        .each { annotation ->
                         switch (qualifiedTypeName(annotation.resolvedType)) {
                             case jpa("NamedQuery"):
                                 annotation.memberValuePairs.each { pair ->
@@ -138,6 +145,21 @@ class EclipseProcessor extends AbstractProcessor {
                                     }
                                 }
                                 break
+                            case SPRING_QUERY_ANNOTATION:
+                                if (annotation instanceof SingleMemberAnnotation) {
+                                    if (annotation.memberValue instanceof StringLiteral) {
+                                        validateArgument(annotation.memberValue, false)
+                                    }
+                                }
+                                else if (annotation instanceof NormalAnnotation) {
+                                    if (!ECJProcessor.isNativeQuery(annotation)) {
+                                        Expression memberValue = ECJProcessor.getMemberValueOfAnnotation(annotation)
+                                        if (memberValue instanceof StringLiteral) {
+                                            validateArgument(memberValue, false)
+                                        }
+                                    }
+                                }
+                                break
                         }
                     }
                     type.methods.each { method ->
@@ -145,6 +167,21 @@ class EclipseProcessor extends AbstractProcessor {
                     }
                 }
             }
+        }
+
+        /**
+         * @return a list of annotations both on the type and on the method. Returns empty list if there is no annotation.
+         */
+        private static Collection<?> getAnnotationsInType(def type) {
+            def result = []
+            if (type.annotations != null) {
+                result += type.annotations
+            }
+            // We need method level annotations to support Spring's @Query
+            if (type.methods != null && type.methods.annotations) {
+                result += type.methods.annotations
+            }
+            return result - null
         }
 
         private void validateStatements(statements) {
