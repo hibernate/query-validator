@@ -5,6 +5,7 @@
       <item index="0" class="java.lang.String" itemvalue="com.google.auto.service.AutoService" />
     </list>
   </component>
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="JavadocGenerationManager">
     <option name="OUTPUT_DIRECTORY" value="out" />
     <option name="OPTION_SCOPE" value="protected" />
