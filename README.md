@@ -147,7 +147,7 @@ displayed inline in your Java editor.
 The query validator was developed and tested with:
 
 - JDK 1.8.0_92
-- Hibernate 5.4.2.Final
+- Hibernate 5.4.10.Final
 - ECJ 4.6.1
 - Eclipse JDT Core 3.17.0
 
