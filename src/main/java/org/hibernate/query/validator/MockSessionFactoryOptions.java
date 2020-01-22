@@ -404,4 +404,8 @@ class MockSessionFactoryOptions implements SessionFactoryOptions {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public boolean isOmitJoinOfSuperclassTablesEnabled() {
+        return false;
+    }
 }
