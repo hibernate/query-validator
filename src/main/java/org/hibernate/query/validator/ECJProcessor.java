@@ -42,6 +42,8 @@ import static org.hibernate.query.validator.Validation.validate;
 //@SupportedAnnotationTypes(CHECK_HQL)
 public class ECJProcessor extends AbstractProcessor {
 
+    static Mocker<ECJSessionFactory> sessionFactory = Mocker.variadic(ECJSessionFactory.class);
+
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         Compiler compiler = ((BaseProcessingEnvImpl) processingEnv).getCompiler();
@@ -127,7 +129,7 @@ public class ECJProcessor extends AbstractProcessor {
                         ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
-                                new ECJSessionFactory(whitelist, handler, unit));
+                                sessionFactory.make(whitelist, handler, unit));
                     }
 
                 }, unit.scope);

@@ -43,6 +43,8 @@ import static org.hibernate.query.validator.Validation.validate;
 //@SupportedAnnotationTypes(CHECK_HQL)
 public class JavacProcessor extends AbstractProcessor {
 
+    static Mocker<JavacSessionFactory> sessionFactory = Mocker.variadic(JavacSessionFactory.class);
+
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         for (Element element : roundEnv.getRootElements()) {
@@ -73,8 +75,7 @@ public class JavacProcessor extends AbstractProcessor {
                         ErrorReporter handler = new ErrorReporter(jcLiteral, element);
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
-                                new JavacSessionFactory(whitelist, handler,
-                                        (JavacProcessingEnvironment) processingEnv));
+                                sessionFactory.make(whitelist, handler, processingEnv));
                     }
 
                     JCTree.JCLiteral firstArgument(JCTree.JCMethodInvocation call) {

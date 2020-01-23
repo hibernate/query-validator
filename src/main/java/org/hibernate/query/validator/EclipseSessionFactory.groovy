@@ -2,6 +2,7 @@ package org.hibernate.query.validator
 
 import org.hibernate.hql.internal.ast.ParseErrorHandler
 import org.hibernate.type.*
+import org.hibernate.usertype.CompositeUserType
 
 import javax.persistence.AccessType
 import java.beans.Introspector
@@ -10,7 +11,12 @@ import static java.util.Arrays.stream
 import static org.hibernate.internal.util.StringHelper.*
 import static org.hibernate.query.validator.HQLProcessor.jpa
 
-class EclipseSessionFactory extends MockSessionFactory {
+abstract class EclipseSessionFactory extends MockSessionFactory {
+
+    private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class)
+    private static final Mocker<ToManyAssociationPersister> toManyPersister = Mocker.variadic(ToManyAssociationPersister.class)
+    private static final Mocker<ElementCollectionPersister> collectionPersister = Mocker.variadic(ElementCollectionPersister.class)
+    private static final Mocker<Component> component = Mocker.variadic(Component.class)
 
     final def unit
 
@@ -23,7 +29,8 @@ class EclipseSessionFactory extends MockSessionFactory {
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {
         def type = findEntityClass(entityName)
-        return type == null ? null : new EntityPersister(entityName, type)
+        return type == null ? null :
+                entityPersister.make(entityName, type, this, getDefaultAccessType(type))
     }
 
     @Override
@@ -36,13 +43,16 @@ class EclipseSessionFactory extends MockSessionFactory {
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType)
         CollectionType collectionType = collectionType(getMemberType(property), role)
         if (isToManyAssociation(property)) {
-            return new ToManyAssociationPersister(role, collectionType,
-                    getToManyTargetEntityName(property))
+            return toManyPersister.make(role, collectionType,
+                    getToManyTargetEntityName(property), this)
         } else if (isElementCollectionProperty(property)) {
             def elementType =
                     getElementCollectionElementType(property)
-            return new ElementCollectionPersister(role, collectionType,
-                    elementType, propertyPath, defaultAccessType)
+            return collectionPersister.make(role, collectionType,
+                    elementType, propertyPath, defaultAccessType,
+                    elementCollectionElementType(elementType, role,
+                            propertyPath, defaultAccessType),
+                    this)
         } else {
             return null
         }
@@ -65,8 +75,8 @@ class EclipseSessionFactory extends MockSessionFactory {
         def memberType = getMemberType(member)
         if (isEmbeddedProperty(member)) {
             return new CompositeCustomType(
-                    new Component(memberType, entityName,
-                            path, defaultAccessType)) {
+                    component.make(memberType, entityName, path,
+                            defaultAccessType)) {
                 @Override
                 String getName() {
                     return simpleTypeName(memberType)
@@ -81,7 +91,7 @@ class EclipseSessionFactory extends MockSessionFactory {
             return collectionType(memberType, qualify(entityName, path))
         } else {
             Type result = typeResolver.basic(qualifiedTypeName(memberType))
-            return result == null ? UNKNOWN_TYPE : result
+            return result == null ? unknownType : result
         }
     }
 
@@ -90,8 +100,8 @@ class EclipseSessionFactory extends MockSessionFactory {
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
             return new CompositeCustomType(
-                    new Component(elementType,
-                            role, path, defaultAccessType)) {
+                    component.make(elementType, role, path,
+                            defaultAccessType)) {
                 @Override
                 String getName() {
                     return simpleTypeName(elementType)
@@ -103,10 +113,10 @@ class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private static CollectionType collectionType(type, String role) {
-        return MockSessionFactory.createCollectionType(role, simpleTypeName(type.actualType()))
+        return createCollectionType(role, simpleTypeName(type.actualType()))
     }
 
-    private static class Component extends MockComponent {
+    abstract static class Component implements CompositeUserType {
         private String[] propertyNames
         private Type[] propertyTypes
         def type
@@ -169,12 +179,12 @@ class EclipseSessionFactory extends MockSessionFactory {
 
     }
 
-    private class EntityPersister extends MockEntityPersister {
+    static abstract class EntityPersister extends MockEntityPersister {
         private final def typeDeclaration
 
-        private EntityPersister(String entityName, type) {
-            super(entityName, getDefaultAccessType(type),
-                    EclipseSessionFactory.this)
+        EntityPersister(String entityName, type, EclipseSessionFactory that,
+                        AccessType defaultAccessType) {
+            super(entityName, defaultAccessType, that)
             this.typeDeclaration = type
             initSubclassPersisters()
         }
@@ -198,13 +208,14 @@ class EclipseSessionFactory extends MockSessionFactory {
 
     }
 
-    private class ToManyAssociationPersister extends MockCollectionPersister {
+    static abstract class ToManyAssociationPersister extends MockCollectionPersister {
         ToManyAssociationPersister(String role,
                                    CollectionType collectionType,
-                                   String targetEntityName) {
+                                   String targetEntityName,
+                                   EclipseSessionFactory that) {
             super(role, collectionType,
                     typeHelper.entity(targetEntityName),
-                    EclipseSessionFactory.this)
+                    that)
         }
 
         @Override
@@ -213,7 +224,7 @@ class EclipseSessionFactory extends MockSessionFactory {
         }
     }
 
-    private class ElementCollectionPersister extends MockCollectionPersister {
+    static abstract class ElementCollectionPersister extends MockCollectionPersister {
         private final def elementType
         private final AccessType defaultAccessType
 
@@ -221,11 +232,10 @@ class EclipseSessionFactory extends MockSessionFactory {
                                    CollectionType collectionType,
                                    elementType,
                                    String propertyPath,
-                                   AccessType defaultAccessType) {
-            super(role, collectionType,
-                    elementCollectionElementType(elementType, role,
-                            propertyPath, defaultAccessType),
-                    EclipseSessionFactory.this)
+                                   AccessType defaultAccessType,
+                                   Type elementCollectionType,
+                                   EclipseSessionFactory that) {
+            super(role, collectionType, elementCollectionType, that)
             this.elementType = elementType
             this.defaultAccessType = defaultAccessType
         }
@@ -307,7 +317,7 @@ class EclipseSessionFactory extends MockSessionFactory {
         }
         def type = unit.scope.getType(entityName.toCharArray())
         return !missing(type) && isEntity(type) &&
-                getEntityName(type).equals(entityName) ?
+                getEntityName(type) == entityName ?
                 type : null
     }
 
@@ -569,7 +579,7 @@ class EclipseSessionFactory extends MockSessionFactory {
                         Class primitive
                         try {
                             primitive = ((PrimitiveType) argType).getPrimitiveClass()
-                        } catch (Exception e) {
+                        } catch (ignored) {
                             continue
                         }
                         if (!toPrimitiveClass(paramType).equals(primitive)) {
@@ -591,7 +601,7 @@ class EclipseSessionFactory extends MockSessionFactory {
                             //the class!
                             try {
                                 className = argType.getReturnedClass().getName()
-                            } catch (Exception e) {
+                            } catch (ignored) {
                                 continue
                             }
                             argTypeClass = findClassByQualifiedName(className)
@@ -617,23 +627,23 @@ class EclipseSessionFactory extends MockSessionFactory {
     private static Class toPrimitiveClass(param) {
         switch (param.id) {
             case 10:
-                return int.class;
+                return int.class
             case 7:
-                return long.class;
+                return long.class
             case 4:
-                return short.class;
+                return short.class
             case 3:
-                return byte.class;
+                return byte.class
             case 9:
-                return float.class;
+                return float.class
             case 8:
-                return double.class;
+                return double.class
             case 5:
-                return boolean.class;
+                return boolean.class
             case 2:
-                return char.class;
+                return char.class
             default:
-                return Object.class;
+                return Object.class
         }
     }
 
