@@ -2,8 +2,6 @@
 
 Compile time validation for queries written in HQL and JPQL.
 
-*WARNING: this project is still at an experimental stage!*
-
 ## Building
 
 Type `gradle` from this project directory.
@@ -155,6 +153,12 @@ Other versions of `javac`, ECJ, and Hibernate may or may not
 work. The query validator depends on internal compiler APIs in 
 `javac` and ECJ, and is therefore sensitive to changes in the 
 compilers.
+
+_NOTE: this version of the query validator does not work on
+JDK 9 and above. The [jdk10][] branch in git is a preview of
+the changes required to make it work on JDK 9-12._
+
+[jdk10]: https://github.com/hibernate/query-validator/tree/jdk10
 
 ## Caveats
 
