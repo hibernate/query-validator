@@ -13,6 +13,11 @@ import static org.hibernate.query.validator.HQLProcessor.jpa
 
 abstract class EclipseSessionFactory extends MockSessionFactory {
 
+    private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class)
+    private static final Mocker<ToManyAssociationPersister> toManyPersister = Mocker.variadic(ToManyAssociationPersister.class)
+    private static final Mocker<ElementCollectionPersister> collectionPersister = Mocker.variadic(ElementCollectionPersister.class)
+    private static final Mocker<Component> component = Mocker.variadic(Component.class)
+
     final def unit
 
     EclipseSessionFactory(List<String> functionWhitelist,
@@ -25,8 +30,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     MockEntityPersister createMockEntityPersister(String entityName) {
         def type = findEntityClass(entityName)
         return type == null ? null :
-                Mocker.make(EntityPersister.class, entityName, type, this,
-                        getDefaultAccessType(type))
+                entityPersister.make(entityName, type, this, getDefaultAccessType(type))
     }
 
     @Override
@@ -39,14 +43,15 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType)
         CollectionType collectionType = collectionType(getMemberType(property), role)
         if (isToManyAssociation(property)) {
-            return Mocker.make(ToManyAssociationPersister.class, role, collectionType,
+            return toManyPersister.make(role, collectionType,
                     getToManyTargetEntityName(property), this)
         } else if (isElementCollectionProperty(property)) {
             def elementType =
                     getElementCollectionElementType(property)
-            return Mocker.make(ElementCollectionPersister.class, role, collectionType,
+            return collectionPersister.make(role, collectionType,
                     elementType, propertyPath, defaultAccessType,
-                    elementCollectionElementType(elementType, role, propertyPath, defaultAccessType),
+                    elementCollectionElementType(elementType, role,
+                            propertyPath, defaultAccessType),
                     this)
         } else {
             return null
@@ -70,8 +75,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         def memberType = getMemberType(member)
         if (isEmbeddedProperty(member)) {
             return new CompositeCustomType(
-                    Mocker.make(Component.class, memberType, entityName,
-                            path, defaultAccessType)) {
+                    component.make(memberType, entityName, path,
+                            defaultAccessType)) {
                 @Override
                 String getName() {
                     return simpleTypeName(memberType)
@@ -86,7 +91,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
             return collectionType(memberType, qualify(entityName, path))
         } else {
             Type result = typeResolver.basic(qualifiedTypeName(memberType))
-            return result == null ? UNKNOWN_TYPE : result
+            return result == null ? unknownType : result
         }
     }
 
@@ -95,8 +100,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
             return new CompositeCustomType(
-                    Mocker.make(Component.class, elementType,
-                            role, path, defaultAccessType)) {
+                    component.make(elementType, role, path,
+                            defaultAccessType)) {
                 @Override
                 String getName() {
                     return simpleTypeName(elementType)
@@ -108,7 +113,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private static CollectionType collectionType(type, String role) {
-        return MockSessionFactory.createCollectionType(role, simpleTypeName(type.actualType()))
+        return createCollectionType(role, simpleTypeName(type.actualType()))
     }
 
     abstract static class Component implements CompositeUserType {
@@ -312,7 +317,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         }
         def type = unit.scope.getType(entityName.toCharArray())
         return !missing(type) && isEntity(type) &&
-                getEntityName(type).equals(entityName) ?
+                getEntityName(type) == entityName ?
                 type : null
     }
 
@@ -574,7 +579,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                         Class primitive
                         try {
                             primitive = ((PrimitiveType) argType).getPrimitiveClass()
-                        } catch (Exception e) {
+                        } catch (ignored) {
                             continue
                         }
                         if (!toPrimitiveClass(paramType).equals(primitive)) {
@@ -596,7 +601,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                             //the class!
                             try {
                                 className = argType.getReturnedClass().getName()
-                            } catch (Exception e) {
+                            } catch (ignored) {
                                 continue
                             }
                             argTypeClass = findClassByQualifiedName(className)
@@ -622,23 +627,23 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     private static Class toPrimitiveClass(param) {
         switch (param.id) {
             case 10:
-                return int.class;
+                return int.class
             case 7:
-                return long.class;
+                return long.class
             case 4:
-                return short.class;
+                return short.class
             case 3:
-                return byte.class;
+                return byte.class
             case 9:
-                return float.class;
+                return float.class
             case 8:
-                return double.class;
+                return double.class
             case 5:
-                return boolean.class;
+                return boolean.class
             case 2:
-                return char.class;
+                return char.class
             default:
-                return Object.class;
+                return Object.class
         }
     }
 

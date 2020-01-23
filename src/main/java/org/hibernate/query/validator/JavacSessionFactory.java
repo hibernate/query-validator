@@ -25,6 +25,11 @@ import static org.hibernate.query.validator.HQLProcessor.jpa;
 
 public abstract class JavacSessionFactory extends MockSessionFactory {
 
+    private static final Mocker<Component> component = Mocker.variadic(Component.class);
+    private static final Mocker<ToManyAssociationPersister> toManyPersister = Mocker.variadic(ToManyAssociationPersister.class);
+    private static final Mocker<ElementCollectionPersister> collectionPersister = Mocker.variadic(ElementCollectionPersister.class);
+    private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class);
+
     private final Names names;
     private final Types types;
     private final Symtab syms;
@@ -42,7 +47,8 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {
         Symbol.ClassSymbol type = findEntityClass(entityName);
-        return type == null ? null : Mocker.make(EntityPersister.class, entityName, type, types, this);
+        return type == null ? null :
+                entityPersister.make(entityName, type, types, this);
     }
 
     @Override
@@ -55,13 +61,13 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType);
         CollectionType collectionType = collectionType(memberType(property), role);
         if (isToManyAssociation(property)) {
-            return Mocker.make(ToManyAssociationPersister.class, role, collectionType,
+            return toManyPersister.make(role, collectionType,
                     getToManyTargetEntityName(property), this);
         }
         else if (isElementCollectionProperty(property)) {
             Symbol.TypeSymbol elementType =
                     getElementCollectionElementType(property).tsym;
-            return Mocker.make(ElementCollectionPersister.class, role, collectionType,
+            return collectionPersister.make(role, collectionType,
                     elementType, propertyPath, defaultAccessType, this);
         }
         else {
@@ -86,8 +92,8 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         com.sun.tools.javac.code.Type memberType = getMemberType(member);
         if (isEmbeddedProperty(member)) {
             return new CompositeCustomType(
-                    Mocker.make(Component.class, memberType.tsym,
-                            entityName, path, defaultAccessType)) {
+                    component.make(memberType.tsym, entityName, path,
+                            defaultAccessType)) {
                 @Override
                 public String getName() {
                     return simpleName(memberType);
@@ -106,7 +112,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         }
         else {
             Type result = typeResolver.basic(qualifiedName(memberType));
-            return result == null ? UNKNOWN_TYPE : result;
+            return result == null ? unknownType : result;
         }
     }
 
@@ -115,8 +121,8 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
             return new CompositeCustomType(
-                    Mocker.make(Component.class, elementType,
-                            role, path, defaultAccessType)) {
+                    component.make(elementType, role, path,
+                            defaultAccessType)) {
                 @Override
                 public String getName() {
                     return simpleName(elementType.type);

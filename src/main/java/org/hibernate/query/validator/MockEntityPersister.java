@@ -75,7 +75,7 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     }
 
     @Override
-    public final Type getPropertyType(String propertyPath) throws MappingException {
+    public final Type getPropertyType(String propertyPath) {
         Type result = propertyTypesByName.get(propertyPath);
         if (result!=null) {
             return result;
@@ -135,8 +135,7 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     }
 
     @Override
-    public String[] toColumns(String propertyName)
-            throws QueryException, UnsupportedOperationException {
+    public String[] toColumns(String propertyName) {
         return new String[] { "" };
     }
 

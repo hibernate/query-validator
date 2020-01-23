@@ -20,7 +20,7 @@ public abstract class MockSessionFactoryOptions implements SessionFactoryOptions
     private static final SessionFactoryObserver[] NO_OBSERVERS = new SessionFactoryObserver[0];
     private static final EntityNameResolver[] NO_RESOLVERS = new EntityNameResolver[0];
 
-    private static JpaCompliance jpaCompliance = Mocker.make(JpaCompliance.class);
+    private static JpaCompliance jpaCompliance = Mocker.nullary(JpaCompliance.class).get();
 
     @Override
     public String getSessionFactoryName() {

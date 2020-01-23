@@ -24,6 +24,8 @@ import static org.hibernate.query.validator.Validation.validate
 //@SupportedAnnotationTypes(CHECK_HQL)
 class EclipseProcessor extends AbstractProcessor {
 
+    static Mocker<EclipseSessionFactory> sessionFactory = Mocker.variadic(EclipseSessionFactory.class);
+
     @Override
     boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         def compiler = processingEnv.getCompiler()
@@ -271,7 +273,7 @@ class EclipseProcessor extends AbstractProcessor {
             ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
             validate(hql, inCreateQueryMethod && immediatelyCalled,
                     setParameterLabels, setParameterNames, handler,
-                    Mocker.make(EclipseSessionFactory.class, whitelist, handler, unit))
+                    sessionFactory.make(whitelist, handler, unit))
         }
 
     }

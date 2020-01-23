@@ -143,21 +143,6 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     }
 
     @Override
-    public String[] getKeyColumnAliases(String suffix) {
-        return new String[0];
-    }
-
-    @Override
-    public String[] getIndexColumnAliases(String suffix) {
-        return new String[0];
-    }
-
-    @Override
-    public String[] getElementColumnAliases(String suffix) {
-        return new String[0];
-    }
-
-    @Override
     public String getMappedByProperty() {
         return null;
     }
@@ -218,12 +203,12 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     }
 
     @Override
-    public String[] toColumns(String alias, String propertyName) throws QueryException {
+    public String[] toColumns(String alias, String propertyName) {
         return new String[] {""};
     }
 
     @Override
-    public String[] toColumns(String propertyName) throws QueryException, UnsupportedOperationException {
+    public String[] toColumns(String propertyName) {
         return new String[] {""};
     }
 

@@ -12,7 +12,6 @@ import org.eclipse.jdt.internal.compiler.lookup.*;
 import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
 import org.hibernate.QueryException;
 import org.hibernate.dialect.Dialect;
-import org.hibernate.hql.internal.ast.ParseErrorHandler;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -42,6 +41,8 @@ import static org.hibernate.query.validator.Validation.validate;
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
 public class ECJProcessor extends AbstractProcessor {
+
+    static Mocker<ECJSessionFactory> sessionFactory = Mocker.variadic(ECJSessionFactory.class);
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -128,7 +129,7 @@ public class ECJProcessor extends AbstractProcessor {
                         ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
-                                Mocker.make(ECJSessionFactory.class, whitelist, handler, unit));
+                                sessionFactory.make(whitelist, handler, unit));
                     }
 
                 }, unit.scope);

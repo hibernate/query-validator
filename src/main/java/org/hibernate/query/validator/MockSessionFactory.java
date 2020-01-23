@@ -37,11 +37,11 @@ import static org.hibernate.internal.util.StringHelper.isEmpty;
 
 public abstract class MockSessionFactory implements SessionFactoryImplementor {
 
-    static final SessionFactoryOptions OPTIONS = Mocker.make(MockSessionFactoryOptions.class);
+    private static final SessionFactoryOptions options = Mocker.nullary(MockSessionFactoryOptions.class).get();
 
-    private static final SQLFunction UNKNOWN_SQL_FUNCTION = new UnknownSQLFunction();
+    private static final SQLFunction unknownSQLFunction = new UnknownSQLFunction();
 
-    static final CustomType UNKNOWN_TYPE = new CustomType(Mocker.make(UserType.class));
+    static final CustomType unknownType = new CustomType(Mocker.nullary(UserType.class).get());
 
     private final Map<String,MockEntityPersister> entityPersistersByName = new HashMap<>();
     private final Map<String,MockCollectionPersister> collectionPersistersByName = new HashMap<>();
@@ -199,23 +199,23 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public String getUuid() {
-        return OPTIONS.getUuid();
+        return options.getUuid();
     }
 
     @Override
     public String getName() {
-        return OPTIONS.getSessionFactoryName();
+        return options.getSessionFactoryName();
     }
 
     @Override
     public SessionFactoryOptions getSessionFactoryOptions() {
-        return OPTIONS;
+        return options;
     }
 
     @SuppressWarnings("deprecation")
     @Override
     public Settings getSettings() {
-        return new Settings(OPTIONS);
+        return new Settings(options);
     }
 
     @Override
@@ -235,23 +235,23 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     @Override
     public EntityNotFoundDelegate getEntityNotFoundDelegate() {
-        return OPTIONS.getEntityNotFoundDelegate();
+        return options.getEntityNotFoundDelegate();
     }
 
     @Override
     public CustomEntityDirtinessStrategy getCustomEntityDirtinessStrategy() {
-        return OPTIONS.getCustomEntityDirtinessStrategy();
+        return options.getCustomEntityDirtinessStrategy();
     }
 
     @Override
     public CurrentTenantIdentifierResolver getCurrentTenantIdentifierResolver() {
-        return OPTIONS.getCurrentTenantIdentifierResolver();
+        return options.getCurrentTenantIdentifierResolver();
     }
 
     @Override
     public SQLFunctionRegistry getSqlFunctionRegistry() {
         return new SQLFunctionRegistry(getJdbcServices().getDialect(),
-                OPTIONS.getCustomSqlFunctionMap()) {
+                options.getCustomSqlFunctionMap()) {
             @Override
             public SQLFunction findSQLFunction(String functionName) {
                 if (isEmpty(functionName)) {
@@ -264,7 +264,7 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
                         handler.reportWarning(functionName
                                 + " is not defined (add it to whitelist)");
                     }
-                    return UNKNOWN_SQL_FUNCTION;
+                    return unknownSQLFunction;
                 }
                 else {
                     return sqlFunction;
@@ -293,12 +293,12 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
         }
 
         @Override
-        public Type getReturnType(Type firstArgumentType, Mapping mapping) throws QueryException {
+        public Type getReturnType(Type firstArgumentType, Mapping mapping) {
             return FloatType.INSTANCE; // ¯\_(ツ)_/¯
         }
 
         @Override
-        public String render(Type firstArgumentType, List arguments, SessionFactoryImplementor factory) throws QueryException {
+        public String render(Type firstArgumentType, List arguments, SessionFactoryImplementor factory) {
             throw new UnsupportedOperationException();
         }
     }
