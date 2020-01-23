@@ -5,6 +5,7 @@ import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.*;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.type.*;
+import org.hibernate.usertype.CompositeUserType;
 
 import javax.persistence.AccessType;
 import java.beans.Introspector;
@@ -16,11 +17,11 @@ import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.hibernate.internal.util.StringHelper.*;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 
-class ECJSessionFactory extends MockSessionFactory {
+public abstract class ECJSessionFactory extends MockSessionFactory {
 
     private final CompilationUnitDeclaration unit;
 
-    ECJSessionFactory(List<String> functionWhitelist,
+    public ECJSessionFactory(List<String> functionWhitelist,
                       ParseErrorHandler handler,
                       CompilationUnitDeclaration unit) {
         super(functionWhitelist, handler);
@@ -30,7 +31,7 @@ class ECJSessionFactory extends MockSessionFactory {
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {
         TypeBinding type = findEntityClass(entityName);
-        return type == null ? null : new EntityPersister(entityName, type);
+        return type == null ? null : Mocker.make(EntityPersister.class, entityName, type, this);
     }
 
     @Override
@@ -43,14 +44,14 @@ class ECJSessionFactory extends MockSessionFactory {
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType);
         CollectionType collectionType = collectionType(getMemberType(property), role);
         if (isToManyAssociation(property)) {
-            return new ToManyAssociationPersister(role, collectionType,
-                    getToManyTargetEntityName(property));
+            return Mocker.make(ToManyAssociationPersister.class, role, collectionType,
+                    getToManyTargetEntityName(property), this);
         }
         else if (isElementCollectionProperty(property)) {
             TypeBinding elementType =
                     getElementCollectionElementType(property);
-            return new ElementCollectionPersister(role, collectionType,
-                    elementType, propertyPath, defaultAccessType);
+            return Mocker.make(ElementCollectionPersister.class, role, collectionType,
+                    elementType, propertyPath, defaultAccessType, this);
         }
         else {
             return null;
@@ -74,7 +75,7 @@ class ECJSessionFactory extends MockSessionFactory {
         TypeBinding memberType = getMemberType(member);
         if (isEmbeddedProperty(member)) {
             return new CompositeCustomType(
-                    new Component(memberType,
+                    Mocker.make(Component.class, memberType,
                             entityName, path, defaultAccessType)) {
                 @Override
                 public String getName() {
@@ -103,7 +104,7 @@ class ECJSessionFactory extends MockSessionFactory {
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
             return new CompositeCustomType(
-                    new Component(elementType,
+                    Mocker.make(Component.class, elementType,
                             role, path, defaultAccessType)) {
                 @Override
                 public String getName() {
@@ -121,12 +122,12 @@ class ECJSessionFactory extends MockSessionFactory {
         return createCollectionType(role, simpleName(type.actualType()));
     }
 
-    private static class Component extends MockComponent {
+    public static abstract class Component implements CompositeUserType {
         private String[] propertyNames;
         private Type[] propertyTypes;
         TypeBinding type;
 
-        Component(TypeBinding type,
+        public Component(TypeBinding type,
                   String entityName, String path,
                   AccessType defaultAccessType) {
             this.type = type;
@@ -186,12 +187,12 @@ class ECJSessionFactory extends MockSessionFactory {
 
     }
 
-    private class EntityPersister extends MockEntityPersister {
+    public static abstract class EntityPersister extends MockEntityPersister {
         private final TypeBinding type;
 
-        private EntityPersister(String entityName, TypeBinding type) {
-            super(entityName, getDefaultAccessType(type),
-                    ECJSessionFactory.this);
+        public EntityPersister(String entityName, TypeBinding type,
+                               ECJSessionFactory that) {
+            super(entityName, getDefaultAccessType(type), that);
             this.type = type;
             initSubclassPersisters();
         }
@@ -214,13 +215,14 @@ class ECJSessionFactory extends MockSessionFactory {
 
     }
 
-    private class ToManyAssociationPersister extends MockCollectionPersister {
-        ToManyAssociationPersister(String role,
-                                   CollectionType collectionType,
-                                   String targetEntityName) {
+    public abstract static class ToManyAssociationPersister extends MockCollectionPersister {
+        public ToManyAssociationPersister(String role,
+                                          CollectionType collectionType,
+                                          String targetEntityName,
+                                          ECJSessionFactory that) {
             super(role, collectionType,
                     typeHelper.entity(targetEntityName),
-                    ECJSessionFactory.this);
+                    that);
         }
 
         @Override
@@ -229,19 +231,20 @@ class ECJSessionFactory extends MockSessionFactory {
         }
     }
 
-    private class ElementCollectionPersister extends MockCollectionPersister {
+    public abstract static class ElementCollectionPersister extends MockCollectionPersister {
         private final TypeBinding elementType;
         private final AccessType defaultAccessType;
 
-        ElementCollectionPersister(String role,
-                                   CollectionType collectionType,
-                                   TypeBinding elementType,
-                                   String propertyPath,
-                                   AccessType defaultAccessType) {
+        public ElementCollectionPersister(String role,
+                                          CollectionType collectionType,
+                                          TypeBinding elementType,
+                                          String propertyPath,
+                                          AccessType defaultAccessType,
+                                          ECJSessionFactory that) {
             super(role, collectionType,
                     elementCollectionElementType(elementType, role,
                             propertyPath, defaultAccessType),
-                    ECJSessionFactory.this);
+                    that);
             this.elementType = elementType;
             this.defaultAccessType = defaultAccessType;
         }
@@ -428,7 +431,7 @@ class ECJSessionFactory extends MockSessionFactory {
         }
         else if (member instanceof MethodBinding) {
             if ((((MethodBinding) member).modifiers & ClassFileConstants.AccStatic) != 0) {
-                return false;
+                return true;
             }
         }
         return false;

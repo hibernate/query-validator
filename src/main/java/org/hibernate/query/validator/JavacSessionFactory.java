@@ -5,8 +5,9 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
-import org.hibernate.type.*;
 import org.hibernate.type.Type;
+import org.hibernate.type.*;
+import org.hibernate.usertype.CompositeUserType;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -22,13 +23,13 @@ import static java.util.Arrays.stream;
 import static org.hibernate.internal.util.StringHelper.*;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 
-class JavacSessionFactory extends MockSessionFactory {
+public abstract class JavacSessionFactory extends MockSessionFactory {
 
     private final Names names;
     private final Types types;
     private final Symtab syms;
 
-    JavacSessionFactory(List<String> functionWhitelist,
+    public JavacSessionFactory(List<String> functionWhitelist,
                         ParseErrorHandler handler,
                         JavacProcessingEnvironment processingEnv) {
         super(functionWhitelist, handler);
@@ -41,7 +42,7 @@ class JavacSessionFactory extends MockSessionFactory {
     @Override
     MockEntityPersister createMockEntityPersister(String entityName) {
         Symbol.ClassSymbol type = findEntityClass(entityName);
-        return type == null ? null : new EntityPersister(entityName, type);
+        return type == null ? null : Mocker.make(EntityPersister.class, entityName, type, types, this);
     }
 
     @Override
@@ -54,14 +55,14 @@ class JavacSessionFactory extends MockSessionFactory {
                 findPropertyByPath(entityClass, propertyPath, defaultAccessType);
         CollectionType collectionType = collectionType(memberType(property), role);
         if (isToManyAssociation(property)) {
-            return new ToManyAssociationPersister(role, collectionType,
-                    getToManyTargetEntityName(property));
+            return Mocker.make(ToManyAssociationPersister.class, role, collectionType,
+                    getToManyTargetEntityName(property), this);
         }
         else if (isElementCollectionProperty(property)) {
             Symbol.TypeSymbol elementType =
                     getElementCollectionElementType(property).tsym;
-            return new ElementCollectionPersister(role, collectionType,
-                    elementType, propertyPath, defaultAccessType);
+            return Mocker.make(ElementCollectionPersister.class, role, collectionType,
+                    elementType, propertyPath, defaultAccessType, this);
         }
         else {
             return null;
@@ -85,7 +86,7 @@ class JavacSessionFactory extends MockSessionFactory {
         com.sun.tools.javac.code.Type memberType = getMemberType(member);
         if (isEmbeddedProperty(member)) {
             return new CompositeCustomType(
-                    new Component(memberType.tsym,
+                    Mocker.make(Component.class, memberType.tsym,
                             entityName, path, defaultAccessType)) {
                 @Override
                 public String getName() {
@@ -114,7 +115,7 @@ class JavacSessionFactory extends MockSessionFactory {
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
             return new CompositeCustomType(
-                    new Component(elementType,
+                    Mocker.make(Component.class, elementType,
                             role, path, defaultAccessType)) {
                 @Override
                 public String getName() {
@@ -132,12 +133,12 @@ class JavacSessionFactory extends MockSessionFactory {
         return createCollectionType(role, simpleName(type));
     }
 
-    private static class Component extends MockComponent {
+    public static abstract class Component implements CompositeUserType {
         private String[] propertyNames;
         private Type[] propertyTypes;
         Symbol.TypeSymbol type;
 
-        Component(Symbol.TypeSymbol type,
+        public Component(Symbol.TypeSymbol type,
                   String entityName, String path,
                   AccessType defaultAccessType) {
             this.type = type;
@@ -186,12 +187,15 @@ class JavacSessionFactory extends MockSessionFactory {
 
     }
 
-    private class EntityPersister extends MockEntityPersister {
+    public static abstract class EntityPersister extends MockEntityPersister {
         private final Symbol.ClassSymbol type;
+        private final Types types;
 
-        private EntityPersister(String entityName, Symbol.ClassSymbol type) {
-            super(entityName, getDefaultAccessType(type), JavacSessionFactory.this);
+        public EntityPersister(String entityName, Symbol.ClassSymbol type, Types types,
+                               JavacSessionFactory that) {
+            super(entityName, getDefaultAccessType(type), that);
             this.type = type;
+            this.types = types;
             initSubclassPersisters();
         }
 
@@ -213,13 +217,14 @@ class JavacSessionFactory extends MockSessionFactory {
 
     }
 
-    private class ToManyAssociationPersister extends MockCollectionPersister {
-        ToManyAssociationPersister(String role,
+    public abstract static class ToManyAssociationPersister extends MockCollectionPersister {
+        public ToManyAssociationPersister(String role,
                                    CollectionType collectionType,
-                                   String targetEntityName) {
+                                   String targetEntityName,
+                                   JavacSessionFactory that) {
             super(role, collectionType,
                     typeHelper.entity(targetEntityName),
-                    JavacSessionFactory.this);
+                    that);
         }
 
         @Override
@@ -228,19 +233,20 @@ class JavacSessionFactory extends MockSessionFactory {
         }
     }
 
-    private class ElementCollectionPersister extends MockCollectionPersister {
+    public abstract static class ElementCollectionPersister extends MockCollectionPersister {
         private final Symbol.TypeSymbol elementType;
         private final AccessType defaultAccessType;
 
-        ElementCollectionPersister(String role,
+        public ElementCollectionPersister(String role,
                                    CollectionType collectionType,
                                    Symbol.TypeSymbol elementType,
                                    String propertyPath,
-                                   AccessType defaultAccessType) {
+                                   AccessType defaultAccessType,
+                                   JavacSessionFactory that) {
             super(role, collectionType,
                     elementCollectionElementType(elementType, role,
                             propertyPath, defaultAccessType),
-                    JavacSessionFactory.this);
+                    that);
             this.elementType = elementType;
             this.defaultAccessType = defaultAccessType;
         }
@@ -523,7 +529,7 @@ class JavacSessionFactory extends MockSessionFactory {
                     Symbol.VarSymbol param = constructor.params.get(i);
                     if (type instanceof PrimitiveType
                             && param.type.isPrimitive()) {
-                        Class primitive;
+                        Class<?> primitive;
                         try {
                             primitive = ((PrimitiveType) type).getPrimitiveClass();
                         } catch (Exception e) {
@@ -569,7 +575,7 @@ class JavacSessionFactory extends MockSessionFactory {
         return false;
     }
 
-    private static Class toPrimitiveClass(Symbol.VarSymbol param) {
+    private static Class<?> toPrimitiveClass(Symbol.VarSymbol param) {
         switch (param.type.getTag()) {
             case BOOLEAN:
                 return boolean.class;

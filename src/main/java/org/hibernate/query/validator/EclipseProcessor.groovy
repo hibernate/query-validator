@@ -271,7 +271,7 @@ class EclipseProcessor extends AbstractProcessor {
             ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
             validate(hql, inCreateQueryMethod && immediatelyCalled,
                     setParameterLabels, setParameterNames, handler,
-                    new EclipseSessionFactory(whitelist, handler, unit))
+                    Mocker.make(EclipseSessionFactory.class, whitelist, handler, unit))
         }
 
     }

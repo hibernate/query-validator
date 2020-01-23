@@ -73,7 +73,7 @@ public class JavacProcessor extends AbstractProcessor {
                         ErrorReporter handler = new ErrorReporter(jcLiteral, element);
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
-                                new JavacSessionFactory(whitelist, handler,
+                                Mocker.make(JavacSessionFactory.class, whitelist, handler,
                                         (JavacProcessingEnvironment) processingEnv));
                     }
 

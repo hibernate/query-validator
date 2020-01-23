@@ -21,52 +21,21 @@ class MockJdbcServicesInitiator extends JdbcServicesInitiator {
 
     private static final GenericDialect genericDialect = new GenericDialect();
 
+    public abstract static class MockJdbcServices implements JdbcServices {
+        @Override
+        public Dialect getDialect() {
+            //TODO: Are there advantages to using the
+            //      configured dialect if any?
+            //      Add dialect argument to @CheckHQL!
+            return genericDialect;
+        }
+    }
+
+    private static final JdbcServices JDBC_SERVICES = Mocker.make(MockJdbcServices.class);
+
     @Override
     public JdbcServices initiateService(Map configurationValues,
                                         ServiceRegistryImplementor registry) {
-        return new JdbcServices() {
-            @Override
-            public Dialect getDialect() {
-                //TODO: Are there advantages to using the
-                //      configured dialect if any?
-                //      Add dialect argument to @CheckHQL!
-                return genericDialect;
-            }
-
-            @Override
-            public JdbcEnvironment getJdbcEnvironment() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public JdbcConnectionAccess getBootstrapJdbcConnectionAccess() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public SqlStatementLogger getSqlStatementLogger() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public SqlExceptionHelper getSqlExceptionHelper() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public ExtractedDatabaseMetaData getExtractedMetaDataSupport() {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public LobCreator getLobCreator(LobCreationContext lobCreationContext) {
-                throw new UnsupportedOperationException();
-            }
-
-            @Override
-            public ResultSetWrapper getResultSetWrapper() {
-                throw new UnsupportedOperationException();
-            }
-        };
+        return JDBC_SERVICES;
     }
 }
