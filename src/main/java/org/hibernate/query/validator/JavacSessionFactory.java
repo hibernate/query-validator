@@ -16,6 +16,7 @@ import javax.lang.model.type.TypeKind;
 import javax.persistence.AccessType;
 import java.beans.Introspector;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -157,7 +158,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                     AccessType accessType =
                             getAccessType(type, defaultAccessType);
                     for (Symbol member: type.members()
-                            .getElements(symbol
+                            .getSymbols(symbol
                                     -> isPersistable(symbol, accessType))) {
                         String name = propertyName(member);
                         Type propertyType =
@@ -269,20 +270,18 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     }
 
     private Symbol.ClassSymbol findEntityClass(String entityName) {
-        if (entityName.indexOf('.')>0) {
+        if (entityName.indexOf('.') > 0) {
             Symbol.ClassSymbol type = findClassByQualifiedName(entityName);
             return isEntity(type) ? type : null;
         }
-        for (Symbol.PackageSymbol pack:
-                new ArrayList<>(syms.packages.values())) {
+        ArrayList<Symbol.ClassSymbol> classes = new ArrayList<>();
+        syms.getAllClasses().forEach(classes::add);
+        for (Symbol.ClassSymbol type : classes) {
             try {
-                for (Symbol type: pack.members()
-                        .getElements(symbol ->
-                                isMatchingEntity(symbol, entityName))) {
-                    return (Symbol.ClassSymbol) type;
+                if (isMatchingEntity(type, entityName)) {
+                    return type;
                 }
-            }
-            catch (Exception e) {}
+            } catch (Exception e) {}
         }
         return null;
     }
@@ -306,7 +305,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                 AccessType accessType =
                         getAccessType(type, defaultAccessType);
                 for (Symbol member: type.members()
-                        .getElements(symbol -> isMatchingProperty(
+                        .getSymbols(symbol -> isMatchingProperty(
                                 symbol, propertyName, accessType))) {
                     return member;
                 }
@@ -405,20 +404,14 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         AnnotationMirror manyToOne =
                 getAnnotation(member, jpa("ManyToOne"));
         if (manyToOne!=null) return manyToOne;
-        AnnotationMirror oneToOne =
-                getAnnotation(member, jpa("OneToOne"));
-        if (oneToOne!=null) return oneToOne;
-        return null;
+        return getAnnotation(member, jpa("OneToOne"));
     }
 
     private static AnnotationMirror toManyAnnotation(Symbol member) {
         AnnotationMirror manyToMany =
                 getAnnotation(member, jpa("ManyToMany"));
         if (manyToMany!=null) return manyToMany;
-        AnnotationMirror oneToMany =
-                getAnnotation(member, jpa("OneToMany"));
-        if (oneToMany!=null) return oneToMany;
-        return null;
+        return getAnnotation(member, jpa("OneToMany"));
     }
 
     private static String simpleName(com.sun.tools.javac.code.Type type) {
@@ -518,7 +511,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     boolean isFieldDefined(String qualifiedClassName, String fieldName) {
         Symbol.ClassSymbol type = findClassByQualifiedName(qualifiedClassName);
         return type != null
-                && type.members().lookup(names.fromString(fieldName)).sym != null;
+                && type.members().getSymbolsByName(names.fromString(fieldName)).iterator().hasNext();
     }
 
     @Override
@@ -526,7 +519,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                                  List<org.hibernate.type.Type> argumentTypes) {
         Symbol.ClassSymbol symbol = findClassByQualifiedName(qualifiedClassName);
         if (symbol==null) return false;
-        for (Symbol cons: symbol.members().getElements(Symbol::isConstructor)) {
+        for (Symbol cons: symbol.members().getSymbols(Symbol::isConstructor)) {
             Symbol.MethodSymbol constructor = (Symbol.MethodSymbol) cons;
             if (constructor.params.length()==argumentTypes.size()) {
                 boolean argumentsCheckOut = true;
@@ -537,7 +530,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                             && param.type.isPrimitive()) {
                         Class<?> primitive;
                         try {
-                            primitive = ((PrimitiveType) type).getPrimitiveClass();
+                            primitive = ((PrimitiveType<?>) type).getPrimitiveClass();
                         } catch (Exception e) {
                             continue;
                         }
@@ -605,17 +598,20 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     }
 
     private Symbol.ClassSymbol findClassByQualifiedName(String path) {
-        return syms.classes.get(names.fromString(path));
+        //TODO: there used to be one class for a given name, now what?
+        Iterator<Symbol.ClassSymbol> classes =
+                syms.getClassesForName(names.fromString(path)).iterator();
+        return classes.hasNext() ? classes.next() : null;
     }
 
     private static AccessType getDefaultAccessType(Symbol.TypeSymbol type) {
         //iterate up the superclass hierarchy
         while (type instanceof Symbol.ClassSymbol) {
-            for (Symbol member: type.members().getElements()) {
-                if (isId(member)) {
-                    return member instanceof Symbol.MethodSymbol ?
-                            AccessType.PROPERTY : AccessType.FIELD;
-                }
+            for (Symbol member: type.members().getSymbols(JavacSessionFactory::isId)) {
+//                if (isId(member)) {
+                return member instanceof Symbol.MethodSymbol ?
+                        AccessType.PROPERTY : AccessType.FIELD;
+//                }
             }
             Symbol.ClassSymbol classSymbol = (Symbol.ClassSymbol) type;
             com.sun.tools.javac.code.Type superclass = classSymbol.getSuperclass();

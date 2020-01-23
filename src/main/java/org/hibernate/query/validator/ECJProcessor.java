@@ -166,7 +166,8 @@ public class ECJProcessor extends AbstractProcessor {
                 String name = qualifiedName((BinaryTypeBinding) value);
                 Dialect dialect;
                 try {
-                    dialect = (Dialect) Class.forName(name).newInstance();
+                    dialect = (Dialect) Class.forName(name)
+                            .getDeclaredConstructor().newInstance();
                 } catch (Exception e) {
                     //TODO: this error doesn't have location info!!
                     new ErrorReporter(null, unit, compiler)

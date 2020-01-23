@@ -20,7 +20,7 @@ public interface Mocker<T> {
 
 	static <T> Supplier<T> nullary(Class<T> clazz) {
 		try {
-			Class<? extends T> mock = load(clazz);
+			Constructor<? extends T> mock = load(clazz).getConstructor();
 			return () -> {
 				try {
 					return mock.newInstance();

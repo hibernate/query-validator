@@ -25,53 +25,53 @@ public class HQLValidationTest {
 
         assertFalse(errors.contains("GoodQueries.java:"));
 
-        assertTrue(errors.contains("BadQueries.java:6: error: unexpected token: do"));
-        assertTrue(errors.contains("BadQueries.java:7: error: unexpected token"));
-        assertTrue(errors.contains("BadQueries.java:8: error: unexpected token: select"));
-        assertTrue(errors.contains("BadQueries.java:9: error: unexpected token: ="));
-        assertTrue(errors.contains("BadQueries.java:10: error: unexpected token: from"));
-        assertTrue(errors.contains("BadQueries.java:10: error: missing from clause or select list"));
+        assertTrue(errors.contains("BadQueries.java:6: unexpected token: do"));
+        assertTrue(errors.contains("BadQueries.java:7: unexpected token"));
+        assertTrue(errors.contains("BadQueries.java:8: unexpected token: select"));
+        assertTrue(errors.contains("BadQueries.java:9: unexpected token: ="));
+        assertTrue(errors.contains("BadQueries.java:10: unexpected token: from"));
+        assertTrue(errors.contains("BadQueries.java:10: missing from clause or select list"));
 
-        assertTrue(errors.contains("BadQueries.java:12: error: test.Nil does not exist"));
-        assertTrue(errors.contains("BadQueries.java:13: error: test.Pair has no suitable constructor for types (Person)"));
-        assertTrue(errors.contains("BadQueries.java:14: error: test.Pair has no suitable constructor for types (Person, string)"));
-        assertTrue(errors.contains("BadQueries.java:50: error: test.Pair has no suitable constructor for types (integer, integer)"));
-        assertTrue(errors.contains("BadQueries.java:51: error: test.Pair has no suitable constructor for types (string, string)"));
+        assertTrue(errors.contains("BadQueries.java:12: test.Nil does not exist"));
+        assertTrue(errors.contains("BadQueries.java:13: test.Pair has no suitable constructor for types (Person)"));
+        assertTrue(errors.contains("BadQueries.java:14: test.Pair has no suitable constructor for types (Person, string)"));
+        assertTrue(errors.contains("BadQueries.java:50: test.Pair has no suitable constructor for types (integer, integer)"));
+        assertTrue(errors.contains("BadQueries.java:51: test.Pair has no suitable constructor for types (string, string)"));
 
-        assertTrue(errors.contains("BadQueries.java:16: error: People is not mapped"));
-        assertTrue(errors.contains("BadQueries.java:17: error: Person has no mapped firstName"));
-        assertTrue(errors.contains("BadQueries.java:18: error: Person has no mapped addr"));
-        assertTrue(errors.contains("BadQueries.java:19: error: Address has no mapped town"));
-        assertTrue(errors.contains("BadQueries.java:20: error: Address has no mapped name"));
-        assertTrue(errors.contains("BadQueries.java:21: error: Address has no mapped country.type"));
+        assertTrue(errors.contains("BadQueries.java:16: People is not mapped"));
+        assertTrue(errors.contains("BadQueries.java:17: Person has no mapped firstName"));
+        assertTrue(errors.contains("BadQueries.java:18: Person has no mapped addr"));
+        assertTrue(errors.contains("BadQueries.java:19: Address has no mapped town"));
+        assertTrue(errors.contains("BadQueries.java:20: Address has no mapped name"));
+        assertTrue(errors.contains("BadQueries.java:21: Address has no mapped country.type"));
 
-        assertTrue(errors.contains("BadQueries.java:23: error: ")); //should be: "string has no mapped length"
-        assertTrue(errors.contains("BadQueries.java:24: error: string has no mapped length"));
+        assertTrue(errors.contains("BadQueries.java:23: ")); //should be: "string has no mapped length"
+        assertTrue(errors.contains("BadQueries.java:24: string has no mapped length"));
 
-        assertTrue(errors.contains("BadQueries.java:26: warning: xxx is not defined"));
-        assertTrue(errors.contains("BadQueries.java:27: warning: func is not defined"));
-        assertTrue(errors.contains("BadQueries.java:28: warning: custom is not defined"));
-        assertTrue(errors.contains("BadQueries.java:29: warning: p is not defined"));
-        assertTrue(errors.contains("BadQueries.java:29: error: p.name is not defined"));
+        assertTrue(errors.contains("BadQueries.java:26: xxx is not defined"));
+        assertTrue(errors.contains("BadQueries.java:27: func is not defined"));
+        assertTrue(errors.contains("BadQueries.java:28: custom is not defined"));
+        assertTrue(errors.contains("BadQueries.java:29: p is not defined"));
+        assertTrue(errors.contains("BadQueries.java:29: p.name is not defined"));
 
-        assertTrue(errors.contains("BadQueries.java:31: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("BadQueries.java:32: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("BadQueries.java:33: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("BadQueries.java:31: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("BadQueries.java:32: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("BadQueries.java:33: key(), value(), or entry() argument must be map element"));
 
-        assertTrue(errors.contains("BadQueries.java:36: error: entry() has no members"));
+        assertTrue(errors.contains("BadQueries.java:36: entry() has no members"));
 
-        assertTrue(errors.contains("BadQueries.java:38: error: illegal token: ?"));
+        assertTrue(errors.contains("BadQueries.java:38: illegal token: ?"));
 
         //should be errors:
 //        assertTrue(errors.contains("BadQueries.java:40:"));
 //        assertTrue(errors.contains("BadQueries.java:41:"));
 
-        assertTrue(errors.contains("Person.java:22: error: Person has no mapped x"));
+        assertTrue(errors.contains("Person.java:22: Person has no mapped x"));
 
-        assertTrue(errors.contains("BadQueries.java:43: warning: ?2 is not set"));
-        assertTrue(errors.contains("BadQueries.java:45: warning: :name is not set"));
+        assertTrue(errors.contains("BadQueries.java:43: ?2 is not set"));
+        assertTrue(errors.contains("BadQueries.java:45: :name is not set"));
 
-        assertTrue(errors.contains("BadQueries.java:48: warning: :hello does not occur in the query"));
+        assertTrue(errors.contains("BadQueries.java:48: :hello does not occur in the query"));
 
     }
 

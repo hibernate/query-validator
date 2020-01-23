@@ -430,14 +430,10 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
 
     private static boolean isStatic(Binding member) {
         if (member instanceof FieldBinding) {
-            if ((((FieldBinding) member).modifiers & ClassFileConstants.AccStatic) != 0) {
-                return true;
-            }
+            return (((FieldBinding) member).modifiers & ClassFileConstants.AccStatic) != 0;
         }
         else if (member instanceof MethodBinding) {
-            if ((((MethodBinding) member).modifiers & ClassFileConstants.AccStatic) != 0) {
-                return true;
-            }
+            return (((MethodBinding) member).modifiers & ClassFileConstants.AccStatic) != 0;
         }
         return false;
     }
@@ -478,20 +474,14 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
         AnnotationBinding manyToOne =
                 getAnnotation(member, jpa("ManyToOne"));
         if (manyToOne!=null) return manyToOne;
-        AnnotationBinding oneToOne =
-                getAnnotation(member, jpa("OneToOne"));
-        if (oneToOne!=null) return oneToOne;
-        return null;
+        return getAnnotation(member, jpa("OneToOne"));
     }
 
     private static AnnotationBinding toManyAnnotation(Binding member) {
         AnnotationBinding manyToMany =
                 getAnnotation(member, jpa("ManyToMany"));
         if (manyToMany!=null) return manyToMany;
-        AnnotationBinding oneToMany =
-                getAnnotation(member, jpa("OneToMany"));
-        if (oneToMany!=null) return oneToMany;
-        return null;
+        return getAnnotation(member, jpa("OneToMany"));
     }
 
     private static TypeBinding getCollectionElementType(Binding property) {
@@ -628,9 +618,9 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                     TypeBinding paramType = method.parameters[i];
                     if (argType instanceof PrimitiveType
                             && paramType.isPrimitiveType()) {
-                        Class primitive;
+                        Class<?> primitive;
                         try {
-                            primitive = ((PrimitiveType) argType).getPrimitiveClass();
+                            primitive = ((PrimitiveType<?>) argType).getPrimitiveClass();
                         } catch (Exception e) {
                             continue;
                         }
@@ -675,7 +665,7 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
         return false;
     }
 
-    private static Class toPrimitiveClass(TypeBinding param) {
+    private static Class<?> toPrimitiveClass(TypeBinding param) {
         switch (param.id) {
             case TypeIds.T_int:
                 return int.class;

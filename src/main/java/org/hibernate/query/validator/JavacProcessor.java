@@ -182,7 +182,8 @@ public class JavacProcessor extends AbstractProcessor {
                             if (act instanceof Attribute.Class) {
                                 String name = act.getValue().toString().replace(".class","");
                                 try {
-                                    Dialect dialect = (Dialect) Class.forName(name).newInstance();
+                                    Dialect dialect = (Dialect) Class.forName(name)
+                                            .getDeclaredConstructor().newInstance();
                                     list.addAll(dialect.getFunctions().keySet());
                                 }
                                 catch (Exception e2) {
@@ -229,7 +230,7 @@ public class JavacProcessor extends AbstractProcessor {
 
             Context context = getContext();
             log = Log.instance(context);
-            Pair pair = JavacElements.instance(context)
+            Pair<?,?> pair = JavacElements.instance(context)
                     .getTreeAndTopLevel(element, null, null);
             JavaFileObject sourcefile = pair == null ? null :
                     ((JCTree.JCCompilationUnit) pair.snd).sourcefile;
@@ -248,27 +249,27 @@ public class JavacProcessor extends AbstractProcessor {
 
         @Override
         public void error(int start, int end, String message) {
-            log.error(literal.pos + start, KEY, message);
+            log.rawError(literal.pos + start, message);
         }
 
         @Override
         public void warn(int start, int end, String message) {
-            log.warning(literal.pos + start, KEY, message);
+            log.rawWarning(literal.pos + start, message);
         }
 
         @Override
         public void reportError(RecognitionException e) {
-            log.error(literal.pos + e.column, KEY, e.getMessage());
+            log.rawError(literal.pos + e.column, e.getMessage());
         }
 
         @Override
         public void reportError(String text) {
-            log.error(literal, KEY, text);
+            log.rawError(literal.pos, text);
         }
 
         @Override
         public void reportWarning(String text) {
-            log.warning(literal, KEY, text);
+            log.rawWarning(literal.pos, text);
         }
 
     }
