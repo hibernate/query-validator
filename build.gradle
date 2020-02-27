@@ -84,9 +84,16 @@ publishing {
 }
 
 test {
+    dependsOn 'copyDependencies'
     systemProperty 'gradle', 'true'
 }
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
+
+task copyDependencies(type: Copy) {
+    from configurations.runtime
+    into 'test-runtime-libs'
+}
+

@@ -5,3 +5,5 @@ target/
 build/
 .gradle
 dependency-reduced-pom.xml
+lib/
+test-runtime-libs/
