@@ -19,6 +19,8 @@ import static org.junit.Assert.assertTrue;
 
 public class HQLValidationTest {
 
+    private final Path TEST_LIBS = Paths.get("test-runtime-libs");
+
     @Test
     public void testJavac() throws Exception {
         String errors = compileWithJavac("test", "test.test");
@@ -202,9 +204,8 @@ public class HQLValidationTest {
             cp.append("out/production/query-validator");
         }
 
-        Files.list(Paths.get("lib"))
+        Files.list(TEST_LIBS)
                 .map(Path::toString)
-                .filter(s -> s.endsWith(".jar")&&!s.endsWith("-sources.jar"))
                 .filter(s -> !s.contains("/ecj-") && ! s.contains("/org.eclipse.jdt.core_"))
                 .forEach(s -> cp.append(":").append(s));
 
@@ -261,9 +262,8 @@ public class HQLValidationTest {
             cp.append("out/production/query-validator");
         }
 
-        Files.list(Paths.get("lib"))
+        Files.list(TEST_LIBS)
                 .map(Path::toString)
-                .filter(s -> s.endsWith(".jar") && !s.endsWith("-sources.jar"))
                 .filter(s -> useFatjar ?
                         s.contains("/javax.persistence")
                             || s.contains("/hibernate-core")
