@@ -24,7 +24,7 @@ import static org.hibernate.query.validator.Validation.validate
 //@SupportedAnnotationTypes(CHECK_HQL)
 class EclipseProcessor extends AbstractProcessor {
 
-    static Mocker<EclipseSessionFactory> sessionFactory = Mocker.variadic(EclipseSessionFactory.class);
+    static Mocker<EclipseSessionFactory> sessionFactory = Mocker.variadic(EclipseSessionFactory.class)
 
     @Override
     boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -322,7 +322,7 @@ class EclipseProcessor extends AbstractProcessor {
             }
             else {
                 startPosition = 0
-                endPosition = 0;
+                endPosition = 0
             }
             int lineNumber = startPosition >= 0 ?
                     getLineNumber(startPosition, lineEnds, 0, lineEnds.length - 1) : 0

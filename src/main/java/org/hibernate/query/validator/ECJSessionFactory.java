@@ -430,16 +430,14 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
 
     private static boolean isStatic(Binding member) {
         if (member instanceof FieldBinding) {
-            if ((((FieldBinding) member).modifiers & ClassFileConstants.AccStatic) != 0) {
-                return true;
-            }
+            return (((FieldBinding) member).modifiers & ClassFileConstants.AccStatic) != 0;
         }
         else if (member instanceof MethodBinding) {
-            if ((((MethodBinding) member).modifiers & ClassFileConstants.AccStatic) != 0) {
-                return true;
-            }
+            return (((MethodBinding) member).modifiers & ClassFileConstants.AccStatic) != 0;
         }
-        return false;
+        else {
+            return false;
+        }
     }
 
     private static boolean isTransient(Binding member) {
@@ -628,9 +626,9 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                     TypeBinding paramType = method.parameters[i];
                     if (argType instanceof PrimitiveType
                             && paramType.isPrimitiveType()) {
-                        Class primitive;
+                        Class<?> primitive;
                         try {
-                            primitive = ((PrimitiveType) argType).getPrimitiveClass();
+                            primitive = ((PrimitiveType<?>) argType).getPrimitiveClass();
                         } catch (Exception e) {
                             continue;
                         }
@@ -675,7 +673,7 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
         return false;
     }
 
-    private static Class toPrimitiveClass(TypeBinding param) {
+    private static Class<?> toPrimitiveClass(TypeBinding param) {
         switch (param.id) {
             case TypeIds.T_int:
                 return int.class;

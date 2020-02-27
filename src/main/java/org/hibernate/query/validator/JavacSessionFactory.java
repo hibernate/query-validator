@@ -537,7 +537,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                             && param.type.isPrimitive()) {
                         Class<?> primitive;
                         try {
-                            primitive = ((PrimitiveType) type).getPrimitiveClass();
+                            primitive = ((PrimitiveType<?>) type).getPrimitiveClass();
                         } catch (Exception e) {
                             continue;
                         }

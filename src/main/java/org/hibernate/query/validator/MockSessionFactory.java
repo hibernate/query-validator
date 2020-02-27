@@ -2,7 +2,6 @@ package org.hibernate.query.validator;
 
 import org.hibernate.CustomEntityDirtinessStrategy;
 import org.hibernate.MappingException;
-import org.hibernate.QueryException;
 import org.hibernate.TypeHelper;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.internal.StandardServiceRegistryImpl;
@@ -219,7 +218,7 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
     }
 
     @Override
-    public Set getDefinedFilterNames() {
+    public Set<?> getDefinedFilterNames() {
         return emptySet();
     }
 

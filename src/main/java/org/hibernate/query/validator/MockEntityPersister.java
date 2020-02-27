@@ -1,7 +1,6 @@
 package org.hibernate.query.validator;
 
 import org.hibernate.EntityMode;
-import org.hibernate.MappingException;
 import org.hibernate.QueryException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.persister.entity.DiscriminatorMetadata;

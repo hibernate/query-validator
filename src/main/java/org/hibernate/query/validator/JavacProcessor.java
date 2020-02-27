@@ -229,10 +229,10 @@ public class JavacProcessor extends AbstractProcessor {
 
             Context context = getContext();
             log = Log.instance(context);
-            Pair pair = JavacElements.instance(context)
+            Pair<JCTree, JCTree.JCCompilationUnit> pair = JavacElements.instance(context)
                     .getTreeAndTopLevel(element, null, null);
             JavaFileObject sourcefile = pair == null ? null :
-                    ((JCTree.JCCompilationUnit) pair.snd).sourcefile;
+                    pair.snd.sourcefile;
             if (sourcefile != null) {
                 log.useSource(sourcefile);
             }
