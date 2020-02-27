@@ -4,7 +4,7 @@ Compile time validation for queries written in HQL and JPQL.
 
 ## Building
 
-Type `gradle` from this project directory.
+Type `./gradlew` from this project directory.
 
 This produces an artifact with the Maven coordinates 
 `org.hibernate:query-validator:1.0-SNAPSHOT` in your local
