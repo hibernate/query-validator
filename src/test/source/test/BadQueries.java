@@ -50,6 +50,8 @@ public class BadQueries {
         createQuery("select new test.Pair(1,1) from Person p"); //"select new" with literals
         createQuery("select new test.Pair('','') from Person p"); //"select new" with literals
 
+        createQuery("from Person p where p.fistName='gavin"); //error
+        createQuery("from Person p where p.firstName='gavin"); //error
     }
 
     private static Query createQuery(String s) { return new Query(); }
