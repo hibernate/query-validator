@@ -144,10 +144,10 @@ displayed inline in your Java editor.
 
 The query validator was developed and tested with:
 
-- JDK 1.8.0_92
+- JDK 1.8.0
 - Hibernate 5.4.10.Final
 - ECJ 4.6.1
-- Eclipse JDT Core 3.17.0
+- Eclipse IDE 2019-03 to 2020-03 (JDT Core 3.17.0 to 3.18.300)
 
 Other versions of `javac`, ECJ, and Hibernate may or may not 
 work. The query validator depends on internal compiler APIs in 
