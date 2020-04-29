@@ -1,6 +1,10 @@
+![Hibernate logo][]
+
 # Hibernate Query Validator
 
 Compile time validation for queries written in HQL and JPQL.
+
+[Hibernate logo]: http://static.jboss.org/hibernate/images/hibernate_logo_whitebkg_200px.png
 
 ## Building
 
@@ -136,9 +140,16 @@ manually.
    add `build/libs/query-validator-1.0-SNAPSHOT-all.jar` 
    from this project directory.
 
+Your project properties should look like this:
+
+![Eclipse Screenshot 1](img/eclipse-annotation-processors.png)
+![Eclipse Screenshot 2](img/eclipse-annotation-factorypath.png)
+
 Eclipse runs annotation processors during every incremental
 build (that is, every time you `Save`), so you'll see errors
 displayed inline in your Java editor.
+
+![Eclipse Screenshot 3](img/eclipse-errors.png)
 
 ## Compatibility
 
