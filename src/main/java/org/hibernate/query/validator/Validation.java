@@ -40,8 +40,16 @@ class Validation {
                          Set<String> setParameterNames,
                          Handler handler,
                          MockSessionFactory factory) {
+        validate(hql, checkParams, setParameterLabels, setParameterNames, handler, factory, 0);
+    }
 
-        handler = new Filter(handler);
+    static void validate(String hql, boolean checkParams,
+                         Set<Integer> setParameterLabels,
+                         Set<String> setParameterNames,
+                         Handler handler,
+                         MockSessionFactory factory,
+                         int errorOffset) {
+        handler = new Filter(handler, errorOffset);
 
         try {
 
@@ -222,9 +230,11 @@ class Validation {
     private static class Filter implements Handler {
         private Handler delegate;
         private int errorCount;
+        private int errorOffset;
 
-        private Filter(Handler delegate) {
+        private Filter(Handler delegate, int errorOffset) {
             this.delegate = delegate;
+            this.errorOffset = errorOffset;
         }
 
         @Override
@@ -237,12 +247,12 @@ class Validation {
 
         @Override
         public void error(int start, int end, String message) {
-            delegate.error(start, end, message);
+            delegate.error(start - errorOffset, end - errorOffset, message);
         }
 
         @Override
         public void warn(int start, int end, String message) {
-            delegate.warn(start, end, message);
+            delegate.warn(start - errorOffset, end - errorOffset, message);
         }
 
         @Override
@@ -267,7 +277,7 @@ class Validation {
 
             errorCount++;
             delegate.reportError(new RecognitionException(text,
-                    e.fileName, e.line, e.column));
+                    e.fileName, e.line, e.column - errorOffset));
         }
 
         @Override

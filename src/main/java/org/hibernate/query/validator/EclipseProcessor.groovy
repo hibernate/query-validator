@@ -107,6 +107,7 @@ class EclipseProcessor extends AbstractProcessor {
 
         Set<Integer> setParameterLabels = new HashSet<>()
         Set<String> setParameterNames = new HashSet<>()
+        Set<String> setOrderBy = new HashSet<>();
         boolean immediatelyCalled = false
 
         private def unit
@@ -143,25 +144,48 @@ class EclipseProcessor extends AbstractProcessor {
                         }
                     }
                     type.methods.each { method ->
-                        validateStatements(method.statements)
+                        validateStatements(type, method.statements)
                     }
                 }
             }
         }
 
-        private void validateStatements(statements) {
-            statements.each { statement -> validateStatement(statement) }
+        private void validateStatements(type, statements) {
+            statements.each { statement -> validateStatement(type, statement) }
         }
 
-        private void validateStatement(statement) {
+        private void validateStatement(type, statement) {
             if (statement != null) switch (statement.class.simpleName) {
                 case "MessageSend":
                     boolean ic = immediatelyCalled
-                    switch (simpleMethodName(statement)) {
+                    def name = simpleMethodName(statement)
+                    switch (name) {
                         case "getResultList":
                         case "getSingleResult":
                             immediatelyCalled = true
                             break
+                        case "count":
+                        case "delete":
+                        case "update":
+                        case "exists":
+                        case "stream":
+                        case "list":
+                        case "find":
+                            if(statement.receiver.class.simpleName == "SingleNameReference") {
+                                def ref = statement.receiver;
+                                String target = charToString(ref.token);
+                                def queryArg = firstArgument(statement);
+                                if(queryArg != null) {
+                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
+                                }
+                            }else if(statement.receiver.class.simpleName == "ThisReference") {
+                                String target = charToString(type.name);
+                                def queryArg = firstArgument(statement);
+                                if(queryArg != null) {
+                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
+                                }
+                            }
+                            break;
                         case "createQuery":
                             statement.arguments.each { arg ->
                                 if (arg.class.simpleName == "StringLiteral") {
@@ -181,91 +205,100 @@ class EclipseProcessor extends AbstractProcessor {
                             }
                             break
                     }
-                    validateStatement(statement.receiver)
+                    validateStatement(type, statement.receiver)
                     setParameterLabels.clear()
                     setParameterNames.clear()
                     immediatelyCalled = ic
-                    validateStatements(statement.arguments)
+                    validateStatements(type, statement.arguments)
                     break
                 case "AbstractVariableDeclaration":
-                    validateStatement(statement.initialization)
+                    validateStatement(type, statement.initialization)
                     break
                 case "AssertStatement":
-                    validateStatement(statement.assertExpression)
+                    validateStatement(type, statement.assertExpression)
                     break
                 case "Block":
-                    validateStatements(statement.statements)
+                    validateStatements(type, statement.statements)
                     break
                 case "SwitchStatement":
-                    validateStatement(statement.expression)
-                    validateStatements(statement.statements)
+                    validateStatement(type, statement.expression)
+                    validateStatements(type, statement.statements)
                     break
                 case "ForStatement":
-                    validateStatement(statement.action)
+                    validateStatement(type, statement.action)
                     break
                 case "ForeachStatement":
-                    validateStatement(statement.collection)
-                    validateStatement(statement.action)
+                    validateStatement(type, statement.collection)
+                    validateStatement(type, statement.action)
                     break
                 case "DoStatement":
                 case "WhileStatement":
-                    validateStatement(statement.condition)
-                    validateStatement(statement.action)
+                    validateStatement(type, statement.condition)
+                    validateStatement(type, statement.action)
                     break
                 case "IfStatement":
-                    validateStatement(statement.condition)
-                    validateStatement(statement.thenStatement)
-                    validateStatement(statement.elseStatement)
+                    validateStatement(type, statement.condition)
+                    validateStatement(type, statement.thenStatement)
+                    validateStatement(type, statement.elseStatement)
                     break
                 case "TryStatement":
-                    validateStatement(statement.tryBlock)
-                    validateStatements(statement.catchBlocks)
-                    validateStatement(statement.finallyBlock)
+                    validateStatement(type, statement.tryBlock)
+                    validateStatements(type, statement.catchBlocks)
+                    validateStatement(type, statement.finallyBlock)
                     break
                 case "SynchronizedStatement":
-                    validateStatement(statement.expression)
-                    validateStatement(statement.block)
+                    validateStatement(type, statement.expression)
+                    validateStatement(type, statement.block)
                     break
                 case "BinaryExpression":
-                    validateStatement(statement.left)
-                    validateStatement(statement.right)
+                    validateStatement(type, statement.left)
+                    validateStatement(type, statement.right)
                     break
                 case "UnaryExpression":
                 case "CastExpression":
                 case "InstanceOfExpression":
-                    validateStatement(statement.expression)
+                    validateStatement(type, statement.expression)
                     break
                 case "ConditionalExpression":
-                    validateStatement(statement.condition)
-                    validateStatement(statement.valueIfTrue)
-                    validateStatement(statement.valueIfFalse)
+                    validateStatement(type, statement.condition)
+                    validateStatement(type, statement.valueIfTrue)
+                    validateStatement(type, statement.valueIfFalse)
                     break
                 case "LambdaExpression":
-                    validateStatement(statement.body)
+                    validateStatement(type, statement.body)
                     break
                 case "ArrayInitializer":
-                    validateStatements(statement.expressions)
+                    validateStatements(type, statement.expressions)
                     break
                 case "ArrayAllocationExpression":
-                    validateStatements(statement.initializer)
+                    validateStatements(type, statement.initializer)
                     break
                 case "Assignment":
-                    validateStatement(statement.lhs)
-                    validateStatement(statement.expression)
+                    validateStatement(type, statement.lhs)
+                    validateStatement(type, statement.expression)
                     break
                 case "AllocationExpression":
-                    validateStatements(statement.arguments)
+                    validateStatements(type, statement.arguments)
                     break
                 case "ReturnStatement":
-                    validateStatement(statement.expression)
+                    validateStatement(type, statement.expression)
                     break
                 case "ThrowStatement":
-                    validateStatement(statement.exception)
+                    validateStatement(type, statement.exception)
                     break
                 case "LabeledStatement":
-                    validateStatement(statement.statement)
+                    validateStatement(type, statement.statement)
                     break
             }
+        }
+
+        def firstArgument(messageSend) {
+            for (argument in messageSend.arguments) {
+                if (argument.class.simpleName == "StringLiteral") {
+                    return argument;
+                }
+            }
+            return null;
         }
 
         void validateArgument(arg, boolean inCreateQueryMethod) {
@@ -274,6 +307,110 @@ class EclipseProcessor extends AbstractProcessor {
             validate(hql, inCreateQueryMethod && immediatelyCalled,
                     setParameterLabels, setParameterNames, handler,
                     sessionFactory.make(whitelist, handler, unit))
+        }
+
+        void checkPanacheQuery(stringLiteral, targetType, methodName, panacheQl, args) {
+            ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
+            collectPanacheArguments(args);
+            int[] offset = new int[1];
+            String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
+                                                     panacheQl, offset, setParameterLabels);
+            if(hql == null)
+                return;
+            if(!setOrderBy.isEmpty()) {
+                hql += " ORDER BY "+String.join(", ", setOrderBy);
+            }
+            validate(hql, true,
+                     setParameterLabels, setParameterNames, handler,
+                     sessionFactory.make(whitelist, handler, unit), offset[0]);
+        }
+
+        String charToString(char[] charArray) {
+            if (charArray == null) return null;
+            return new String(charArray);
+        }
+
+        void collectPanacheArguments(args) {
+            // first arg is pql
+            // second arg can be Sort, Object..., Map or Parameters
+            setParameterLabels.clear();
+            setParameterNames.clear();
+            setOrderBy.clear();
+            if(args.length > 1) {
+                int firstArgIndex = 1;
+                if(isSortCall(args[firstArgIndex])) {
+                    firstArgIndex++;
+                }
+                
+                if(args.length > firstArgIndex) {
+                    def firstArg = args[firstArgIndex];
+                    isParametersCall(firstArg);
+                    if(setParameterNames.isEmpty()) {
+                        for(int i = 0 ; i < args.length - firstArgIndex ; i++) {
+                            setParameterLabels.add(1 + i);
+                        }
+                    }
+                }
+            }
+        }
+        boolean isParametersCall(firstArg) {
+            if(firstArg.class.simpleName == "MessageSend") {
+                def invocation = firstArg;
+                String fieldName = charToString(invocation.selector);
+                if(fieldName.equals("and") && isParametersCall(invocation.receiver)) {
+                    def queryArg = firstArgument(invocation);
+                    if(queryArg != null) {
+                        setParameterNames.add(charToString(queryArg.source()));
+                        return true;
+                    }
+                }else if(fieldName.equals("with")
+                        && invocation.receiver.class.simpleName == "SingleNameReference") {
+                    def receiver = invocation.receiver;
+                    String target = charToString(receiver.token);
+                    if(target.equals("Parameters")) {
+                        def queryArg = firstArgument(invocation);
+                        if(queryArg != null) {
+                            setParameterNames.add(charToString(queryArg.source()));
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        boolean isSortCall(firstArg) {
+            if(firstArg.class.simpleName == "MessageSend") {
+                def invocation = firstArg;
+                String fieldName = charToString(invocation.selector);
+                    if((fieldName.equals("and")
+                            || fieldName.equals("descending")
+                            || fieldName.equals("ascending")
+                            || fieldName.equals("direction"))
+                            && isSortCall(invocation.receiver)) {
+                        for (e in invocation.arguments) {
+                            if(e.class.simpleName == "StringLiteral") {
+                                setOrderBy.add(charToString(e.source()));
+                            }
+                        }
+                        return true;
+                    }else if((fieldName.equals("by")
+                            || fieldName.equals("descending")
+                            || fieldName.equals("ascending"))
+                            && invocation.receiver.class.simpleName == "SingleNameReference") {
+                        def receiver = invocation.receiver;
+                        String target = charToString(receiver.token);
+                        if(target.equals("Sort")) {
+                            for (e in invocation.arguments) {
+                                if(e.class.simpleName == "StringLiteral") {
+                                    setOrderBy.add(charToString(e.source()));
+                                }
+                            }
+                            return true;
+                        }
+                    }
+            }
+            return false;
         }
 
     }

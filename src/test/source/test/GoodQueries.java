@@ -1,6 +1,8 @@
 package test;
 
 import org.hibernate.query.validator.CheckHQL;
+import io.quarkus.panache.common.Sort;
+import io.quarkus.panache.common.Parameters;
 
 @CheckHQL(whitelist={"func", "current_thing", "custom"},
         dialect=org.hibernate.dialect.HSQLDialect.class)
@@ -106,7 +108,19 @@ public class GoodQueries {
 
 //        createQuery("from Person p where p.dob = {d '2008-12-31'}");
 //        createQuery("from Person p where p.dob = date '2008-12-31'");
+        
+        PanachePerson.find("name", "foo");
+        PanachePerson.find("name = ?1 and id = ?2", "foo", 2);
+        PanachePerson.find("name = :name and id = :id", Parameters.with("name", "foo").and("id", 2));
+        PanachePerson.find("name", Sort.by("name"), "foo");
+        PanachePerson.find("name = ?1 and id = ?2", Sort.by("name"), "foo", 2);
+        PanachePerson.find("name = :name and id = :id", Sort.by("name"), Parameters.with("name", "foo").and("id", 2));
+        PanachePerson.update("name", "foo");
+        PanachePerson.delete("name", "foo");
+        PanachePerson.count("name", "foo");
 
+        PanachePerson.find("order by name");
+        PanachePerson.find("from Person");
     }
 
     public void okQueries() {

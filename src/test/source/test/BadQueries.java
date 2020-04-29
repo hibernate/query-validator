@@ -1,5 +1,8 @@
 package test;
 
+import io.quarkus.panache.common.Sort;
+import io.quarkus.panache.common.Parameters;
+
 public class BadQueries {
 
     public void badQueries() {
@@ -50,6 +53,21 @@ public class BadQueries {
         createQuery("select new test.Pair(1,1) from Person p"); //"select new" with literals
         createQuery("select new test.Pair('','') from Person p"); //"select new" with literals
 
+        PanachePerson.find("missing", "stef"); // property does not exist
+        PanachePerson.find("name = ?1 and id = ?2", "stef"); // missing positional arg
+        PanachePerson.find("name = :name and id = :id", Parameters.with("name", "stef")); // missing named arg
+        PanachePerson.find("name"); // missing required param for name
+        PanachePerson.find("name = :name and id = :id and id = :bar", Parameters.with("name", "stef").and("id", "foo")); // missing named arg
+        PanachePerson.find("name", Sort.descending("name")); // missing positional arg
+        PanachePerson.list("name"); // missing positional arg
+        PanachePerson.stream("name"); // missing positional arg
+        PanachePerson.delete("name"); // missing positional arg
+        PanachePerson.update("name"); // missing positional arg
+        PanachePerson.count("name"); // missing positional arg
+        PanachePerson.exists("name"); // missing positional arg
+        PanachePerson.find("name", 123, 345); // too many params for name
+        PanachePerson.find("", Sort.by("missing")); // property does not exist
+        PanachePerson.find("", Sort.by("name").and("missing")); // property does not exist
     }
 
     private static Query createQuery(String s) { return new Query(); }

@@ -1,19 +1,13 @@
 package org.hibernate.query.validator;
 
-import antlr.RecognitionException;
-import com.sun.source.tree.ExpressionTree;
-import com.sun.source.tree.IdentifierTree;
-import com.sun.source.tree.MemberSelectTree;
-import com.sun.tools.javac.code.Attribute;
-import com.sun.tools.javac.model.JavacElements;
-import com.sun.tools.javac.processing.JavacProcessingEnvironment;
-import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.tree.TreeScanner;
-import com.sun.tools.javac.util.Context;
-import com.sun.tools.javac.util.Log;
-import com.sun.tools.javac.util.Pair;
-import org.hibernate.QueryException;
-import org.hibernate.dialect.Dialect;
+import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
+import static org.hibernate.query.validator.HQLProcessor.jpa;
+import static org.hibernate.query.validator.Validation.validate;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
@@ -25,14 +19,27 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
-import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
-import static org.hibernate.query.validator.HQLProcessor.jpa;
-import static org.hibernate.query.validator.Validation.validate;
+import org.hibernate.QueryException;
+import org.hibernate.dialect.Dialect;
+
+import com.sun.source.tree.ExpressionTree;
+import com.sun.source.tree.IdentifierTree;
+import com.sun.source.tree.MemberSelectTree;
+import com.sun.source.tree.Tree.Kind;
+import com.sun.tools.javac.code.Attribute;
+import com.sun.tools.javac.model.JavacElements;
+import com.sun.tools.javac.processing.JavacProcessingEnvironment;
+import com.sun.tools.javac.tree.JCTree;
+import com.sun.tools.javac.tree.JCTree.JCExpression;
+import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
+import com.sun.tools.javac.tree.JCTree.JCIdent;
+import com.sun.tools.javac.tree.TreeScanner;
+import com.sun.tools.javac.util.Context;
+import com.sun.tools.javac.util.Log;
+import com.sun.tools.javac.util.Pair;
+
+import antlr.RecognitionException;
 
 /**
  * Annotation processor that validates HQL and JPQL queries
@@ -68,6 +75,7 @@ public class JavacProcessor extends AbstractProcessor {
                 tree.accept(new TreeScanner() {
                     Set<Integer> setParameterLabels = new HashSet<>();
                     Set<String> setParameterNames = new HashSet<>();
+                    Set<String> setOrderBy = new HashSet<>();
                     boolean immediatelyCalled;
 
                     private void check(JCTree.JCLiteral jcLiteral, String hql,
@@ -76,6 +84,121 @@ public class JavacProcessor extends AbstractProcessor {
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
                                 sessionFactory.make(whitelist, handler, processingEnv));
+                    }
+
+                    private void checkPanacheQuery(JCTree.JCLiteral jcLiteral, String targetType, String methodName, String panacheQl,
+                                       com.sun.tools.javac.util.List<JCExpression> args) {
+                        ErrorReporter handler = new ErrorReporter(jcLiteral, element);
+                        collectPanacheArguments(args);
+                        int[] offset = new int[1];
+                        String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
+                                                                 panacheQl, offset, setParameterLabels);
+                        if(hql == null)
+                            return;
+                        if(!setOrderBy.isEmpty()) {
+                            hql += " ORDER BY "+String.join(", ", setOrderBy);
+                        }
+                        validate(hql, true,
+                                setParameterLabels, setParameterNames, handler,
+                                sessionFactory.make(whitelist, handler, processingEnv), offset[0]);
+                    }
+
+                    private void collectPanacheArguments(com.sun.tools.javac.util.List<JCExpression> args) {
+                        // first arg is pql
+                        // second arg can be Sort, Object..., Map or Parameters
+                        setParameterLabels.clear();
+                        setParameterNames.clear();
+                        setOrderBy.clear();
+                        com.sun.tools.javac.util.List<JCExpression> nonQueryArgs = args.tail;
+                        if(!nonQueryArgs.isEmpty()) {
+                            if(isSortCall(nonQueryArgs.head)) {
+                                nonQueryArgs = nonQueryArgs.tail;
+                            }
+                            
+                            if(!nonQueryArgs.isEmpty()) {
+                                JCExpression firstArg = nonQueryArgs.head;
+                                isParametersCall(firstArg);
+                                if(setParameterNames.isEmpty()) {
+                                    int i = 1;
+                                    for (JCExpression arg : nonQueryArgs) {
+                                        setParameterLabels.add(i++);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    private boolean isParametersCall(JCExpression firstArg) {
+                        if(firstArg.getKind() == Kind.METHOD_INVOCATION) {
+                            JCTree.JCMethodInvocation invocation = (JCTree.JCMethodInvocation)firstArg;
+                            JCExpression method = invocation.meth;
+                            if(method.getKind() == Kind.MEMBER_SELECT) {
+                                JCTree.JCFieldAccess fa = (JCFieldAccess) method;
+                                if(fa.name.toString().equals("and") && isParametersCall(fa.selected)) {
+                                    JCTree.JCLiteral queryArg = firstArgument(invocation);
+                                    if (queryArg != null && queryArg.value instanceof String) {
+                                        String name = (String) queryArg.value;
+                                        setParameterNames.add(name);
+                                        return true;
+                                    }
+                                }else if(fa.name.toString().equals("with")
+                                        && fa.selected.getKind() == Kind.IDENTIFIER) {
+                                    String target = ((JCTree.JCIdent)fa.selected).name.toString();
+                                    if(target.equals("Parameters")) {
+                                        JCTree.JCLiteral queryArg = firstArgument(invocation);
+                                        if (queryArg != null && queryArg.value instanceof String) {
+                                            String name = (String) queryArg.value;
+                                            setParameterNames.add(name);
+                                            return true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return false;
+                    }
+
+                    private boolean isSortCall(JCExpression firstArg) {
+                        if(firstArg.getKind() == Kind.METHOD_INVOCATION) {
+                            JCTree.JCMethodInvocation invocation = (JCTree.JCMethodInvocation)firstArg;
+                            JCExpression method = invocation.meth;
+                            if(method.getKind() == Kind.MEMBER_SELECT) {
+                                JCTree.JCFieldAccess fa = (JCFieldAccess) method;
+                                String fieldName = fa.name.toString();
+                                if((fieldName.equals("and")
+                                        || fieldName.equals("descending")
+                                        || fieldName.equals("ascending")
+                                        || fieldName.equals("direction"))
+                                        && isSortCall(fa.selected)) {
+                                    for (JCTree.JCExpression e : invocation.args) {
+                                        if(e instanceof JCTree.JCLiteral) {
+                                            JCTree.JCLiteral lit = (JCTree.JCLiteral)e;
+                                            if(lit.value instanceof String) {
+                                                setOrderBy.add((String)lit.value);
+                                            }
+                                        }
+                                    }
+                                    return true;
+                                }else if((fieldName.equals("by")
+                                        || fieldName.equals("descending")
+                                        || fieldName.equals("ascending"))
+                                        && fa.selected.getKind() == Kind.IDENTIFIER) {
+                                    String target = ((JCTree.JCIdent)fa.selected).name.toString();
+                                    if(target.equals("Sort")) {
+                                        for (JCTree.JCExpression e : invocation.args) {
+                                            if(e instanceof JCTree.JCLiteral) {
+                                                JCTree.JCLiteral lit = (JCTree.JCLiteral)e;
+                                                if(lit.value instanceof String) {
+                                                    setOrderBy.add((String)lit.value);
+                                                }
+                                            }
+                                        }
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                        return false;
                     }
 
                     JCTree.JCLiteral firstArgument(JCTree.JCMethodInvocation call) {
@@ -95,6 +218,37 @@ public class JavacProcessor extends AbstractProcessor {
                                 immediatelyCalled = true;
                                 super.visitApply(jcMethodInvocation);
                                 immediatelyCalled = false;
+                                break;
+                            case "count":
+                            case "delete":
+                            case "update":
+                            case "exists":
+                            case "stream":
+                            case "list":
+                            case "find":
+                                switch(jcMethodInvocation.meth.getKind()) {
+                                case MEMBER_SELECT:
+                                    JCTree.JCFieldAccess fa = (JCFieldAccess) jcMethodInvocation.meth;
+                                    switch(fa.selected.getKind()) {
+                                    case IDENTIFIER:
+                                        JCTree.JCIdent target = (JCIdent) fa.selected;
+                                        JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
+                                        if (queryArg != null && queryArg.value instanceof String) {
+                                            String panacheQl = (String) queryArg.value;
+                                            checkPanacheQuery(queryArg, target.name.toString(), name, panacheQl, jcMethodInvocation.args);
+                                        }
+                                        break;
+                                    }
+                                    break;
+                                case IDENTIFIER:
+                                    JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
+                                    if (queryArg != null && queryArg.value instanceof String) {
+                                        String panacheQl = (String) queryArg.value;
+                                        checkPanacheQuery(queryArg, element.getSimpleName().toString(), name, panacheQl, jcMethodInvocation.args);
+                                    }
+                                    break;
+                                }
+                                super.visitApply(jcMethodInvocation); //needed!
                                 break;
                             case "createQuery":
                                 JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
