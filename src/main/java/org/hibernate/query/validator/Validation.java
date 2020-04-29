@@ -4,6 +4,7 @@ import antlr.NoViableAltException;
 import antlr.RecognitionException;
 import antlr.Token;
 import antlr.TokenStream;
+import antlr.TokenStreamException;
 import antlr.collections.AST;
 import org.hibernate.HibernateException;
 import org.hibernate.QueryException;
@@ -55,7 +56,15 @@ class Validation {
 
             HqlParser parser = HqlParser.getInstance(hql);
             setHandler(parser, handler);
-            parser.statement();
+            try {
+                parser.statement();
+            }
+            catch (TokenStreamException tse) {
+                String message = tse.getMessage();
+                if (message != null) {
+                    handler.reportError(message);
+                }
+            }
 
             if (handler.getErrorCount() == 0) {
                 new NodeTraverser(new JavaConstantConverter(factory))

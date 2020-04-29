@@ -77,6 +77,9 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("BadQueries.java:51: warning: :hello does not occur in the query"));
 
+        assertTrue(errors.contains("BadQueries.java:56: error: expecting '''"));
+        assertTrue(errors.contains("BadQueries.java:57: error: expecting '''"));
+
         assertPanacheErrors(errors, "PanacheBadPerson", 22);
         assertPanacheErrors(errors, "PanacheBadPersonRepository", 10);
     }
@@ -160,6 +163,9 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("BadQueries.java (at line 51)") && errors.contains(":hello does not occur in the query"));
 
+        assertTrue(errors.contains("expecting '''") && errors.contains("BadQueries.java (at line 56)"));
+        assertTrue(errors.contains("expecting '''") && errors.contains("BadQueries.java (at line 57)"));
+
         assertPanacheErrorsEcj(errors, "PanacheBadPerson", 22);
         assertPanacheErrorsEcj(errors, "PanacheBadPersonRepository", 10);
     }
@@ -179,7 +185,6 @@ public class HQLValidationTest {
         assertTrue(errors.contains(name+".java (at line "+(start+10)+")") && errors.contains("Missing required parameter for name"));
         assertTrue(errors.contains(name+".java (at line "+(start+11)+")") && errors.contains("Missing required parameter for name"));
         assertTrue(errors.contains(name+".java (at line "+(start+12)+")") && errors.contains("Too many parameters for name"));
-        
     }
 
     @Test
@@ -188,6 +193,9 @@ public class HQLValidationTest {
         String errors = compileWithECJ("test", "test.test");
         
         assertECJ(errors);
+
+        assertTrue(errors.contains("expecting '''") && errors.contains("BadQueries.java (at line 56)"));
+        assertTrue(errors.contains("expecting '''") && errors.contains("BadQueries.java (at line 57)"));
 
         forceEclipseForTesting = false;
     }
