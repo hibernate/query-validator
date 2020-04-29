@@ -151,6 +151,12 @@ displayed inline in your Java editor.
 
 ![Eclipse Screenshot 3](img/eclipse-errors.png)
 
+If the query validator doesn't run, please ensure that:
+
+- Eclipse itself is running on JDK 8.
+- Your project is set up to compile with a JDK 8-compatible
+  compiler, and the compiler compliance level is set to 1.8.  
+
 ## Compatibility
 
 The query validator was developed and tested with:
