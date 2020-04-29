@@ -3,6 +3,7 @@ import org.gradle.internal.jvm.Jvm
 plugins {
     id 'java'
     id 'groovy'
+    id 'maven'
     id 'maven-publish'
     id "com.github.johnrengelman.shadow" version "5.0.0"
 }
