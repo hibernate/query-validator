@@ -122,6 +122,8 @@ Select **Enable annotation processing** in IntelliJ IDEA
 preferences under **Build, Execution, Deployment > Compiler > 
 AnnotationProcessors**. 
 
+![IntelliJ Screenshot 1](img/intellij-annotation-processors.png)
+
 IntelliJ only runs annotation processors during a build (that
 is, when you `Run` your code or explicitly `Build Project`). 
 So you won't see errors in your Java editor as you're typing.
