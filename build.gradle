@@ -74,12 +74,14 @@ shadowJar {
     relocate 'groovyjarjarasm', 'org.hibernate.query.validator.asm'
     relocate 'groovyjarjarcommonscli', 'org.hibernate.query.validator.cli'
     relocate 'groovyjarjarpicocli', 'org.hibernate.query.validator.picocli'
+    classifier = 'fatjar'
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
             from(components.java)
+            artifact shadowJar
         }
     }
 }
