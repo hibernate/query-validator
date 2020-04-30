@@ -278,8 +278,9 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
     }
 
     static String qualifiedName(TypeBinding type) {
-        return charToString(type.qualifiedPackageName())
-                + "."  +charToString(type.qualifiedSourceName());
+        String pkgName = charToString(type.qualifiedPackageName());
+        String className = charToString(type.qualifiedSourceName());
+        return pkgName.isEmpty() ? className : pkgName + "."  + className;
     }
 
     static String qualifiedName(MethodBinding binding) {

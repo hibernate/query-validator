@@ -20,6 +20,7 @@ import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.Elements;
 
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
@@ -76,6 +77,9 @@ public class ECJProcessor extends AbstractProcessor {
         for (TypeDeclaration type : unit.types) {
             if (isCheckable(type.binding, unit)) {
                 List<String> whitelist = getWhitelist(type.binding, unit, compiler);
+                Elements elements = processingEnv.getElementUtils();
+                TypeElement typeElement = elements.getTypeElement(qualifiedName(type.binding));
+                TypeElement panacheEntity = PanacheUtils.isPanache(typeElement, processingEnv.getTypeUtils(), elements);
                 type.traverse(new ASTVisitor() {
                     Set<Integer> setParameterLabels = new HashSet<>();
                     Set<String> setParameterNames = new HashSet<>();
@@ -97,15 +101,16 @@ public class ECJProcessor extends AbstractProcessor {
                             case "stream":
                             case "list":
                             case "find":
-                                if(messageSend.receiver instanceof SingleNameReference) {
-                                    SingleNameReference ref = (SingleNameReference) messageSend.receiver;
-                                    String target = charToString(ref.token);
-                                    StringLiteral queryArg = firstArgument(messageSend);
-                                    if(queryArg != null) {
-                                        checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), messageSend.arguments);
-                                    }
-                                }else if(messageSend.receiver instanceof ThisReference) {
-                                    String target = charToString(type.name);
+                                // Disable until we can make this type-safe for Javac
+//                                if(messageSend.receiver instanceof SingleNameReference) {
+//                                    SingleNameReference ref = (SingleNameReference) messageSend.receiver;
+//                                    String target = charToString(ref.token);
+//                                    StringLiteral queryArg = firstArgument(messageSend);
+//                                    if(queryArg != null) {
+//                                        checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), messageSend.arguments);
+//                                    }
+                                if(messageSend.receiver instanceof ThisReference && panacheEntity != null) {
+                                    String target = panacheEntity.getSimpleName().toString();
                                     StringLiteral queryArg = firstArgument(messageSend);
                                     if(queryArg != null) {
                                         checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), messageSend.arguments);
@@ -185,12 +190,9 @@ public class ECJProcessor extends AbstractProcessor {
                         collectPanacheArguments(args);
                         int[] offset = new int[1];
                         String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
-                                                                 panacheQl, offset, setParameterLabels);
+                                                                 panacheQl, offset, setParameterLabels, setOrderBy);
                         if(hql == null)
                             return;
-                        if(!setOrderBy.isEmpty()) {
-                            hql += " ORDER BY "+String.join(", ", setOrderBy);
-                        }
                         validate(hql, true,
                                  setParameterLabels, setParameterNames, handler,
                                  sessionFactory.make(whitelist, handler, unit), offset[0]);

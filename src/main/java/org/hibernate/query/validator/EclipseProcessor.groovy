@@ -32,7 +32,7 @@ class EclipseProcessor extends AbstractProcessor {
         if (!roundEnv.getRootElements().isEmpty()) {
             for (unit in compiler.unitsToProcess) {
                 compiler.parser.getMethodBodies(unit)
-                new Checker(unit, compiler).checkHQL()
+                new Checker(unit, compiler, processingEnv).checkHQL()
             }
         }
         return false
@@ -113,10 +113,12 @@ class EclipseProcessor extends AbstractProcessor {
         private def unit
         private def compiler
         private List<String> whitelist
+        private def processingEnv;
 
-        Checker(unit, compiler) {
+        Checker(unit, compiler, processingEnv) {
             this.compiler = compiler
             this.unit = unit
+            this.processingEnv = processingEnv;
         }
 
         void checkHQL() {
@@ -143,18 +145,27 @@ class EclipseProcessor extends AbstractProcessor {
                                 break
                         }
                     }
+                    def elements = processingEnv.getElementUtils();
+                    def typeElement = elements.getTypeElement(qualifiedName(type.binding));
+                    def panacheEntity = PanacheUtils.isPanache(typeElement, processingEnv.getTypeUtils(), elements);
                     type.methods.each { method ->
-                        validateStatements(type, method.statements)
+                        validateStatements(type, panacheEntity, method.statements)
                     }
                 }
             }
         }
 
-        private void validateStatements(type, statements) {
-            statements.each { statement -> validateStatement(type, statement) }
+        private String qualifiedName(type) {
+            String pkgName = charToString(type.qualifiedPackageName());
+            String className = charToString(type.qualifiedSourceName());
+            return pkgName.isEmpty() ? className : pkgName + "."  + className;
         }
 
-        private void validateStatement(type, statement) {
+        private void validateStatements(type, panacheEntity, statements) {
+            statements.each { statement -> validateStatement(type, panacheEntity, statement) }
+        }
+
+        private void validateStatement(type, panacheEntity, statement) {
             if (statement != null) switch (statement.class.simpleName) {
                 case "MessageSend":
                     boolean ic = immediatelyCalled
@@ -171,15 +182,16 @@ class EclipseProcessor extends AbstractProcessor {
                         case "stream":
                         case "list":
                         case "find":
-                            if(statement.receiver.class.simpleName == "SingleNameReference") {
-                                def ref = statement.receiver;
-                                String target = charToString(ref.token);
-                                def queryArg = firstArgument(statement);
-                                if(queryArg != null) {
-                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
-                                }
-                            }else if(statement.receiver.class.simpleName == "ThisReference") {
-                                String target = charToString(type.name);
+                        // Disabled until we find how to support this type-safe in Javac
+//                            if(statement.receiver.class.simpleName == "SingleNameReference") {
+//                                def ref = statement.receiver;
+//                                String target = charToString(ref.token);
+//                                def queryArg = firstArgument(statement);
+//                                if(queryArg != null) {
+//                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
+//                                }
+                            if(statement.receiver.class.simpleName == "ThisReference" && panacheEntity != null) {
+                                String target = panacheEntity.getSimpleName().toString();
                                 def queryArg = firstArgument(statement);
                                 if(queryArg != null) {
                                     checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
@@ -205,89 +217,89 @@ class EclipseProcessor extends AbstractProcessor {
                             }
                             break
                     }
-                    validateStatement(type, statement.receiver)
+                    validateStatement(type, panacheEntity, statement.receiver)
                     setParameterLabels.clear()
                     setParameterNames.clear()
                     immediatelyCalled = ic
-                    validateStatements(type, statement.arguments)
+                    validateStatements(type, panacheEntity, statement.arguments)
                     break
                 case "AbstractVariableDeclaration":
-                    validateStatement(type, statement.initialization)
+                    validateStatement(type, panacheEntity, statement.initialization)
                     break
                 case "AssertStatement":
-                    validateStatement(type, statement.assertExpression)
+                    validateStatement(type, panacheEntity, statement.assertExpression)
                     break
                 case "Block":
-                    validateStatements(type, statement.statements)
+                    validateStatements(type, panacheEntity, statement.statements)
                     break
                 case "SwitchStatement":
-                    validateStatement(type, statement.expression)
-                    validateStatements(type, statement.statements)
+                    validateStatement(type, panacheEntity, statement.expression)
+                    validateStatements(type, panacheEntity, statement.statements)
                     break
                 case "ForStatement":
-                    validateStatement(type, statement.action)
+                    validateStatement(type, panacheEntity, statement.action)
                     break
                 case "ForeachStatement":
-                    validateStatement(type, statement.collection)
-                    validateStatement(type, statement.action)
+                    validateStatement(type, panacheEntity, statement.collection)
+                    validateStatement(type, panacheEntity, statement.action)
                     break
                 case "DoStatement":
                 case "WhileStatement":
-                    validateStatement(type, statement.condition)
-                    validateStatement(type, statement.action)
+                    validateStatement(type, panacheEntity, statement.condition)
+                    validateStatement(type, panacheEntity, statement.action)
                     break
                 case "IfStatement":
-                    validateStatement(type, statement.condition)
-                    validateStatement(type, statement.thenStatement)
-                    validateStatement(type, statement.elseStatement)
+                    validateStatement(type, panacheEntity, statement.condition)
+                    validateStatement(type, panacheEntity, statement.thenStatement)
+                    validateStatement(type, panacheEntity, statement.elseStatement)
                     break
                 case "TryStatement":
-                    validateStatement(type, statement.tryBlock)
-                    validateStatements(type, statement.catchBlocks)
-                    validateStatement(type, statement.finallyBlock)
+                    validateStatement(type, panacheEntity, statement.tryBlock)
+                    validateStatements(type, panacheEntity, statement.catchBlocks)
+                    validateStatement(type, panacheEntity, statement.finallyBlock)
                     break
                 case "SynchronizedStatement":
-                    validateStatement(type, statement.expression)
-                    validateStatement(type, statement.block)
+                    validateStatement(type, panacheEntity, statement.expression)
+                    validateStatement(type, panacheEntity, statement.block)
                     break
                 case "BinaryExpression":
-                    validateStatement(type, statement.left)
-                    validateStatement(type, statement.right)
+                    validateStatement(type, panacheEntity, statement.left)
+                    validateStatement(type, panacheEntity, statement.right)
                     break
                 case "UnaryExpression":
                 case "CastExpression":
                 case "InstanceOfExpression":
-                    validateStatement(type, statement.expression)
+                    validateStatement(type, panacheEntity, statement.expression)
                     break
                 case "ConditionalExpression":
-                    validateStatement(type, statement.condition)
-                    validateStatement(type, statement.valueIfTrue)
-                    validateStatement(type, statement.valueIfFalse)
+                    validateStatement(type, panacheEntity, statement.condition)
+                    validateStatement(type, panacheEntity, statement.valueIfTrue)
+                    validateStatement(type, panacheEntity, statement.valueIfFalse)
                     break
                 case "LambdaExpression":
-                    validateStatement(type, statement.body)
+                    validateStatement(type, panacheEntity, statement.body)
                     break
                 case "ArrayInitializer":
-                    validateStatements(type, statement.expressions)
+                    validateStatements(type, panacheEntity, statement.expressions)
                     break
                 case "ArrayAllocationExpression":
-                    validateStatements(type, statement.initializer)
+                    validateStatements(type, panacheEntity, statement.initializer)
                     break
                 case "Assignment":
-                    validateStatement(type, statement.lhs)
-                    validateStatement(type, statement.expression)
+                    validateStatement(type, panacheEntity, statement.lhs)
+                    validateStatement(type, panacheEntity, statement.expression)
                     break
                 case "AllocationExpression":
-                    validateStatements(type, statement.arguments)
+                    validateStatements(type, panacheEntity, statement.arguments)
                     break
                 case "ReturnStatement":
-                    validateStatement(type, statement.expression)
+                    validateStatement(type, panacheEntity, statement.expression)
                     break
                 case "ThrowStatement":
-                    validateStatement(type, statement.exception)
+                    validateStatement(type, panacheEntity, statement.exception)
                     break
                 case "LabeledStatement":
-                    validateStatement(type, statement.statement)
+                    validateStatement(type, panacheEntity, statement.statement)
                     break
             }
         }
@@ -314,12 +326,9 @@ class EclipseProcessor extends AbstractProcessor {
             collectPanacheArguments(args);
             int[] offset = new int[1];
             String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
-                                                     panacheQl, offset, setParameterLabels);
+                                                     panacheQl, offset, setParameterLabels, setOrderBy);
             if(hql == null)
                 return;
-            if(!setOrderBy.isEmpty()) {
-                hql += " ORDER BY "+String.join(", ", setOrderBy);
-            }
             validate(hql, true,
                      setParameterLabels, setParameterNames, handler,
                      sessionFactory.make(whitelist, handler, unit), offset[0]);
@@ -529,5 +538,4 @@ class EclipseProcessor extends AbstractProcessor {
         }
 
     }
-
 }

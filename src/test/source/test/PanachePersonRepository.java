@@ -1,27 +1,16 @@
 package test;
 
-import javax.persistence.Entity;
-import javax.persistence.Basic;
-import javax.persistence.NamedQuery;
-import javax.persistence.NamedQueries;
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.panache.common.Parameters;
 
-@Entity
-@NamedQueries({
-    @NamedQuery(name="ok", query="from PanachePerson p where p.id=1"),
-})
-public class PanachePerson extends PanacheEntity {
-    public String name;
-    @Basic(optional=false)
-    public Sex sex;
+public class PanachePersonRepository implements PanacheRepository<PanachePerson> {
     
-    public static PanachePerson findByName(String name) {
+    public PanachePerson findByName(String name) {
         return find("name", name).firstResult();
     }
     
-    public static void goodQueries() {
+    public void goodQueries() {
         find("name", "foo");
         find("name = ?1 and id = ?2", "foo", 2);
         find("name = :name and id = :id", Parameters.with("name", "foo").and("id", 2));

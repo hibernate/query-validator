@@ -33,7 +33,6 @@ import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.JCExpression;
 import com.sun.tools.javac.tree.JCTree.JCFieldAccess;
-import com.sun.tools.javac.tree.JCTree.JCIdent;
 import com.sun.tools.javac.tree.TreeScanner;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Log;
@@ -71,6 +70,7 @@ public class JavacProcessor extends AbstractProcessor {
         if (isCheckable(element) || isCheckable(element.getEnclosingElement())) {
             List<String> whitelist = getWhitelist(element);
             JCTree tree = ((JavacElements) elementUtils).getTree(element);
+            TypeElement panacheEntity = PanacheUtils.isPanache(element, processingEnv.getTypeUtils(), elementUtils);
             if (tree != null) {
                 tree.accept(new TreeScanner() {
                     Set<Integer> setParameterLabels = new HashSet<>();
@@ -92,12 +92,9 @@ public class JavacProcessor extends AbstractProcessor {
                         collectPanacheArguments(args);
                         int[] offset = new int[1];
                         String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
-                                                                 panacheQl, offset, setParameterLabels);
+                                                                 panacheQl, offset, setParameterLabels, setOrderBy);
                         if(hql == null)
                             return;
-                        if(!setOrderBy.isEmpty()) {
-                            hql += " ORDER BY "+String.join(", ", setOrderBy);
-                        }
                         validate(hql, true,
                                 setParameterLabels, setParameterNames, handler,
                                 sessionFactory.make(whitelist, handler, processingEnv), offset[0]);
@@ -227,24 +224,25 @@ public class JavacProcessor extends AbstractProcessor {
                             case "list":
                             case "find":
                                 switch(jcMethodInvocation.meth.getKind()) {
-                                case MEMBER_SELECT:
-                                    JCTree.JCFieldAccess fa = (JCFieldAccess) jcMethodInvocation.meth;
-                                    switch(fa.selected.getKind()) {
-                                    case IDENTIFIER:
-                                        JCTree.JCIdent target = (JCIdent) fa.selected;
-                                        JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
-                                        if (queryArg != null && queryArg.value instanceof String) {
-                                            String panacheQl = (String) queryArg.value;
-                                            checkPanacheQuery(queryArg, target.name.toString(), name, panacheQl, jcMethodInvocation.args);
-                                        }
-                                        break;
-                                    }
-                                    break;
+                                // disable this until we figure out how to type the LHS
+//                                case MEMBER_SELECT:
+//                                    JCTree.JCFieldAccess fa = (JCFieldAccess) jcMethodInvocation.meth;
+//                                    switch(fa.selected.getKind()) {
+//                                    case IDENTIFIER:
+//                                        JCTree.JCIdent target = (JCIdent) fa.selected;
+//                                        JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
+//                                        if (queryArg != null && queryArg.value instanceof String) {
+//                                            String panacheQl = (String) queryArg.value;
+//                                            checkPanacheQuery(queryArg, target.name.toString(), name, panacheQl, jcMethodInvocation.args);
+//                                        }
+//                                        break;
+//                                    }
+//                                    break;
                                 case IDENTIFIER:
                                     JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
-                                    if (queryArg != null && queryArg.value instanceof String) {
+                                    if (queryArg != null && queryArg.value instanceof String && panacheEntity != null) {
                                         String panacheQl = (String) queryArg.value;
-                                        checkPanacheQuery(queryArg, element.getSimpleName().toString(), name, panacheQl, jcMethodInvocation.args);
+                                        checkPanacheQuery(queryArg, panacheEntity.getSimpleName().toString(), name, panacheQl, jcMethodInvocation.args);
                                     }
                                     break;
                                 }

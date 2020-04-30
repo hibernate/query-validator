@@ -26,6 +26,8 @@ public class HQLValidationTest {
         String errors = compileWithJavac("test", "test.test");
 
         assertFalse(errors.contains("GoodQueries.java:"));
+        assertFalse(errors.contains("PanachePerson.java:"));
+        assertFalse(errors.contains("PanacheRepository.java:"));
 
         assertTrue(errors.contains("BadQueries.java:9: error: unexpected token: do"));
         assertTrue(errors.contains("BadQueries.java:10: error: unexpected token"));
@@ -75,20 +77,26 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("BadQueries.java:51: warning: :hello does not occur in the query"));
 
-        assertTrue(errors.contains("BadQueries.java:56: warning: missing is not defined (add it to whitelist)"));
-        assertTrue(errors.contains("BadQueries.java:57: warning: ?2 is not set"));
-        assertTrue(errors.contains("BadQueries.java:58: warning: :id is not set"));
-        assertTrue(errors.contains("BadQueries.java:59: warning: Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java:60: warning: :bar is not set"));
-        assertTrue(errors.contains("BadQueries.java:61: warning: Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java:62: warning: Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java:63: warning: Missing required parameter for name"));
+        assertPanacheErrors(errors, "PanacheBadPerson", 22);
+        assertPanacheErrors(errors, "PanacheBadPersonRepository", 10);
+    }
+
+    private void assertPanacheErrors(String errors, String name, int start) {
+        
+        assertTrue(errors.contains(name+".java:"+(start)+": warning: missing is not defined (add it to whitelist)"));
+        assertTrue(errors.contains(name+".java:"+(start+1)+": warning: ?2 is not set"));
+        assertTrue(errors.contains(name+".java:"+(start+2)+": warning: :id is not set"));
+        assertTrue(errors.contains(name+".java:"+(start+3)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+4)+": warning: :bar is not set"));
+        assertTrue(errors.contains(name+".java:"+(start+5)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+6)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+7)+": warning: Missing required parameter for name"));
         // FIXME: update/delete
-//        assertTrue(errors.contains("BadQueries.java:64: warning: Missing required parameter for name"));
-//        assertTrue(errors.contains("BadQueries.java:65: warning: Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java:66: warning: Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java:67: warning: Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java:68: warning: Too many parameters for name"));
+//        assertTrue(errors.contains(name+".java:"+(start+8)+": warning: Missing required parameter for name"));
+//        assertTrue(errors.contains(name+".java:"+(start+9)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+10)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+11)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+12)+": warning: Too many parameters for name"));
     }
 
     @Test
@@ -100,6 +108,8 @@ public class HQLValidationTest {
 
     private void assertECJ(String errors) {
         assertFalse(errors.contains("GoodQueries.java"));
+        assertFalse(errors.contains("PanachePerson.java"));
+        assertFalse(errors.contains("PanachePersonRepository.java"));
 
         assertTrue(errors.contains("unexpected token: do") && errors.contains("BadQueries.java (at line 9)"));
         assertTrue(errors.contains("unexpected token"));
@@ -150,20 +160,26 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("BadQueries.java (at line 51)") && errors.contains(":hello does not occur in the query"));
 
-        assertTrue(errors.contains("BadQueries.java (at line 56)") && errors.contains("missing is not defined (add it to whitelist)"));
-        assertTrue(errors.contains("BadQueries.java (at line 57)") && errors.contains("?2 is not set"));
-        assertTrue(errors.contains("BadQueries.java (at line 58)") && errors.contains(":id is not set"));
-        assertTrue(errors.contains("BadQueries.java (at line 59)") && errors.contains("Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java (at line 60)") && errors.contains(":bar is not set"));
-        assertTrue(errors.contains("BadQueries.java (at line 61)") && errors.contains("Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java (at line 62)") && errors.contains("Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java (at line 63)") && errors.contains("Missing required parameter for name"));
+        assertPanacheErrorsEcj(errors, "PanacheBadPerson", 22);
+        assertPanacheErrorsEcj(errors, "PanacheBadPersonRepository", 10);
+    }
+
+    private void assertPanacheErrorsEcj(String errors, String name, int start) {
+        assertTrue(errors.contains(name+".java (at line "+(start)+")") && errors.contains("missing is not defined (add it to whitelist)"));
+        assertTrue(errors.contains(name+".java (at line "+(start+1)+")") && errors.contains("?2 is not set"));
+        assertTrue(errors.contains(name+".java (at line "+(start+2)+")") && errors.contains(":id is not set"));
+        assertTrue(errors.contains(name+".java (at line "+(start+3)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+4)+")") && errors.contains(":bar is not set"));
+        assertTrue(errors.contains(name+".java (at line "+(start+5)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+6)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+7)+")") && errors.contains("Missing required parameter for name"));
         // FIXME: update/delete
-//        assertTrue(errors.contains("BadQueries.java (at line 64)") && errors.contains("Missing required parameter for name"));
-//        assertTrue(errors.contains("BadQueries.java (at line 65)") && errors.contains("Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java (at line 66)") && errors.contains("Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java (at line 67)") && errors.contains("Missing required parameter for name"));
-        assertTrue(errors.contains("BadQueries.java (at line 68)") && errors.contains("Too many parameters for name"));
+//        assertTrue(errors.contains(name+".java (at line "+(start+8)+")") && errors.contains("Missing required parameter for name"));
+//        assertTrue(errors.contains(name+".java (at line "+(start+9)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+10)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+11)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+12)+")") && errors.contains("Too many parameters for name"));
+        
     }
 
     @Test
