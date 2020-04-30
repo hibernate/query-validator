@@ -277,7 +277,7 @@ class Validation {
 
             errorCount++;
             delegate.reportError(new RecognitionException(text,
-                    e.fileName, e.line, e.column - errorOffset));
+                    e.fileName, e.line, e.column));
         }
 
         @Override
