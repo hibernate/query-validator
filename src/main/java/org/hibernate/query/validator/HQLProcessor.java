@@ -7,6 +7,7 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.tools.Diagnostic;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Set;

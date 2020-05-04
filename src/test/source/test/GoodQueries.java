@@ -106,7 +106,6 @@ public class GoodQueries {
 
 //        createQuery("from Person p where p.dob = {d '2008-12-31'}");
 //        createQuery("from Person p where p.dob = date '2008-12-31'");
-
     }
 
     public void okQueries() {

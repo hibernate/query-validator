@@ -3,6 +3,7 @@ import org.gradle.internal.jvm.Jvm
 plugins {
     id 'java'
     id 'groovy'
+    id 'maven'
     id 'maven-publish'
     id "com.github.johnrengelman.shadow" version "5.0.0"
 }
@@ -26,6 +27,13 @@ dependencies {
     compile 'javax.transaction:javax.transaction-api:1.3'
     compile 'net.bytebuddy:byte-buddy:1.10.2'
     compile 'org.jboss.logging:jboss-logging:3.3.2.Final'
+
+    testRuntime ('io.quarkus:quarkus-hibernate-orm-panache:1.4.1.Final') {
+        transitive = false
+    }
+    testRuntime ('io.quarkus:quarkus-panache-common:1.4.1.Final') {
+        transitive = false
+    }
 
     compile 'org.codehaus.groovy:groovy:2.5.6:indy'
 
@@ -73,12 +81,14 @@ shadowJar {
     relocate 'groovyjarjarasm', 'org.hibernate.query.validator.asm'
     relocate 'groovyjarjarcommonscli', 'org.hibernate.query.validator.cli'
     relocate 'groovyjarjarpicocli', 'org.hibernate.query.validator.picocli'
+    classifier = 'fatjar'
 }
 
 publishing {
     publications {
         maven(MavenPublication) {
             from(components.java)
+            artifact shadowJar
         }
     }
 }
@@ -93,7 +103,7 @@ tasks.withType(JavaCompile) {
 }
 
 task copyDependencies(type: Copy) {
-    from configurations.runtime
+    from configurations.testRuntime
     into 'test-runtime-libs'
 }
 

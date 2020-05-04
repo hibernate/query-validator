@@ -2,7 +2,7 @@
 
 # Hibernate Query Validator
 
-Compile time validation for queries written in HQL and JPQL.
+Compile time validation for queries written in HQL, JPQL and Panache-QL.
 
 [Hibernate logo]: http://static.jboss.org/hibernate/images/hibernate_logo_whitebkg_200px.png
 
@@ -37,6 +37,15 @@ Then the validator will check any static string argument of
 - the `@NamedQuery()` annotation
 
 which occurs in the annotated package or class. 
+
+### Panache usage
+
+Inside a Panache entity or repository, the following queries will be checked:
+
+- `list`/`find`/`stream`
+- `count`
+- `delete`
+- `update`
 
 #### Errors
 
@@ -73,6 +82,8 @@ parameter bindings validated. A warning is produced if
   using `setParameter()`, or
 - an argument is specified using `setParameter()`, but there 
   is no matching parameter in the query string.
+
+All Panache queries have their parameters validated.
 
 ### Usage from command line
 

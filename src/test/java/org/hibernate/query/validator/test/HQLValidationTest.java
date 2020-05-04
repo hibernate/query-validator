@@ -26,43 +26,45 @@ public class HQLValidationTest {
         String errors = compileWithJavac("test", "test.test");
 
         assertFalse(errors.contains("GoodQueries.java:"));
+        assertFalse(errors.contains("PanachePerson.java:"));
+        assertFalse(errors.contains("PanacheRepository.java:"));
 
-        assertTrue(errors.contains("BadQueries.java:6: error: unexpected token: do"));
-        assertTrue(errors.contains("BadQueries.java:7: error: unexpected token"));
-        assertTrue(errors.contains("BadQueries.java:8: error: unexpected token: select"));
-        assertTrue(errors.contains("BadQueries.java:9: error: unexpected token: ="));
-        assertTrue(errors.contains("BadQueries.java:10: error: unexpected token: from"));
-        assertTrue(errors.contains("BadQueries.java:10: error: missing from clause or select list"));
+        assertTrue(errors.contains("BadQueries.java:9: error: unexpected token: do"));
+        assertTrue(errors.contains("BadQueries.java:10: error: unexpected token"));
+        assertTrue(errors.contains("BadQueries.java:11: error: unexpected token: select"));
+        assertTrue(errors.contains("BadQueries.java:12: error: unexpected token: ="));
+        assertTrue(errors.contains("BadQueries.java:13: error: unexpected token: from"));
+        assertTrue(errors.contains("BadQueries.java:13: error: missing from clause or select list"));
 
-        assertTrue(errors.contains("BadQueries.java:12: error: test.Nil does not exist"));
-        assertTrue(errors.contains("BadQueries.java:13: error: test.Pair has no suitable constructor for types (Person)"));
-        assertTrue(errors.contains("BadQueries.java:14: error: test.Pair has no suitable constructor for types (Person, string)"));
-        assertTrue(errors.contains("BadQueries.java:50: error: test.Pair has no suitable constructor for types (integer, integer)"));
-        assertTrue(errors.contains("BadQueries.java:51: error: test.Pair has no suitable constructor for types (string, string)"));
+        assertTrue(errors.contains("BadQueries.java:15: error: test.Nil does not exist"));
+        assertTrue(errors.contains("BadQueries.java:16: error: test.Pair has no suitable constructor for types (Person)"));
+        assertTrue(errors.contains("BadQueries.java:17: error: test.Pair has no suitable constructor for types (Person, string)"));
+        assertTrue(errors.contains("BadQueries.java:53: error: test.Pair has no suitable constructor for types (integer, integer)"));
+        assertTrue(errors.contains("BadQueries.java:54: error: test.Pair has no suitable constructor for types (string, string)"));
 
-        assertTrue(errors.contains("BadQueries.java:16: error: People is not mapped"));
-        assertTrue(errors.contains("BadQueries.java:17: error: Person has no mapped firstName"));
-        assertTrue(errors.contains("BadQueries.java:18: error: Person has no mapped addr"));
-        assertTrue(errors.contains("BadQueries.java:19: error: Address has no mapped town"));
-        assertTrue(errors.contains("BadQueries.java:20: error: Address has no mapped name"));
-        assertTrue(errors.contains("BadQueries.java:21: error: Address has no mapped country.type"));
+        assertTrue(errors.contains("BadQueries.java:19: error: People is not mapped"));
+        assertTrue(errors.contains("BadQueries.java:20: error: Person has no mapped firstName"));
+        assertTrue(errors.contains("BadQueries.java:21: error: Person has no mapped addr"));
+        assertTrue(errors.contains("BadQueries.java:22: error: Address has no mapped town"));
+        assertTrue(errors.contains("BadQueries.java:23: error: Address has no mapped name"));
+        assertTrue(errors.contains("BadQueries.java:24: error: Address has no mapped country.type"));
 
-        assertTrue(errors.contains("BadQueries.java:23: error: ")); //should be: "string has no mapped length"
-        assertTrue(errors.contains("BadQueries.java:24: error: string has no mapped length"));
+        assertTrue(errors.contains("BadQueries.java:26: error: ")); //should be: "string has no mapped length"
+        assertTrue(errors.contains("BadQueries.java:27: error: string has no mapped length"));
 
-        assertTrue(errors.contains("BadQueries.java:26: warning: xxx is not defined"));
-        assertTrue(errors.contains("BadQueries.java:27: warning: func is not defined"));
-        assertTrue(errors.contains("BadQueries.java:28: warning: custom is not defined"));
-        assertTrue(errors.contains("BadQueries.java:29: warning: p is not defined"));
-        assertTrue(errors.contains("BadQueries.java:29: error: p.name is not defined"));
+        assertTrue(errors.contains("BadQueries.java:29: warning: xxx is not defined"));
+        assertTrue(errors.contains("BadQueries.java:30: warning: func is not defined"));
+        assertTrue(errors.contains("BadQueries.java:31: warning: custom is not defined"));
+        assertTrue(errors.contains("BadQueries.java:32: warning: p is not defined"));
+        assertTrue(errors.contains("BadQueries.java:32: error: p.name is not defined"));
 
-        assertTrue(errors.contains("BadQueries.java:31: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("BadQueries.java:32: error: key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("BadQueries.java:33: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("BadQueries.java:34: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("BadQueries.java:35: error: key(), value(), or entry() argument must be map element"));
+        assertTrue(errors.contains("BadQueries.java:36: error: key(), value(), or entry() argument must be map element"));
 
-        assertTrue(errors.contains("BadQueries.java:36: error: entry() has no members"));
+        assertTrue(errors.contains("BadQueries.java:39: error: entry() has no members"));
 
-        assertTrue(errors.contains("BadQueries.java:38: error: illegal token: ?"));
+        assertTrue(errors.contains("BadQueries.java:41: error: illegal token: ?"));
 
         //should be errors:
 //        assertTrue(errors.contains("BadQueries.java:40:"));
@@ -70,25 +72,51 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("Person.java:22: error: Person has no mapped x"));
 
-        assertTrue(errors.contains("BadQueries.java:43: warning: ?2 is not set"));
-        assertTrue(errors.contains("BadQueries.java:45: warning: :name is not set"));
+        assertTrue(errors.contains("BadQueries.java:46: warning: ?2 is not set"));
+        assertTrue(errors.contains("BadQueries.java:48: warning: :name is not set"));
 
-        assertTrue(errors.contains("BadQueries.java:48: warning: :hello does not occur in the query"));
+        assertTrue(errors.contains("BadQueries.java:51: warning: :hello does not occur in the query"));
 
+        assertPanacheErrors(errors, "PanacheBadPerson", 22);
+        assertPanacheErrors(errors, "PanacheBadPersonRepository", 10);
+    }
+
+    private void assertPanacheErrors(String errors, String name, int start) {
+        
+        assertTrue(errors.contains(name+".java:"+(start)+": warning: missing is not defined (add it to whitelist)"));
+        assertTrue(errors.contains(name+".java:"+(start+1)+": warning: ?2 is not set"));
+        assertTrue(errors.contains(name+".java:"+(start+2)+": warning: :id is not set"));
+        assertTrue(errors.contains(name+".java:"+(start+3)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+4)+": warning: :bar is not set"));
+        assertTrue(errors.contains(name+".java:"+(start+5)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+6)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+7)+": warning: Missing required parameter for name"));
+        // FIXME: update/delete
+//        assertTrue(errors.contains(name+".java:"+(start+8)+": warning: Missing required parameter for name"));
+//        assertTrue(errors.contains(name+".java:"+(start+9)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+10)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+11)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+12)+": warning: Too many parameters for name"));
     }
 
     @Test
     public void testECJ() throws Exception {
         String errors = compileWithECJ("test", "test.test");
 
-        assertFalse(errors.contains("GoodQueries.java"));
+        assertECJ(errors);
+    }
 
-        assertTrue(errors.contains("unexpected token: do") && errors.contains("BadQueries.java (at line 6)"));
+    private void assertECJ(String errors) {
+        assertFalse(errors.contains("GoodQueries.java"));
+        assertFalse(errors.contains("PanachePerson.java"));
+        assertFalse(errors.contains("PanachePersonRepository.java"));
+
+        assertTrue(errors.contains("unexpected token: do") && errors.contains("BadQueries.java (at line 9)"));
         assertTrue(errors.contains("unexpected token"));
-        assertTrue(errors.contains("unexpected token: select") && errors.contains("BadQueries.java (at line 8)"));
-        assertTrue(errors.contains("unexpected token: =") && errors.contains("BadQueries.java (at line 9)"));
-        assertTrue(errors.contains("unexpected token: from") && errors.contains("BadQueries.java (at line 10)"));
-        assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 10)"));
+        assertTrue(errors.contains("unexpected token: select") && errors.contains("BadQueries.java (at line 11)"));
+        assertTrue(errors.contains("unexpected token: =") && errors.contains("BadQueries.java (at line 12)"));
+        assertTrue(errors.contains("unexpected token: from") && errors.contains("BadQueries.java (at line 13)"));
+        assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 13)"));
 
         assertTrue(errors.contains("test.Nil does not exist"));
         assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person)"));
@@ -96,89 +124,70 @@ public class HQLValidationTest {
         assertTrue(errors.contains("test.Pair has no suitable constructor for types (string, string)"));
         assertTrue(errors.contains("test.Pair has no suitable constructor for types (integer, integer)"));
 
-        assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 16)"));
-        assertTrue(errors.contains("Person has no mapped firstName") && errors.contains("BadQueries.java (at line 17)"));
-        assertTrue(errors.contains("Person has no mapped addr") && errors.contains("BadQueries.java (at line 18)"));
-        assertTrue(errors.contains("Address has no mapped town") && errors.contains("BadQueries.java (at line 19)"));
-        assertTrue(errors.contains("Address has no mapped name") && errors.contains("BadQueries.java (at line 10)"));
-        assertTrue(errors.contains("Address has no mapped country.type") && errors.contains("BadQueries.java (at line 21)"));
+        assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 19)"));
+        assertTrue(errors.contains("Person has no mapped firstName") && errors.contains("BadQueries.java (at line 20)"));
+        assertTrue(errors.contains("Person has no mapped addr") && errors.contains("BadQueries.java (at line 21)"));
+        assertTrue(errors.contains("Address has no mapped town") && errors.contains("BadQueries.java (at line 22)"));
+        assertTrue(errors.contains("Address has no mapped name") && errors.contains("BadQueries.java (at line 13)"));
+        assertTrue(errors.contains("Address has no mapped country.type") && errors.contains("BadQueries.java (at line 24)"));
 
-        assertTrue(errors.contains("") && errors.contains("BadQueries.java (at line 23)")); //should be: "string has no mapped length"
-        assertTrue(errors.contains("string has no mapped length") && errors.contains("BadQueries.java (at line 24)"));
+        assertTrue(errors.contains("") && errors.contains("BadQueries.java (at line 26)")); //should be: "string has no mapped length"
+        assertTrue(errors.contains("string has no mapped length") && errors.contains("BadQueries.java (at line 27)"));
 
-        assertTrue(errors.contains("xxx is not defined") && errors.contains("BadQueries.java (at line 26)"));
-        assertTrue(errors.contains("func is not defined") && errors.contains("BadQueries.java (at line 27)"));
-        assertTrue(errors.contains("custom is not defined") && errors.contains("BadQueries.java (at line 28)"));
-        assertTrue(errors.contains("p is not defined") && errors.contains("BadQueries.java (at line 29)"));
-        assertTrue(errors.contains("p.name is not defined") && errors.contains("BadQueries.java (at line 29)"));
+        assertTrue(errors.contains("xxx is not defined") && errors.contains("BadQueries.java (at line 29)"));
+        assertTrue(errors.contains("func is not defined") && errors.contains("BadQueries.java (at line 30)"));
+        assertTrue(errors.contains("custom is not defined") && errors.contains("BadQueries.java (at line 31)"));
+        assertTrue(errors.contains("p is not defined") && errors.contains("BadQueries.java (at line 32)"));
+        assertTrue(errors.contains("p.name is not defined") && errors.contains("BadQueries.java (at line 32)"));
 
         assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
 
-        assertTrue(errors.contains("entry() has no members") && errors.contains("BadQueries.java (at line 36)"));
+        assertTrue(errors.contains("entry() has no members") && errors.contains("BadQueries.java (at line 39)"));
 
-        assertTrue(errors.contains("illegal token: ?") && errors.contains("BadQueries.java (at line 38)"));
+        assertTrue(errors.contains("illegal token: ?") && errors.contains("BadQueries.java (at line 34)"));
 
         assertTrue(errors.contains("Person has no mapped x") && errors.contains("Person.java (at line 22)"));
 
-        assertTrue(errors.contains("?2 is not set") && errors.contains("BadQueries.java (at line 43)"));
-        assertTrue(errors.contains(":name is not set") && errors.contains("BadQueries.java (at line 45)"));
+        assertTrue(errors.contains("?2 is not set") && errors.contains("BadQueries.java (at line 46)"));
+        assertTrue(errors.contains(":name is not set") && errors.contains("BadQueries.java (at line 48)"));
 
-        assertTrue(errors.contains(":hello does not occur in the query") && errors.contains("BadQueries.java (at line 48)"));
+        assertTrue(errors.contains(":hello does not occur in the query") && errors.contains("BadQueries.java (at line 51)"));
 
+        assertTrue(errors.contains("BadQueries.java (at line 46)") && errors.contains("?2 is not set"));
+        assertTrue(errors.contains("BadQueries.java (at line 48)") && errors.contains(":name is not set"));
+
+        assertTrue(errors.contains("BadQueries.java (at line 51)") && errors.contains(":hello does not occur in the query"));
+
+        assertPanacheErrorsEcj(errors, "PanacheBadPerson", 22);
+        assertPanacheErrorsEcj(errors, "PanacheBadPersonRepository", 10);
+    }
+
+    private void assertPanacheErrorsEcj(String errors, String name, int start) {
+        assertTrue(errors.contains(name+".java (at line "+(start)+")") && errors.contains("missing is not defined (add it to whitelist)"));
+        assertTrue(errors.contains(name+".java (at line "+(start+1)+")") && errors.contains("?2 is not set"));
+        assertTrue(errors.contains(name+".java (at line "+(start+2)+")") && errors.contains(":id is not set"));
+        assertTrue(errors.contains(name+".java (at line "+(start+3)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+4)+")") && errors.contains(":bar is not set"));
+        assertTrue(errors.contains(name+".java (at line "+(start+5)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+6)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+7)+")") && errors.contains("Missing required parameter for name"));
+        // FIXME: update/delete
+//        assertTrue(errors.contains(name+".java (at line "+(start+8)+")") && errors.contains("Missing required parameter for name"));
+//        assertTrue(errors.contains(name+".java (at line "+(start+9)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+10)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+11)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+12)+")") && errors.contains("Too many parameters for name"));
+        
     }
 
     @Test
     public void testEclipse() throws Exception {
         forceEclipseForTesting = true;
         String errors = compileWithECJ("test", "test.test");
-
-        assertFalse(errors.contains("GoodQueries.java"));
-
-        assertTrue(errors.contains("unexpected token: do") && errors.contains("BadQueries.java (at line 6)"));
-        assertTrue(errors.contains("unexpected token"));
-        assertTrue(errors.contains("unexpected token: select") && errors.contains("BadQueries.java (at line 8)"));
-        assertTrue(errors.contains("unexpected token: =") && errors.contains("BadQueries.java (at line 9)"));
-        assertTrue(errors.contains("unexpected token: from") && errors.contains("BadQueries.java (at line 10)"));
-        assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 10)"));
-
-        assertTrue(errors.contains("test.Nil does not exist"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person)"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person, string)"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor for types (string, string)"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor for types (integer, integer)"));
-
-        assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 16)"));
-        assertTrue(errors.contains("Person has no mapped firstName") && errors.contains("BadQueries.java (at line 17)"));
-        assertTrue(errors.contains("Person has no mapped addr") && errors.contains("BadQueries.java (at line 18)"));
-        assertTrue(errors.contains("Address has no mapped town") && errors.contains("BadQueries.java (at line 19)"));
-        assertTrue(errors.contains("Address has no mapped name") && errors.contains("BadQueries.java (at line 10)"));
-        assertTrue(errors.contains("Address has no mapped country.type") && errors.contains("BadQueries.java (at line 21)"));
-
-        assertTrue(errors.contains("") && errors.contains("BadQueries.java (at line 23)")); //should be: "string has no mapped length"
-        assertTrue(errors.contains("string has no mapped length") && errors.contains("BadQueries.java (at line 24)"));
-
-        assertTrue(errors.contains("xxx is not defined") && errors.contains("BadQueries.java (at line 26)"));
-        assertTrue(errors.contains("func is not defined") && errors.contains("BadQueries.java (at line 27)"));
-        assertTrue(errors.contains("custom is not defined") && errors.contains("BadQueries.java (at line 28)"));
-        assertTrue(errors.contains("p is not defined") && errors.contains("BadQueries.java (at line 29)"));
-        assertTrue(errors.contains("p.name is not defined") && errors.contains("BadQueries.java (at line 29)"));
-
-        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
-        assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
-
-        assertTrue(errors.contains("entry() has no members") && errors.contains("BadQueries.java (at line 36)"));
-
-        assertTrue(errors.contains("illegal token: ?") && errors.contains("BadQueries.java (at line 38)"));
-
-        assertTrue(errors.contains("Person has no mapped x") && errors.contains("Person.java (at line 22)"));
-
-        assertTrue(errors.contains("?2 is not set") && errors.contains("BadQueries.java (at line 43)"));
-        assertTrue(errors.contains(":name is not set") && errors.contains("BadQueries.java (at line 45)"));
-
-        assertTrue(errors.contains(":hello does not occur in the query") && errors.contains("BadQueries.java (at line 48)"));
+        
+        assertECJ(errors);
 
         forceEclipseForTesting = false;
     }
@@ -202,6 +211,7 @@ public class HQLValidationTest {
         }
         else {
             cp.append("out/production/query-validator");
+            cp.append(":build/classes/java/main");
         }
 
         Files.list(TEST_LIBS)
@@ -259,13 +269,14 @@ public class HQLValidationTest {
         }
         else {
             useFatjar = false;
-            cp.append("out/production/query-validator");
+            cp.append("build/classes/java/main:build/classes/groovy/main");
         }
 
         Files.list(TEST_LIBS)
                 .map(Path::toString)
                 .filter(s -> useFatjar ?
                         s.contains("/javax.persistence")
+                            || s.contains("/quarkus-")
                             || s.contains("/hibernate-core")
                             || s.contains("/org.eclipse.jdt.core_") :
                         !s.contains(forceEclipseForTesting ?

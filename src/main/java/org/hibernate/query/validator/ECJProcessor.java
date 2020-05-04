@@ -1,27 +1,5 @@
 package org.hibernate.query.validator;
 
-import antlr.RecognitionException;
-import org.eclipse.jdt.core.compiler.CategorizedProblem;
-import org.eclipse.jdt.internal.compiler.ASTVisitor;
-import org.eclipse.jdt.internal.compiler.CompilationResult;
-import org.eclipse.jdt.internal.compiler.Compiler;
-import org.eclipse.jdt.internal.compiler.apt.dispatch.BaseProcessingEnvImpl;
-import org.eclipse.jdt.internal.compiler.ast.*;
-import org.eclipse.jdt.internal.compiler.impl.StringConstant;
-import org.eclipse.jdt.internal.compiler.lookup.*;
-import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
-import org.hibernate.QueryException;
-import org.hibernate.dialect.Dialect;
-
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.lang.model.SourceVersion;
-import javax.lang.model.element.TypeElement;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import static java.lang.Integer.parseInt;
 import static java.util.Collections.emptyList;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
@@ -32,6 +10,45 @@ import static org.hibernate.query.validator.ECJSessionFactory.qualifiedName;
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 import static org.hibernate.query.validator.Validation.validate;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.RoundEnvironment;
+import javax.lang.model.SourceVersion;
+import javax.lang.model.element.TypeElement;
+import javax.lang.model.util.Elements;
+
+import org.eclipse.jdt.core.compiler.CategorizedProblem;
+import org.eclipse.jdt.internal.compiler.ASTVisitor;
+import org.eclipse.jdt.internal.compiler.CompilationResult;
+import org.eclipse.jdt.internal.compiler.Compiler;
+import org.eclipse.jdt.internal.compiler.apt.dispatch.BaseProcessingEnvImpl;
+import org.eclipse.jdt.internal.compiler.ast.ASTNode;
+import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
+import org.eclipse.jdt.internal.compiler.ast.Expression;
+import org.eclipse.jdt.internal.compiler.ast.IntLiteral;
+import org.eclipse.jdt.internal.compiler.ast.MemberValuePair;
+import org.eclipse.jdt.internal.compiler.ast.MessageSend;
+import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
+import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
+import org.eclipse.jdt.internal.compiler.ast.ThisReference;
+import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
+import org.eclipse.jdt.internal.compiler.impl.StringConstant;
+import org.eclipse.jdt.internal.compiler.lookup.AnnotationBinding;
+import org.eclipse.jdt.internal.compiler.lookup.BinaryTypeBinding;
+import org.eclipse.jdt.internal.compiler.lookup.Binding;
+import org.eclipse.jdt.internal.compiler.lookup.BlockScope;
+import org.eclipse.jdt.internal.compiler.lookup.ElementValuePair;
+import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
+import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
+import org.hibernate.QueryException;
+import org.hibernate.dialect.Dialect;
+
+import antlr.RecognitionException;
 
 /**
  * Annotation processor that validates HQL and JPQL queries
@@ -60,9 +77,13 @@ public class ECJProcessor extends AbstractProcessor {
         for (TypeDeclaration type : unit.types) {
             if (isCheckable(type.binding, unit)) {
                 List<String> whitelist = getWhitelist(type.binding, unit, compiler);
+                Elements elements = processingEnv.getElementUtils();
+                TypeElement typeElement = elements.getTypeElement(qualifiedName(type.binding));
+                TypeElement panacheEntity = PanacheUtils.isPanache(typeElement, processingEnv.getTypeUtils(), elements);
                 type.traverse(new ASTVisitor() {
                     Set<Integer> setParameterLabels = new HashSet<>();
                     Set<String> setParameterNames = new HashSet<>();
+                    Set<String> setOrderBy = new HashSet<>();
                     boolean immediatelyCalled;
 
                     @Override
@@ -72,6 +93,29 @@ public class ECJProcessor extends AbstractProcessor {
                             case "getResultList":
                             case "getSingleResult":
                                 immediatelyCalled = true;
+                                break;
+                            case "count":
+                            case "delete":
+                            case "update":
+                            case "exists":
+                            case "stream":
+                            case "list":
+                            case "find":
+                                // Disable until we can make this type-safe for Javac
+//                                if(messageSend.receiver instanceof SingleNameReference) {
+//                                    SingleNameReference ref = (SingleNameReference) messageSend.receiver;
+//                                    String target = charToString(ref.token);
+//                                    StringLiteral queryArg = firstArgument(messageSend);
+//                                    if(queryArg != null) {
+//                                        checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), messageSend.arguments);
+//                                    }
+                                if(messageSend.receiver instanceof ThisReference && panacheEntity != null) {
+                                    String target = panacheEntity.getSimpleName().toString();
+                                    StringLiteral queryArg = firstArgument(messageSend);
+                                    if(queryArg != null) {
+                                        checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), messageSend.arguments);
+                                    }
+                                }
                                 break;
                             case "createQuery":
                                 for (Expression argument : messageSend.arguments) {
@@ -100,6 +144,15 @@ public class ECJProcessor extends AbstractProcessor {
                                 break;
                         }
                         return true;
+                    }
+
+                    private StringLiteral firstArgument(MessageSend messageSend) {
+                        for (Expression argument : messageSend.arguments) {
+                            if (argument instanceof StringLiteral) {
+                                return (StringLiteral) argument;
+                            }
+                        }
+                        return null;
                     }
 
                     @Override
@@ -131,7 +184,104 @@ public class ECJProcessor extends AbstractProcessor {
                                 setParameterLabels, setParameterNames, handler,
                                 sessionFactory.make(whitelist, handler, unit));
                     }
+                    
+                    void checkPanacheQuery(StringLiteral stringLiteral, String targetType, String methodName, String panacheQl, Expression[] args) {
+                        ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
+                        collectPanacheArguments(args);
+                        int[] offset = new int[1];
+                        String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
+                                                                 panacheQl, offset, setParameterLabels, setOrderBy);
+                        if(hql == null)
+                            return;
+                        validate(hql, true,
+                                 setParameterLabels, setParameterNames, handler,
+                                 sessionFactory.make(whitelist, handler, unit), offset[0]);
+                    }
 
+                    private void collectPanacheArguments(Expression[] args) {
+                        // first arg is pql
+                        // second arg can be Sort, Object..., Map or Parameters
+                        setParameterLabels.clear();
+                        setParameterNames.clear();
+                        setOrderBy.clear();
+                        if(args.length > 1) {
+                            int firstArgIndex = 1;
+                            if(isSortCall(args[firstArgIndex])) {
+                                firstArgIndex++;
+                            }
+                            
+                            if(args.length > firstArgIndex) {
+                                Expression firstArg = args[firstArgIndex];
+                                isParametersCall(firstArg);
+                                if(setParameterNames.isEmpty()) {
+                                    for(int i = 0 ; i < args.length - firstArgIndex ; i++) {
+                                        setParameterLabels.add(1 + i);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    private boolean isParametersCall(Expression firstArg) {
+                        if(firstArg instanceof MessageSend) {
+                            MessageSend invocation = (MessageSend)firstArg;
+                            String fieldName = charToString(invocation.selector);
+                            if(fieldName.equals("and") && isParametersCall(invocation.receiver)) {
+                                StringLiteral queryArg = firstArgument(invocation);
+                                if(queryArg != null) {
+                                    setParameterNames.add(charToString(queryArg.source()));
+                                    return true;
+                                }
+                            }else if(fieldName.equals("with")
+                                    && invocation.receiver instanceof SingleNameReference) {
+                                SingleNameReference receiver = (SingleNameReference) invocation.receiver;
+                                String target = charToString(receiver.token);
+                                if(target.equals("Parameters")) {
+                                    StringLiteral queryArg = firstArgument(invocation);
+                                    if(queryArg != null) {
+                                        setParameterNames.add(charToString(queryArg.source()));
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                        return false;
+                    }
+
+                    private boolean isSortCall(Expression firstArg) {
+                        if(firstArg instanceof MessageSend) {
+                            MessageSend invocation = (MessageSend)firstArg;
+                            String fieldName = charToString(invocation.selector);
+                                if((fieldName.equals("and")
+                                        || fieldName.equals("descending")
+                                        || fieldName.equals("ascending")
+                                        || fieldName.equals("direction"))
+                                        && isSortCall(invocation.receiver)) {
+                                    for (Expression e : invocation.arguments) {
+                                        if(e instanceof StringLiteral) {
+                                            StringLiteral lit = (StringLiteral)e;
+                                            setOrderBy.add(charToString(lit.source()));
+                                        }
+                                    }
+                                    return true;
+                                }else if((fieldName.equals("by")
+                                        || fieldName.equals("descending")
+                                        || fieldName.equals("ascending"))
+                                        && invocation.receiver instanceof SingleNameReference) {
+                                    SingleNameReference receiver = (SingleNameReference) invocation.receiver;
+                                    String target = charToString(receiver.token);
+                                    if(target.equals("Sort")) {
+                                        for (Expression e : invocation.arguments) {
+                                            if(e instanceof StringLiteral) {
+                                                StringLiteral lit = (StringLiteral)e;
+                                                setOrderBy.add(charToString(lit.source()));
+                                            }
+                                        }
+                                        return true;
+                                    }
+                                }
+                        }
+                        return false;
+                    }
                 }, unit.scope);
             }
         }

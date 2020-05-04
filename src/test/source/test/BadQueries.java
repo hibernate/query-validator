@@ -1,5 +1,8 @@
 package test;
 
+//leave blank line or update test error locations
+//leave blank line or update test error locations
+
 public class BadQueries {
 
     public void badQueries() {
@@ -49,7 +52,6 @@ public class BadQueries {
 
         createQuery("select new test.Pair(1,1) from Person p"); //"select new" with literals
         createQuery("select new test.Pair('','') from Person p"); //"select new" with literals
-
     }
 
     private static Query createQuery(String s) { return new Query(); }
