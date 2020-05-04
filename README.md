@@ -2,8 +2,9 @@
 
 # Hibernate Query Validator
 
-Compile time validation for queries written in HQL, JPQL and Panache-QL.
+Compile time validation for queries written in HQL, JPQL, and [Panache][].
 
+[Panache]: https://quarkus.io/guides/hibernate-orm-panache
 [Hibernate logo]: http://static.jboss.org/hibernate/images/hibernate_logo_whitebkg_200px.png
 
 ## Building
@@ -31,21 +32,30 @@ you prefer.
    `org.hibernate:query-validator:1.0-SNAPSHOT`.)
 2. Annotate a package or toplevel class with `@CheckHQL`.
 
-Then the validator will check any static string argument of
+#### Usage with plain Hibernate or JPA
+
+The validator will check any static string argument of
 
 - the `createQuery()` method or
 - the `@NamedQuery()` annotation
 
 which occurs in the annotated package or class. 
 
-### Panache usage
+#### Usage with Panache
 
-Inside a Panache entity or repository, the following queries will be checked:
+Inside a Panache entity or repository, the following queries 
+will be checked:
 
 - `list`/`find`/`stream`
 - `count`
 - `delete`
 - `update`
+
+### Errors and warnings
+
+The purpose of the query validator is to detect erroneous query 
+strings and query parameter bindings when the Java code is compiled,
+instead of at runtime when the query is executed.
 
 #### Errors
 
@@ -119,6 +129,7 @@ the dependency to the query validator.
             <groupId>org.hibernate</groupId>
             <artifactId>query-validator</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <optional>true</optional>
         </dependency>
     <dependencies>
 
