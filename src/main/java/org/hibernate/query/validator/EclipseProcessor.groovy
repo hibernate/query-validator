@@ -56,19 +56,23 @@ class EclipseProcessor extends AbstractProcessor {
                         names.add(literal.stringValue())
                     }
                 }
-            } else if (value.class.simpleName == "StringConstant") {
+            }
+            else if (value.class.simpleName == "StringConstant") {
                 names.add(value.stringValue())
-            } else if (value.class.simpleName == "BinaryTypeBinding") {
+            }
+            else if (value.class.simpleName == "BinaryTypeBinding") {
                 String name = qualifiedTypeName(value)
                 def dialect
                 try {
                     dialect = Class.forName(name).newInstance()
                     dialect.getFunctions()
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     try {
                         dialect = Class.forName(shadow(name)).newInstance()
                         dialect.getFunctions()
-                    } catch (Exception e2) {
+                    }
+                    catch (Exception e2) {
                         //TODO: this error doesn't have location info!!
                         new ErrorReporter(null, unit, compiler)
                                 .reportError("could not create dialect " + name);
@@ -183,17 +187,17 @@ class EclipseProcessor extends AbstractProcessor {
                         case "list":
                         case "find":
                         // Disabled until we find how to support this type-safe in Javac
-//                            if(statement.receiver.class.simpleName == "SingleNameReference") {
+//                            if (statement.receiver.class.simpleName == "SingleNameReference") {
 //                                def ref = statement.receiver;
 //                                String target = charToString(ref.token);
 //                                def queryArg = firstArgument(statement);
-//                                if(queryArg != null) {
+//                                if (queryArg != null) {
 //                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
 //                                }
-                            if(statement.receiver.class.simpleName == "ThisReference" && panacheEntity != null) {
+                            if (statement.receiver.class.simpleName == "ThisReference" && panacheEntity != null) {
                                 String target = panacheEntity.getSimpleName().toString();
                                 def queryArg = firstArgument(statement);
-                                if(queryArg != null) {
+                                if (queryArg != null) {
                                     checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
                                 }
                             }
@@ -327,7 +331,7 @@ class EclipseProcessor extends AbstractProcessor {
             int[] offset = new int[1];
             String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
                                                      panacheQl, offset, setParameterLabels, setOrderBy);
-            if(hql == null)
+            if (hql == null)
                 return;
             validate(hql, true,
                      setParameterLabels, setParameterNames, handler,
@@ -345,17 +349,17 @@ class EclipseProcessor extends AbstractProcessor {
             setParameterLabels.clear();
             setParameterNames.clear();
             setOrderBy.clear();
-            if(args.length > 1) {
+            if (args.length > 1) {
                 int firstArgIndex = 1;
-                if(isSortCall(args[firstArgIndex])) {
+                if (isSortCall(args[firstArgIndex])) {
                     firstArgIndex++;
                 }
                 
-                if(args.length > firstArgIndex) {
+                if (args.length > firstArgIndex) {
                     def firstArg = args[firstArgIndex];
                     isParametersCall(firstArg);
-                    if(setParameterNames.isEmpty()) {
-                        for(int i = 0 ; i < args.length - firstArgIndex ; i++) {
+                    if (setParameterNames.isEmpty()) {
+                        for (int i = 0 ; i < args.length - firstArgIndex ; i++) {
                             setParameterLabels.add(1 + i);
                         }
                     }
@@ -363,22 +367,23 @@ class EclipseProcessor extends AbstractProcessor {
             }
         }
         boolean isParametersCall(firstArg) {
-            if(firstArg.class.simpleName == "MessageSend") {
+            if (firstArg.class.simpleName == "MessageSend") {
                 def invocation = firstArg;
                 String fieldName = charToString(invocation.selector);
-                if(fieldName.equals("and") && isParametersCall(invocation.receiver)) {
+                if (fieldName.equals("and") && isParametersCall(invocation.receiver)) {
                     def queryArg = firstArgument(invocation);
-                    if(queryArg != null) {
+                    if (queryArg != null) {
                         setParameterNames.add(charToString(queryArg.source()));
                         return true;
                     }
-                }else if(fieldName.equals("with")
+                }
+                else if (fieldName.equals("with")
                         && invocation.receiver.class.simpleName == "SingleNameReference") {
                     def receiver = invocation.receiver;
                     String target = charToString(receiver.token);
-                    if(target.equals("Parameters")) {
+                    if (target.equals("Parameters")) {
                         def queryArg = firstArgument(invocation);
-                        if(queryArg != null) {
+                        if (queryArg != null) {
                             setParameterNames.add(charToString(queryArg.source()));
                             return true;
                         }
@@ -389,29 +394,30 @@ class EclipseProcessor extends AbstractProcessor {
         }
 
         boolean isSortCall(firstArg) {
-            if(firstArg.class.simpleName == "MessageSend") {
+            if (firstArg.class.simpleName == "MessageSend") {
                 def invocation = firstArg;
                 String fieldName = charToString(invocation.selector);
-                    if((fieldName.equals("and")
+                    if ((fieldName.equals("and")
                             || fieldName.equals("descending")
                             || fieldName.equals("ascending")
                             || fieldName.equals("direction"))
                             && isSortCall(invocation.receiver)) {
                         for (e in invocation.arguments) {
-                            if(e.class.simpleName == "StringLiteral") {
+                            if (e.class.simpleName == "StringLiteral") {
                                 setOrderBy.add(charToString(e.source()));
                             }
                         }
                         return true;
-                    }else if((fieldName.equals("by")
+                    }
+                    else if ((fieldName.equals("by")
                             || fieldName.equals("descending")
                             || fieldName.equals("ascending"))
                             && invocation.receiver.class.simpleName == "SingleNameReference") {
                         def receiver = invocation.receiver;
                         String target = charToString(receiver.token);
-                        if(target.equals("Sort")) {
+                        if (target.equals("Sort")) {
                             for (e in invocation.arguments) {
-                                if(e.class.simpleName == "StringLiteral") {
+                                if (e.class.simpleName == "StringLiteral") {
                                     setOrderBy.add(charToString(e.source()));
                                 }
                             }
@@ -509,9 +515,11 @@ class EclipseProcessor extends AbstractProcessor {
                 m = g + (d - g) / 2
                 if (position < (start = lineEnds[m])) {
                     d = m - 1
-                } else if (position > start) {
+                }
+                else if (position > start) {
                     g = m + 1
-                } else {
+                }
+                else {
                     return m + 1
                 }
             }

@@ -45,7 +45,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         if (isToManyAssociation(property)) {
             return toManyPersister.make(role, collectionType,
                     getToManyTargetEntityName(property), this)
-        } else if (isElementCollectionProperty(property)) {
+        }
+        else if (isElementCollectionProperty(property)) {
             def elementType =
                     getElementCollectionElementType(property)
             return collectionPersister.make(role, collectionType,
@@ -53,7 +54,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                     elementCollectionElementType(elementType, role,
                             propertyPath, defaultAccessType),
                     this)
-        } else {
+        }
+        else {
             return null
         }
     }
@@ -82,14 +84,18 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                     return simpleTypeName(memberType)
                 }
             }
-        } else if (isToOneAssociation(member)) {
+        }
+        else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member)
             return typeHelper.entity(targetEntity)
-        } else if (isToManyAssociation(member)) {
+        }
+        else if (isToManyAssociation(member)) {
             return collectionType(memberType, qualify(entityName, path))
-        } else if (isElementCollectionProperty(member)) {
+        }
+        else if (isElementCollectionProperty(member)) {
             return collectionType(memberType, qualify(entityName, path))
-        } else {
+        }
+        else {
             Type result = typeResolver.basic(qualifiedTypeName(memberType))
             return result == null ? unknownType : result
         }
@@ -107,7 +113,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                     return simpleTypeName(elementType)
                 }
             }
-        } else {
+        }
+        else {
             return typeResolver.basic(qualifiedTypeName(elementType))
         }
     }
@@ -352,13 +359,16 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
             String name = simpleMethodName(symbol)
             if (name.startsWith("get")) {
                 name = name.substring(3)
-            } else if (name.startsWith("is")) {
+            }
+            else if (name.startsWith("is")) {
                 name = name.substring(2)
             }
             return Introspector.decapitalize(name)
-        } else if (symbol.class.simpleName == "FieldBinding") {
+        }
+        else if (symbol.class.simpleName == "FieldBinding") {
             return simpleVariableName(symbol)
-        } else {
+        }
+        else {
             return null
         }
     }
@@ -366,14 +376,17 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     private static boolean isPersistable(member, AccessType accessType) {
         if (isStatic(member) || isTransient(member)) {
             return false
-        } else if (member.class.simpleName == "FieldBinding") {
+        }
+        else if (member.class.simpleName == "FieldBinding") {
             return accessType == AccessType.FIELD ||
                     hasAnnotation(member, jpa("Access"))
-        } else if (member.class.simpleName == "MethodBinding") {
+        }
+        else if (member.class.simpleName == "MethodBinding") {
             return isGetterMethod(member) &&
                     (accessType == AccessType.PROPERTY ||
                             hasAnnotation(member, jpa("Access")))
-        } else {
+        }
+        else {
             return false
         }
     }
@@ -391,9 +404,11 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     private static def getMemberType(binding) {
         if (binding.class.simpleName == "MethodBinding") {
             return binding.returnType
-        } else if (binding.class.simpleName == "FieldBinding") {
+        }
+        else if (binding.class.simpleName == "FieldBinding") {
             return binding.type
-        } else {
+        }
+        else {
             return binding
         }
     }
@@ -529,7 +544,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                 getAnnotation(type, jpa("Access"))
         if (annotation == null) {
             return defaultAccessType
-        } else {
+        }
+        else {
             def member = getAnnotationMember(annotation, "value")
             if (member == null) {
                 return defaultAccessType //does not occur
@@ -579,7 +595,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                         Class primitive
                         try {
                             primitive = ((PrimitiveType) argType).getPrimitiveClass()
-                        } catch (ignored) {
+                        }
+                        catch (ignored) {
                             continue
                         }
                         if (!toPrimitiveClass(paramType).equals(primitive)) {
@@ -592,20 +609,24 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                         if (argType instanceof EntityType) {
                             String entityName = argType.getAssociatedEntityName()
                             argTypeClass = findEntityClass(entityName)
-                        } else if (argType instanceof CompositeCustomType) {
+                        }
+                        else if (argType instanceof CompositeCustomType) {
                             argTypeClass = argType.getUserType().type
-                        } else if (argType instanceof BasicType) {
+                        }
+                        else if (argType instanceof BasicType) {
                             String className
                             //sadly there is no way to get the classname
                             //from a Hibernate Type without trying to load
                             //the class!
                             try {
                                 className = argType.getReturnedClass().getName()
-                            } catch (ignored) {
+                            }
+                            catch (ignored) {
                                 continue
                             }
                             argTypeClass = findClassByQualifiedName(className)
-                        } else {
+                        }
+                        else {
                             //TODO: what other Hibernate Types do we
                             //      need to consider here?
                             continue

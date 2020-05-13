@@ -84,12 +84,14 @@ class Validation {
                 setHandler(walker, handler);
                 try {
                     walker.statement(parser.getAST());
-                } catch (HibernateException e) {
+                }
+                catch (HibernateException e) {
                     String message = e.getMessage();
                     if (message != null) {
                         handler.reportError(message);
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     //throw away NullPointerExceptions and the like
                     //since I guess they represent bugs in Hibernate
 //                    e.printStackTrace();
@@ -128,7 +130,8 @@ class Validation {
                                                 int label;
                                                 try {
                                                     label = parseInt(text);
-                                                } catch (NumberFormatException nfe) {
+                                                }
+                                                catch (NumberFormatException nfe) {
                                                     continue;
                                                 }
                                                 labels.add(label);
@@ -175,7 +178,8 @@ class Validation {
                     }
                 }
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -231,7 +235,8 @@ class Validation {
             Field field = object.getClass().getDeclaredField("parseErrorHandler");
             field.setAccessible(true);
             field.set(object, handler);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
         }
     }

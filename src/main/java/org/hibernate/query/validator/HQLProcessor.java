@@ -44,9 +44,11 @@ public class HQLProcessor extends AbstractProcessor {
             //us to compile everything else w/o
             //the Groovy compiler being present
             delegate = newEclipseProcessor();
-        } else if (compiler.endsWith("BatchProcessingEnvImpl")) {
+        }
+        else if (compiler.endsWith("BatchProcessingEnvImpl")) {
             delegate = new ECJProcessor();
-        } else if (compiler.endsWith("JavacProcessingEnvironment")) {
+        }
+        else if (compiler.endsWith("JavacProcessingEnvironment")) {
             delegate = new JavacProcessor();
         }
         if (delegate!=null) {
@@ -67,7 +69,8 @@ public class HQLProcessor extends AbstractProcessor {
             return (AbstractProcessor)
                     Class.forName("org.hibernate.query.validator.EclipseProcessor")
                             .newInstance();
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
             return null;
         }

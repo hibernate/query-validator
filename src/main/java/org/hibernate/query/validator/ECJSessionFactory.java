@@ -630,7 +630,8 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                         Class<?> primitive;
                         try {
                             primitive = ((PrimitiveType<?>) argType).getPrimitiveClass();
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e) {
                             continue;
                         }
                         if (!toPrimitiveClass(paramType).equals(primitive)) {
@@ -643,20 +644,24 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                         if (argType instanceof EntityType) {
                             String entityName = ((EntityType) argType).getAssociatedEntityName();
                             argTypeClass = findEntityClass(entityName);
-                        } else if (argType instanceof CompositeCustomType) {
+                        }
+                        else if (argType instanceof CompositeCustomType) {
                             argTypeClass = ((Component) ((CompositeCustomType) argType).getUserType()).type;
-                        } else if (argType instanceof BasicType) {
+                        }
+                        else if (argType instanceof BasicType) {
                             String className;
                             //sadly there is no way to get the classname
                             //from a Hibernate Type without trying to load
                             //the class!
                             try {
                                 className = argType.getReturnedClass().getName();
-                            } catch (Exception e) {
+                            }
+                            catch (Exception e) {
                                 continue;
                             }
                             argTypeClass = findClassByQualifiedName(className);
-                        } else {
+                        }
+                        else {
                             //TODO: what other Hibernate Types do we
                             //      need to consider here?
                             continue;

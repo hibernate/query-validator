@@ -24,11 +24,13 @@ public interface Mocker<T> {
 			return () -> {
 				try {
 					return mock.newInstance();
-				} catch (Exception e) {
+				}
+				catch (Exception e) {
 					throw new RuntimeException(e);
 				}
 			};
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -43,7 +45,8 @@ public interface Mocker<T> {
 		return (args) -> {
 			try {
 				return (T) constructor.newInstance(args);
-			} catch (Exception e) {
+			}
+			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		};

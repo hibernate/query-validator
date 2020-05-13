@@ -102,17 +102,17 @@ public class ECJProcessor extends AbstractProcessor {
                             case "list":
                             case "find":
                                 // Disable until we can make this type-safe for Javac
-//                                if(messageSend.receiver instanceof SingleNameReference) {
+//                                if (messageSend.receiver instanceof SingleNameReference) {
 //                                    SingleNameReference ref = (SingleNameReference) messageSend.receiver;
 //                                    String target = charToString(ref.token);
 //                                    StringLiteral queryArg = firstArgument(messageSend);
-//                                    if(queryArg != null) {
+//                                    if (queryArg != null) {
 //                                        checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), messageSend.arguments);
 //                                    }
-                                if(messageSend.receiver instanceof ThisReference && panacheEntity != null) {
+                                if (messageSend.receiver instanceof ThisReference && panacheEntity != null) {
                                     String target = panacheEntity.getSimpleName().toString();
                                     StringLiteral queryArg = firstArgument(messageSend);
-                                    if(queryArg != null) {
+                                    if (queryArg != null) {
                                         checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), messageSend.arguments);
                                     }
                                 }
@@ -191,7 +191,7 @@ public class ECJProcessor extends AbstractProcessor {
                         int[] offset = new int[1];
                         String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
                                                                  panacheQl, offset, setParameterLabels, setOrderBy);
-                        if(hql == null)
+                        if (hql == null)
                             return;
                         validate(hql, true,
                                  setParameterLabels, setParameterNames, handler,
@@ -204,17 +204,17 @@ public class ECJProcessor extends AbstractProcessor {
                         setParameterLabels.clear();
                         setParameterNames.clear();
                         setOrderBy.clear();
-                        if(args.length > 1) {
+                        if (args.length > 1) {
                             int firstArgIndex = 1;
-                            if(isSortCall(args[firstArgIndex])) {
+                            if (isSortCall(args[firstArgIndex])) {
                                 firstArgIndex++;
                             }
                             
-                            if(args.length > firstArgIndex) {
+                            if (args.length > firstArgIndex) {
                                 Expression firstArg = args[firstArgIndex];
                                 isParametersCall(firstArg);
-                                if(setParameterNames.isEmpty()) {
-                                    for(int i = 0 ; i < args.length - firstArgIndex ; i++) {
+                                if (setParameterNames.isEmpty()) {
+                                    for (int i = 0 ; i < args.length - firstArgIndex ; i++) {
                                         setParameterLabels.add(1 + i);
                                     }
                                 }
@@ -222,22 +222,23 @@ public class ECJProcessor extends AbstractProcessor {
                         }
                     }
                     private boolean isParametersCall(Expression firstArg) {
-                        if(firstArg instanceof MessageSend) {
+                        if (firstArg instanceof MessageSend) {
                             MessageSend invocation = (MessageSend)firstArg;
                             String fieldName = charToString(invocation.selector);
-                            if(fieldName.equals("and") && isParametersCall(invocation.receiver)) {
+                            if (fieldName.equals("and") && isParametersCall(invocation.receiver)) {
                                 StringLiteral queryArg = firstArgument(invocation);
-                                if(queryArg != null) {
+                                if (queryArg != null) {
                                     setParameterNames.add(charToString(queryArg.source()));
                                     return true;
                                 }
-                            }else if(fieldName.equals("with")
+                            }
+                            else if (fieldName.equals("with")
                                     && invocation.receiver instanceof SingleNameReference) {
                                 SingleNameReference receiver = (SingleNameReference) invocation.receiver;
                                 String target = charToString(receiver.token);
-                                if(target.equals("Parameters")) {
+                                if (target.equals("Parameters")) {
                                     StringLiteral queryArg = firstArgument(invocation);
-                                    if(queryArg != null) {
+                                    if (queryArg != null) {
                                         setParameterNames.add(charToString(queryArg.source()));
                                         return true;
                                     }
@@ -248,30 +249,31 @@ public class ECJProcessor extends AbstractProcessor {
                     }
 
                     private boolean isSortCall(Expression firstArg) {
-                        if(firstArg instanceof MessageSend) {
+                        if (firstArg instanceof MessageSend) {
                             MessageSend invocation = (MessageSend)firstArg;
                             String fieldName = charToString(invocation.selector);
-                                if((fieldName.equals("and")
+                                if ((fieldName.equals("and")
                                         || fieldName.equals("descending")
                                         || fieldName.equals("ascending")
                                         || fieldName.equals("direction"))
                                         && isSortCall(invocation.receiver)) {
                                     for (Expression e : invocation.arguments) {
-                                        if(e instanceof StringLiteral) {
+                                        if (e instanceof StringLiteral) {
                                             StringLiteral lit = (StringLiteral)e;
                                             setOrderBy.add(charToString(lit.source()));
                                         }
                                     }
                                     return true;
-                                }else if((fieldName.equals("by")
+                                }
+                                else if ((fieldName.equals("by")
                                         || fieldName.equals("descending")
                                         || fieldName.equals("ascending"))
                                         && invocation.receiver instanceof SingleNameReference) {
                                     SingleNameReference receiver = (SingleNameReference) invocation.receiver;
                                     String target = charToString(receiver.token);
-                                    if(target.equals("Sort")) {
+                                    if (target.equals("Sort")) {
                                         for (Expression e : invocation.arguments) {
-                                            if(e instanceof StringLiteral) {
+                                            if (e instanceof StringLiteral) {
                                                 StringLiteral lit = (StringLiteral)e;
                                                 setOrderBy.add(charToString(lit.source()));
                                             }
@@ -317,7 +319,8 @@ public class ECJProcessor extends AbstractProcessor {
                 Dialect dialect;
                 try {
                     dialect = (Dialect) Class.forName(name).newInstance();
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     //TODO: this error doesn't have location info!!
                     new ErrorReporter(null, unit, compiler)
                             .reportError("could not create dialect " + name);

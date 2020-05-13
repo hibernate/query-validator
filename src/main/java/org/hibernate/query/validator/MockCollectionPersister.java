@@ -122,7 +122,8 @@ public abstract class MockCollectionPersister implements QueryableCollection {
         if (elementType.isEntityType()) {
             return factory.getMetamodel()
                     .entityPersister(elementType.getName());
-        } else {
+        }
+        else {
             return null;
         }
     }

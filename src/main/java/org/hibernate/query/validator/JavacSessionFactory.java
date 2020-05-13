@@ -538,32 +538,38 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                         Class<?> primitive;
                         try {
                             primitive = ((PrimitiveType<?>) type).getPrimitiveClass();
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e) {
                             continue;
                         }
                         if (!toPrimitiveClass(param).equals(primitive)) {
                             argumentsCheckOut = false;
                             break;
                         }
-                    } else {
+                    }
+                    else {
                         Symbol.TypeSymbol typeClass;
                         if (type instanceof EntityType) {
                             String entityName = ((EntityType) type).getAssociatedEntityName();
                             typeClass = findEntityClass(entityName);
-                        } else if (type instanceof CompositeCustomType) {
+                        }
+                        else if (type instanceof CompositeCustomType) {
                             typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
-                        } else if (type instanceof BasicType) {
+                        }
+                        else if (type instanceof BasicType) {
                             String className;
                             //sadly there is no way to get the classname
                             //from a Hibernate Type without trying to load
                             //the class!
                             try {
                                 className = type.getReturnedClass().getName();
-                            } catch (Exception e) {
+                            }
+                            catch (Exception e) {
                                 continue;
                             }
                             typeClass = findClassByQualifiedName(className);
-                        } else {
+                        }
+                        else {
                             //TODO: what other Hibernate Types do we
                             //      need to consider here?
                             continue;

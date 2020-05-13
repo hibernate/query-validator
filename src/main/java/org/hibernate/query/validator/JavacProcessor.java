@@ -58,7 +58,8 @@ public class JavacProcessor extends AbstractProcessor {
 //                for (Element member : element.getEnclosedElements()) {
 //                    checkHQL(member);
 //                }
-            } else {
+            }
+            else {
                 checkHQL(element);
             }
         }
@@ -93,7 +94,7 @@ public class JavacProcessor extends AbstractProcessor {
                         int[] offset = new int[1];
                         String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
                                                                  panacheQl, offset, setParameterLabels, setOrderBy);
-                        if(hql == null)
+                        if (hql == null)
                             return;
                         validate(hql, true,
                                 setParameterLabels, setParameterNames, handler,
@@ -107,15 +108,15 @@ public class JavacProcessor extends AbstractProcessor {
                         setParameterNames.clear();
                         setOrderBy.clear();
                         com.sun.tools.javac.util.List<JCExpression> nonQueryArgs = args.tail;
-                        if(!nonQueryArgs.isEmpty()) {
-                            if(isSortCall(nonQueryArgs.head)) {
+                        if (!nonQueryArgs.isEmpty()) {
+                            if (isSortCall(nonQueryArgs.head)) {
                                 nonQueryArgs = nonQueryArgs.tail;
                             }
                             
-                            if(!nonQueryArgs.isEmpty()) {
+                            if (!nonQueryArgs.isEmpty()) {
                                 JCExpression firstArg = nonQueryArgs.head;
                                 isParametersCall(firstArg);
-                                if(setParameterNames.isEmpty()) {
+                                if (setParameterNames.isEmpty()) {
                                     int i = 1;
                                     for (JCExpression arg : nonQueryArgs) {
                                         setParameterLabels.add(i++);
@@ -126,22 +127,23 @@ public class JavacProcessor extends AbstractProcessor {
                     }
 
                     private boolean isParametersCall(JCExpression firstArg) {
-                        if(firstArg.getKind() == Kind.METHOD_INVOCATION) {
+                        if (firstArg.getKind() == Kind.METHOD_INVOCATION) {
                             JCTree.JCMethodInvocation invocation = (JCTree.JCMethodInvocation)firstArg;
                             JCExpression method = invocation.meth;
-                            if(method.getKind() == Kind.MEMBER_SELECT) {
+                            if (method.getKind() == Kind.MEMBER_SELECT) {
                                 JCTree.JCFieldAccess fa = (JCFieldAccess) method;
-                                if(fa.name.toString().equals("and") && isParametersCall(fa.selected)) {
+                                if (fa.name.toString().equals("and") && isParametersCall(fa.selected)) {
                                     JCTree.JCLiteral queryArg = firstArgument(invocation);
                                     if (queryArg != null && queryArg.value instanceof String) {
                                         String name = (String) queryArg.value;
                                         setParameterNames.add(name);
                                         return true;
                                     }
-                                }else if(fa.name.toString().equals("with")
+                                }
+                                else if (fa.name.toString().equals("with")
                                         && fa.selected.getKind() == Kind.IDENTIFIER) {
                                     String target = ((JCTree.JCIdent)fa.selected).name.toString();
-                                    if(target.equals("Parameters")) {
+                                    if (target.equals("Parameters")) {
                                         JCTree.JCLiteral queryArg = firstArgument(invocation);
                                         if (queryArg != null && queryArg.value instanceof String) {
                                             String name = (String) queryArg.value;
@@ -156,36 +158,37 @@ public class JavacProcessor extends AbstractProcessor {
                     }
 
                     private boolean isSortCall(JCExpression firstArg) {
-                        if(firstArg.getKind() == Kind.METHOD_INVOCATION) {
+                        if (firstArg.getKind() == Kind.METHOD_INVOCATION) {
                             JCTree.JCMethodInvocation invocation = (JCTree.JCMethodInvocation)firstArg;
                             JCExpression method = invocation.meth;
-                            if(method.getKind() == Kind.MEMBER_SELECT) {
+                            if (method.getKind() == Kind.MEMBER_SELECT) {
                                 JCTree.JCFieldAccess fa = (JCFieldAccess) method;
                                 String fieldName = fa.name.toString();
-                                if((fieldName.equals("and")
+                                if ((fieldName.equals("and")
                                         || fieldName.equals("descending")
                                         || fieldName.equals("ascending")
                                         || fieldName.equals("direction"))
                                         && isSortCall(fa.selected)) {
                                     for (JCTree.JCExpression e : invocation.args) {
-                                        if(e instanceof JCTree.JCLiteral) {
+                                        if (e instanceof JCTree.JCLiteral) {
                                             JCTree.JCLiteral lit = (JCTree.JCLiteral)e;
-                                            if(lit.value instanceof String) {
+                                            if (lit.value instanceof String) {
                                                 setOrderBy.add((String)lit.value);
                                             }
                                         }
                                     }
                                     return true;
-                                }else if((fieldName.equals("by")
+                                }
+                                else if ((fieldName.equals("by")
                                         || fieldName.equals("descending")
                                         || fieldName.equals("ascending"))
                                         && fa.selected.getKind() == Kind.IDENTIFIER) {
                                     String target = ((JCTree.JCIdent)fa.selected).name.toString();
-                                    if(target.equals("Sort")) {
+                                    if (target.equals("Sort")) {
                                         for (JCTree.JCExpression e : invocation.args) {
-                                            if(e instanceof JCTree.JCLiteral) {
+                                            if (e instanceof JCTree.JCLiteral) {
                                                 JCTree.JCLiteral lit = (JCTree.JCLiteral)e;
-                                                if(lit.value instanceof String) {
+                                                if (lit.value instanceof String) {
                                                     setOrderBy.add((String)lit.value);
                                                 }
                                             }
@@ -223,11 +226,11 @@ public class JavacProcessor extends AbstractProcessor {
                             case "stream":
                             case "list":
                             case "find":
-                                switch(jcMethodInvocation.meth.getKind()) {
+                                switch (jcMethodInvocation.meth.getKind()) {
                                 // disable this until we figure out how to type the LHS
 //                                case MEMBER_SELECT:
 //                                    JCTree.JCFieldAccess fa = (JCFieldAccess) jcMethodInvocation.meth;
-//                                    switch(fa.selected.getKind()) {
+//                                    switch (fa.selected.getKind()) {
 //                                    case IDENTIFIER:
 //                                        JCTree.JCIdent target = (JCIdent) fa.selected;
 //                                        JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
@@ -261,7 +264,8 @@ public class JavacProcessor extends AbstractProcessor {
                                 if (paramArg != null) {
                                     if (paramArg.value instanceof String) {
                                         setParameterNames.add((String) paramArg.value);
-                                    } else if (paramArg.value instanceof Integer) {
+                                    }
+                                    else if (paramArg.value instanceof Integer) {
                                         setParameterLabels.add((Integer) paramArg.value);
                                     }
                                 }
@@ -291,7 +295,8 @@ public class JavacProcessor extends AbstractProcessor {
                                     }
                                 }
                             }
-                        } else {
+                        }
+                        else {
                             super.visitAnnotation(jcAnnotation); //needed!
                         }
                     }
@@ -356,10 +361,12 @@ public class JavacProcessor extends AbstractProcessor {
         if (select instanceof MemberSelectTree) {
             MemberSelectTree ref = (MemberSelectTree) select;
             return ref.getIdentifier().toString();
-        } else if (select instanceof IdentifierTree) {
+        }
+        else if (select instanceof IdentifierTree) {
             IdentifierTree ref = (IdentifierTree) select;
             return ref.getName().toString();
-        } else {
+        }
+        else {
             return null;
         }
     }

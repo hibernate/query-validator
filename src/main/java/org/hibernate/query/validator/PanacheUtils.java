@@ -17,7 +17,7 @@ public class PanacheUtils {
                                         String panacheQl, int[] offset, Set<Integer> setParameterLabels, 
                                         Set<String> setOrderBy) {
         String ret = null;
-        switch(methodName) {
+        switch (methodName) {
         case "find":
         case "list":
         case "stream":
@@ -45,7 +45,7 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
             ret = panacheCountQueryToHql(handler, targetType, panacheQl, offset, setParameterLabels);
             break;
         }
-        if(ret != null && !setOrderBy.isEmpty()) {
+        if (ret != null && !setOrderBy.isEmpty()) {
             ret += " ORDER BY "+String.join(", ", setOrderBy);
         }
         return ret;
@@ -77,7 +77,7 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
             return countPrefix + fromPrefix;
         }
         if (trimmedLc.indexOf(' ') == -1 && trimmedLc.indexOf('=') == -1) {
-            if(missingRequiredSingleParam(handler, query, setParameterLabels))
+            if (missingRequiredSingleParam(handler, query, setParameterLabels))
                 return null;
             query += " = ?1";
         }
@@ -106,7 +106,7 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
             return "UPDATE " + query;
         }
         if (trimmedLc.indexOf(' ') == -1 && trimmedLc.indexOf('=') == -1) {
-            if(missingRequiredSingleParam(handler, query, setParameterLabels))
+            if (missingRequiredSingleParam(handler, query, setParameterLabels))
                 return null;
             query += " = ?1";
         }
@@ -144,7 +144,7 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
             return deletePrefix;
         }
         if (trimmedLc.indexOf(' ') == -1 && trimmedLc.indexOf('=') == -1) {
-            if(missingRequiredSingleParam(handler, query, setParameterLabels))
+            if (missingRequiredSingleParam(handler, query, setParameterLabels))
                 return null;
             query += " = ?1";
         }
@@ -181,7 +181,7 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
             return fromPrefix + " " + query;
         }
         if (trimmedLc.indexOf(' ') == -1 && trimmedLc.indexOf('=') == -1) {
-            if(missingRequiredSingleParam(handler, query, setParameterLabels))
+            if (missingRequiredSingleParam(handler, query, setParameterLabels))
                 return null;
             query += " = ?1";
         }
@@ -195,10 +195,11 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
 
     private static boolean missingRequiredSingleParam(Validation.Handler handler, String query,
                                                Set<Integer> setParameterLabels) {
-        if(setParameterLabels.size() < 1) {
+        if (setParameterLabels.size() < 1) {
             handler.warn(0, 0, "Missing required parameter for "+query);
             return true;
-        } else if(setParameterLabels.size() > 1){
+        }
+        else if (setParameterLabels.size() > 1){
             handler.warn(0, 0, "Too many parameters for "+query);
             return true;
         }
@@ -206,18 +207,18 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
     }
 
     public static TypeElement isPanache(Element element, Types types, Elements elements) {
-        if(element.getKind() == ElementKind.CLASS
+        if (element.getKind() == ElementKind.CLASS
                 || element.getKind() == ElementKind.INTERFACE) {
             TypeMirror type = element.asType();
             TypeElement panacheEntityType = elements.getTypeElement("io.quarkus.hibernate.orm.panache.PanacheEntityBase");
-            if(panacheEntityType == null)
+            if (panacheEntityType == null)
                 return null;
-            if(types.isSubtype(type, panacheEntityType.asType()))
+            if (types.isSubtype(type, panacheEntityType.asType()))
                 return (TypeElement) types.asElement(type);
             TypeElement panacheRepositoryType = elements.getTypeElement("io.quarkus.hibernate.orm.panache.PanacheRepositoryBase");
-            if(panacheRepositoryType == null)
+            if (panacheRepositoryType == null)
                 return null;
-            if(types.isSubtype(type, types.erasure(panacheRepositoryType.asType()))) {
+            if (types.isSubtype(type, types.erasure(panacheRepositoryType.asType()))) {
                 TypeMirror ret = getFirstTypeArg(types, element.asType(), panacheRepositoryType);
                 return ret != null ? (TypeElement)types.asElement(ret) : null;
             }
@@ -228,32 +229,32 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
     private static TypeMirror getFirstTypeArg(Types types, TypeMirror type, TypeElement superType) {
         // look at this first
         TypeElement typeElement = ((TypeElement)types.asElement(type));
-        if(typeElement.getQualifiedName().contentEquals(superType.getQualifiedName())) {
+        if (typeElement.getQualifiedName().contentEquals(superType.getQualifiedName())) {
             return superType.getTypeParameters().get(0).asType();
         }
         // look up
         TypeMirror superclass = typeElement.getSuperclass();
-        if(superclass.getKind() != TypeKind.NONE) {
+        if (superclass.getKind() != TypeKind.NONE) {
             // look at superclass
             TypeMirror ret = getFirstTypeArg(types, superclass, superType);
-            if(ret != null)
+            if (ret != null)
                 return mapGenerics(types, superclass, ret);
         }
         for (TypeMirror superInterface : typeElement.getInterfaces()) {
             TypeMirror ret = getFirstTypeArg(types, superInterface, superType);
-            if(ret != null)
+            if (ret != null)
                 return mapGenerics(types, superInterface, ret);
         }
         return null;
     }
 
     private static TypeMirror mapGenerics(Types types, TypeMirror superType, TypeMirror ret) {
-        if(ret.getKind() == TypeKind.TYPEVAR) {
+        if (ret.getKind() == TypeKind.TYPEVAR) {
             TypeElement superElement = (TypeElement) types.asElement(superType);
             int typeParamIndex = superElement.getTypeParameters().indexOf(types.asElement(ret));
             DeclaredType superDeclaredType = (DeclaredType) superType;
             List<? extends TypeMirror> superTypeArgs = superDeclaredType.getTypeArguments();
-            if(typeParamIndex != -1 && typeParamIndex < superTypeArgs.size()) {
+            if (typeParamIndex != -1 && typeParamIndex < superTypeArgs.size()) {
                 ret = superTypeArgs.get(typeParamIndex);
                 return ret;
             }
