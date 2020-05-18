@@ -215,6 +215,6 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
 
     @Override
     public Type getDiscriminatorType() {
-        return null;
+        return StandardBasicTypes.STRING;
     }
 }
