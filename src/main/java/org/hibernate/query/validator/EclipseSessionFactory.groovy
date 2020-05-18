@@ -271,7 +271,10 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     static String qualifiedTypeName(type) {
-        return new String((char[]) type.qualifiedPackageName()) +
+        def pkgPart = new String((char[]) type.qualifiedPackageName());
+        if(pkgPart.isEmpty())
+          return new String((char[]) type.qualifiedSourceName())
+        return  pkgPart +
                 "." + new String((char[]) type.qualifiedSourceName())
     }
 

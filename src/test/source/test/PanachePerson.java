@@ -14,8 +14,10 @@ import io.quarkus.panache.common.Parameters;
 })
 public class PanachePerson extends PanacheEntity {
     public String name;
+    public String title;
     @Basic(optional=false)
     public Sex sex;
+    public boolean completed;
     
     public static PanachePerson findByName(String name) {
         return find("name", name).firstResult();
@@ -34,5 +36,7 @@ public class PanachePerson extends PanacheEntity {
 
         find("order by name");
         find("from Person");
+        String stef = "";
+        find("completed = 0 and title like ?1", "%"+stef+"%");
     }
 }
