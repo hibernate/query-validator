@@ -36,10 +36,10 @@ at org.hibernate.query.validator.Validation.validate(Validation.java:77)
 at org.hibernate.query.validator.JavacProcessor$1.checkPanacheQuery(JavacProcessor.java:97)
 at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java:374)
              */
-//        case "delete":
-//            return panacheDeleteQueryToHql(handler, targetType, panacheQl, offset, setParameterLabels);
-//        case "update":
-//            return panacheUpdateQueryToHql(handler, targetType, panacheQl, offset, setParameterLabels);
+        case "delete":
+            return panacheDeleteQueryToHql(handler, targetType, panacheQl, offset, setParameterLabels);
+        case "update":
+            return panacheUpdateQueryToHql(handler, targetType, panacheQl, offset, setParameterLabels);
         case "exists":
         case "count":
             ret = panacheCountQueryToHql(handler, targetType, panacheQl, offset, setParameterLabels);
