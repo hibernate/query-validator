@@ -81,7 +81,7 @@ shadowJar {
     relocate 'groovyjarjarasm', 'org.hibernate.query.validator.asm'
     relocate 'groovyjarjarcommonscli', 'org.hibernate.query.validator.cli'
     relocate 'groovyjarjarpicocli', 'org.hibernate.query.validator.picocli'
-    classifier = 'fatjar'
+    classifier = 'all'
 }
 
 publishing {
