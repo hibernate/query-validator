@@ -94,9 +94,8 @@ public class HQLValidationTest {
         assertTrue(errors.contains(name+".java:"+(start+5)+": warning: Missing required parameter for name"));
         assertTrue(errors.contains(name+".java:"+(start+6)+": warning: Missing required parameter for name"));
         assertTrue(errors.contains(name+".java:"+(start+7)+": warning: Missing required parameter for name"));
-        // FIXME: update/delete
-//        assertTrue(errors.contains(name+".java:"+(start+8)+": warning: Missing required parameter for name"));
-//        assertTrue(errors.contains(name+".java:"+(start+9)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+8)+": warning: Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java:"+(start+9)+": warning: Missing required parameter for name"));
         assertTrue(errors.contains(name+".java:"+(start+10)+": warning: Missing required parameter for name"));
         assertTrue(errors.contains(name+".java:"+(start+11)+": warning: Missing required parameter for name"));
         assertTrue(errors.contains(name+".java:"+(start+12)+": warning: Too many parameters for name"));
@@ -179,9 +178,8 @@ public class HQLValidationTest {
         assertTrue(errors.contains(name+".java (at line "+(start+5)+")") && errors.contains("Missing required parameter for name"));
         assertTrue(errors.contains(name+".java (at line "+(start+6)+")") && errors.contains("Missing required parameter for name"));
         assertTrue(errors.contains(name+".java (at line "+(start+7)+")") && errors.contains("Missing required parameter for name"));
-        // FIXME: update/delete
-//        assertTrue(errors.contains(name+".java (at line "+(start+8)+")") && errors.contains("Missing required parameter for name"));
-//        assertTrue(errors.contains(name+".java (at line "+(start+9)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+8)+")") && errors.contains("Missing required parameter for name"));
+        assertTrue(errors.contains(name+".java (at line "+(start+9)+")") && errors.contains("Missing required parameter for name"));
         assertTrue(errors.contains(name+".java (at line "+(start+10)+")") && errors.contains("Missing required parameter for name"));
         assertTrue(errors.contains(name+".java (at line "+(start+11)+")") && errors.contains("Missing required parameter for name"));
         assertTrue(errors.contains(name+".java (at line "+(start+12)+")") && errors.contains("Too many parameters for name"));
