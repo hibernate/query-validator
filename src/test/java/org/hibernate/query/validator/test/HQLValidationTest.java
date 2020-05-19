@@ -80,6 +80,8 @@ public class HQLValidationTest {
         assertTrue(errors.contains("BadQueries.java:56: error: expecting '''"));
         assertTrue(errors.contains("BadQueries.java:57: error: expecting '''"));
 
+        assertTrue(errors.contains("BadQueries.java:59: error: unexpected token: fromPerson"));
+
         assertPanacheErrors(errors, "PanacheBadPerson", 22);
         assertPanacheErrors(errors, "PanacheBadPersonRepository", 10);
     }
@@ -165,6 +167,8 @@ public class HQLValidationTest {
         assertTrue(errors.contains("expecting '''") && errors.contains("BadQueries.java (at line 56)"));
         assertTrue(errors.contains("expecting '''") && errors.contains("BadQueries.java (at line 57)"));
 
+        assertTrue(errors.contains("BadQueries.java (at line 59)"));
+
         assertPanacheErrorsEcj(errors, "PanacheBadPerson", 22);
         assertPanacheErrorsEcj(errors, "PanacheBadPersonRepository", 10);
     }
@@ -194,6 +198,8 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("expecting '''") && errors.contains("BadQueries.java (at line 56)"));
         assertTrue(errors.contains("expecting '''") && errors.contains("BadQueries.java (at line 57)"));
+
+        assertTrue(errors.contains("BadQueries.java (at line 59)"));
 
         forceEclipseForTesting = false;
     }

@@ -204,7 +204,8 @@ class EclipseProcessor extends AbstractProcessor {
                             break;
                         case "createQuery":
                             statement.arguments.each { arg ->
-                                if (arg.class.simpleName == "StringLiteral") {
+                                if (arg.class.simpleName == "StringLiteral"
+                                        || arg.class.simpleName == "ExtendedStringLiteral") {
                                     validateArgument(arg, true)
                                 }
                             }
@@ -216,6 +217,7 @@ class EclipseProcessor extends AbstractProcessor {
                                     setParameterLabels.add(parseInt(new String((char[])arg.source())))
                                     break
                                 case "StringLiteral":
+                                case "ExtendedStringLiteral":
                                     setParameterNames.add(new String((char[])arg.source()))
                                     break
                             }
@@ -310,7 +312,8 @@ class EclipseProcessor extends AbstractProcessor {
 
         def firstArgument(messageSend) {
             for (argument in messageSend.arguments) {
-                if (argument.class.simpleName == "StringLiteral") {
+                if (argument.class.simpleName == "StringLiteral" ||
+                        argument.class.simpleName == "ExtendedStringLiteral") {
                     return argument;
                 }
             }

@@ -55,6 +55,8 @@ public class BadQueries {
 
         createQuery("from Person p where p.fistName='gavin"); //error
         createQuery("from Person p where p.firstName='gavin"); //error
+
+        createQuery("from" + "Person"); //error missing space in concatenated query
     }
 
     private static Query createQuery(String s) { return new Query(); }

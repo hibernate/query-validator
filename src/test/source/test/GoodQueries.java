@@ -8,6 +8,7 @@ public class GoodQueries {
 
     public void goodQueries() {
         createQuery("from Person");
+        createQuery("from " + "Person" + " order by 1");
         createQuery("from test.Person"); //allowed by HQL
         createQuery("from Person p where lower(p.name)='gavin'");
         createQuery("from Employee p where p.name='gavin' and p.employeeId=111");
