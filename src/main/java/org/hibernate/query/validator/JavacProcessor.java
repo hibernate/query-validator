@@ -20,7 +20,6 @@ import javax.lang.model.util.Elements;
 import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
-import com.sun.tools.javac.code.Symbol;
 import org.hibernate.QueryException;
 import org.hibernate.dialect.Dialect;
 
