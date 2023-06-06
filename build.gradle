@@ -42,7 +42,7 @@ dependencies {
 }
 
 group = 'org.hibernate'
-version = '1.0-SNAPSHOT'
+version = '2.0-SNAPSHOT'
 description = 'query-validator'
 sourceCompatibility = '1.8'
 

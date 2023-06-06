@@ -218,7 +218,7 @@ public class HQLValidationTest {
         StringBuilder cp = new StringBuilder();
 
         if (System.getProperty("gradle")!=null) {
-            cp.append("build/libs/query-validator-1.0-SNAPSHOT.jar");
+            cp.append("build/libs/query-validator-2.0-SNAPSHOT.jar");
             cp.append(":build/classes/java/main:build/classes/groovy/main");
         }
         else {
@@ -270,12 +270,12 @@ public class HQLValidationTest {
         boolean useFatjar;
         if (System.getProperty("gradle")!=null) {
             useFatjar = forceEclipseForTesting
-                    && Files.exists(Paths.get("build/libs/query-validator-1.0-SNAPSHOT-all.jar"));
+                    && Files.exists(Paths.get("build/libs/query-validator-2.0-SNAPSHOT-all.jar"));
             if (useFatjar) {
-                cp.append("build/libs/query-validator-1.0-SNAPSHOT-all.jar");
+                cp.append("build/libs/query-validator-2.0-SNAPSHOT-all.jar");
             }
             else {
-                cp.append("build/libs/query-validator-1.0-SNAPSHOT.jar");
+                cp.append("build/libs/query-validator-2.0-SNAPSHOT.jar");
                 cp.append(":build/classes/java/main:build/classes/groovy/main");
             }
         }

@@ -12,10 +12,10 @@ Compile time validation for queries written in HQL, JPQL, and [Panache][].
 Type `./gradlew` from this project directory.
 
 This produces an artifact with the Maven coordinates 
-`org.hibernate:query-validator:1.0-SNAPSHOT` in your local
+`org.hibernate:query-validator:2.0-SNAPSHOT` in your local
 Maven repository.
 
-It also creates a far jar `query-validator-1.0-SNAPSHOT-all.jar`
+It also creates a far jar `query-validator-2.0-SNAPSHOT-all.jar`
 in the `build/libs` directory of this project.
 
 ## Usage
@@ -27,9 +27,9 @@ basic JPA metadata annotations like `@Entity`, `@ManyToOne`,
 mapping information like table and column names if that's what 
 you prefer.
 
-1. Put `query-validator-1.0-SNAPSHOT-all.jar` in the 
+1. Put `query-validator-2.0-SNAPSHOT-all.jar` in the 
    compile-time classpath of your project. (Or depend on
-   `org.hibernate:query-validator:1.0-SNAPSHOT`.)
+   `org.hibernate:query-validator:2.0-SNAPSHOT`.)
 2. Annotate a package or toplevel class with `@CheckHQL`.
 
 #### Usage with plain Hibernate or JPA
@@ -107,7 +107,7 @@ Just compile your code with `javac`, or even with ECJ
 (`java -jar ecj-4.6.1.jar`), with the query validator `jar` in 
 the classpath: 
 
-    -classpath query-validator-1.0-SNAPSHOT-all.jar
+    -classpath query-validator-2.0-SNAPSHOT-all.jar
 
 #### Gradle
 
@@ -115,8 +115,8 @@ Annoyingly, Gradle requires that the dependency on the query
 validator be declared *twice*:
 
     dependencies {
-        implementation 'org.hibernate:query-validator:1.0-SNAPSHOT'
-        annotationProcessor 'org.hibernate:query-validator:1.0-SNAPSHOT'
+        implementation 'org.hibernate:query-validator:2.0-SNAPSHOT'
+        annotationProcessor 'org.hibernate:query-validator:2.0-SNAPSHOT'
     }
 
 #### Maven
@@ -128,7 +128,7 @@ the dependency to the query validator.
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>query-validator</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>2.0-SNAPSHOT</version>
             <optional>true</optional>
         </dependency>
     <dependencies>
@@ -161,7 +161,7 @@ manually.
    processing**. 
 2. Then go to **Java Compiler > Annotation Processing > 
    Factory Path** and click **Add External JARs...** and
-   add `build/libs/query-validator-1.0-SNAPSHOT-all.jar` 
+   add `build/libs/query-validator-2.0-SNAPSHOT-all.jar` 
    from this project directory.
 
 Your project properties should look like this:
