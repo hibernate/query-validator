@@ -357,7 +357,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private static String propertyName(def symbol) {
-        if (symbol.class.simpleName == "MethodBinding") {
+        if (symbol.getClass().simpleName == "MethodBinding") {
             String name = simpleMethodName(symbol)
             if (name.startsWith("get")) {
                 name = name.substring(3)
@@ -367,7 +367,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
             }
             return Introspector.decapitalize(name)
         }
-        else if (symbol.class.simpleName == "FieldBinding") {
+        else if (symbol.getClass().simpleName == "FieldBinding") {
             return simpleVariableName(symbol)
         }
         else {
@@ -379,14 +379,14 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         if (isStatic(member) || isTransient(member)) {
             return false
         }
-        else if (member.class.simpleName == "FieldBinding") {
-            return accessType == AccessType.FIELD ||
-                    hasAnnotation(member, jpa("Access"))
+        else if (member.getClass().simpleName == "FieldBinding") {
+            return accessType == AccessType.FIELD
+                || hasAnnotation(member, jpa("Access"))
         }
-        else if (member.class.simpleName == "MethodBinding") {
-            return isGetterMethod(member) &&
-                    (accessType == AccessType.PROPERTY ||
-                            hasAnnotation(member, jpa("Access")))
+        else if (member.getClass().simpleName == "MethodBinding") {
+            return isGetterMethod(member)
+                && (accessType == AccessType.PROPERTY
+                    || hasAnnotation(member, jpa("Access")))
         }
         else {
             return false
@@ -399,15 +399,15 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         }
         String methodName = simpleMethodName(method)
         def returnType = method.returnType
-        return methodName.startsWith("get") && returnType.id != 6 ||
-                methodName.startsWith("is") && returnType.id == 5
+        return methodName.startsWith("get") && returnType.id != 6
+            || methodName.startsWith("is") && returnType.id == 5
     }
 
     private static def getMemberType(binding) {
-        if (binding.class.simpleName == "MethodBinding") {
+        if (binding.getClass().simpleName == "MethodBinding") {
             return binding.returnType
         }
-        else if (binding.class.simpleName == "FieldBinding") {
+        else if (binding.getClass().simpleName == "FieldBinding") {
             return binding.type
         }
         else {
@@ -678,8 +678,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private static boolean missing(type) {
-        return type.class.simpleName == "MissingTypeBinding" ||
-                type.class.simpleName == "ProblemReferenceBinding"
+        return type.getClass().simpleName == "MissingTypeBinding"
+            || type.getClass().simpleName == "ProblemReferenceBinding"
     }
 
 }

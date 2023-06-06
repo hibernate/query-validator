@@ -1,5 +1,6 @@
 package org.hibernate.query.validator;
 
+import static com.sun.tools.javac.resources.CompilerProperties.Warnings.ProcMessager;
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 import static org.hibernate.query.validator.Validation.validate;
@@ -74,9 +75,9 @@ public class JavacProcessor extends AbstractProcessor {
             TypeElement panacheEntity = PanacheUtils.isPanache(element, processingEnv.getTypeUtils(), elementUtils);
             if (tree != null) {
                 tree.accept(new TreeScanner() {
-                    Set<Integer> setParameterLabels = new HashSet<>();
-                    Set<String> setParameterNames = new HashSet<>();
-                    Set<String> setOrderBy = new HashSet<>();
+                    final Set<Integer> setParameterLabels = new HashSet<>();
+                    final Set<String> setParameterNames = new HashSet<>();
+                    final Set<String> setOrderBy = new HashSet<>();
                     boolean immediatelyCalled;
 
                     private void check(JCTree.JCLiteral jcLiteral, String hql,
@@ -380,8 +381,8 @@ public class JavacProcessor extends AbstractProcessor {
 
         private static final String KEY = "proc.messager";
 
-        private Log log;
-        private JCTree.JCLiteral literal;
+        private final Log log;
+        private final JCTree.JCLiteral literal;
 
         ErrorReporter(JCTree.JCLiteral literal, Element element) {
             this.literal = literal;
@@ -412,7 +413,8 @@ public class JavacProcessor extends AbstractProcessor {
 
         @Override
         public void warn(int start, int end, String message) {
-            log.warning(literal.pos + start, KEY, message);
+
+            log.warning(literal.pos + start, ProcMessager(message));
         }
 
         @Override
@@ -422,12 +424,12 @@ public class JavacProcessor extends AbstractProcessor {
 
         @Override
         public void reportError(String text) {
-            log.error(literal, KEY, text);
+            log.error(literal.pos, KEY, text);
         }
 
         @Override
         public void reportWarning(String text) {
-            log.warning(literal, KEY, text);
+            log.warning(literal.pos, ProcMessager(text));
         }
 
     }

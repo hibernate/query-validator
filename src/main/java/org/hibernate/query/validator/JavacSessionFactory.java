@@ -38,7 +38,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                         ParseErrorHandler handler,
                         JavacProcessingEnvironment processingEnv) {
         super(functionWhitelist, handler);
-        Context context = processingEnv.getContext();
+        final Context context = processingEnv.getContext();
         names = Names.instance(context);
         types = Types.instance(context);
         syms = Symtab.instance(context);
@@ -140,8 +140,8 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     }
 
     public static abstract class Component implements CompositeUserType {
-        private String[] propertyNames;
-        private Type[] propertyTypes;
+        private final String[] propertyNames;
+        private final Type[] propertyTypes;
         Symbol.TypeSymbol type;
 
         public Component(Symbol.TypeSymbol type,
@@ -157,8 +157,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                     AccessType accessType =
                             getAccessType(type, defaultAccessType);
                     for (Symbol member: type.members()
-                            .getElements(symbol
-                                    -> isPersistable(symbol, accessType))) {
+                            .getSymbols(symbol -> isPersistable(symbol, accessType))) {
                         String name = propertyName(member);
                         Type propertyType =
                                 propertyType(member, entityName,
@@ -273,12 +272,11 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
             Symbol.ClassSymbol type = findClassByQualifiedName(entityName);
             return isEntity(type) ? type : null;
         }
-        for (Symbol.PackageSymbol pack:
-                new ArrayList<>(syms.packages.values())) {
+        for (Symbol pack: syms.unnamedModule.members()
+                .getSymbols(symbol -> symbol instanceof Symbol.PackageSymbol)) {
             try {
                 for (Symbol type: pack.members()
-                        .getElements(symbol ->
-                                isMatchingEntity(symbol, entityName))) {
+                        .getSymbols(symbol -> isMatchingEntity(symbol, entityName))) {
                     return (Symbol.ClassSymbol) type;
                 }
             }
@@ -306,8 +304,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                 AccessType accessType =
                         getAccessType(type, defaultAccessType);
                 for (Symbol member: type.members()
-                        .getElements(symbol -> isMatchingProperty(
-                                symbol, propertyName, accessType))) {
+                        .getSymbols(symbol -> isMatchingProperty(symbol, propertyName, accessType))) {
                     return member;
                 }
             }
@@ -518,7 +515,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     boolean isFieldDefined(String qualifiedClassName, String fieldName) {
         Symbol.ClassSymbol type = findClassByQualifiedName(qualifiedClassName);
         return type != null
-                && type.members().lookup(names.fromString(fieldName)).sym != null;
+            && type.members().findFirst( names.fromString(fieldName) ) != null;
     }
 
     @Override
@@ -526,7 +523,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                                  List<org.hibernate.type.Type> argumentTypes) {
         Symbol.ClassSymbol symbol = findClassByQualifiedName(qualifiedClassName);
         if (symbol==null) return false;
-        for (Symbol cons: symbol.members().getElements(Symbol::isConstructor)) {
+        for (Symbol cons: symbol.members().getSymbols(Symbol::isConstructor)) {
             Symbol.MethodSymbol constructor = (Symbol.MethodSymbol) cons;
             if (constructor.params.length()==argumentTypes.size()) {
                 boolean argumentsCheckOut = true;
@@ -611,13 +608,13 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     }
 
     private Symbol.ClassSymbol findClassByQualifiedName(String path) {
-        return syms.classes.get(names.fromString(path));
+        return syms.getClass(null, names.fromString(path));
     }
 
     private static AccessType getDefaultAccessType(Symbol.TypeSymbol type) {
         //iterate up the superclass hierarchy
         while (type instanceof Symbol.ClassSymbol) {
-            for (Symbol member: type.members().getElements()) {
+            for (Symbol member: type.members().getSymbols()) {
                 if (isId(member)) {
                     return member instanceof Symbol.MethodSymbol ?
                             AccessType.PROPERTY : AccessType.FIELD;

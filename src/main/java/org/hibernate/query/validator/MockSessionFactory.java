@@ -17,6 +17,7 @@ import org.hibernate.engine.spi.Mapping;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.graph.spi.RootGraphImplementor;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
+import org.hibernate.internal.FastSessionServices;
 import org.hibernate.internal.TypeLocatorImpl;
 import org.hibernate.metamodel.internal.MetamodelImpl;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
@@ -245,6 +246,11 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
     @Override
     public CurrentTenantIdentifierResolver getCurrentTenantIdentifierResolver() {
         return options.getCurrentTenantIdentifierResolver();
+    }
+
+    @Override
+    public FastSessionServices getFastSessionServices() {
+        throw new UnsupportedOperationException();
     }
 
     @Override
