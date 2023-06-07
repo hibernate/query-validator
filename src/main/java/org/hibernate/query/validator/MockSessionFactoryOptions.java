@@ -15,6 +15,9 @@ import java.util.Map;
 
 import static java.util.Collections.emptyMap;
 
+/**
+ * @author Gavin King
+ */
 public abstract class MockSessionFactoryOptions implements SessionFactoryOptions {
 
     private static final SessionFactoryObserver[] NO_OBSERVERS = new SessionFactoryObserver[0];

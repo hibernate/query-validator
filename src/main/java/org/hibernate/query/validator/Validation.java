@@ -8,6 +8,7 @@ import antlr.TokenStreamException;
 import antlr.collections.AST;
 import org.hibernate.HibernateException;
 import org.hibernate.QueryException;
+import org.hibernate.dialect.Dialect;
 import org.hibernate.hql.internal.antlr.HqlBaseLexer;
 import org.hibernate.hql.internal.antlr.HqlTokenTypes;
 import org.hibernate.hql.internal.ast.*;
@@ -29,6 +30,9 @@ import static java.util.stream.Stream.concat;
 import static org.hibernate.internal.util.StringHelper.qualifier;
 import static org.hibernate.internal.util.StringHelper.unqualify;
 
+/**
+ * @author Gavin King
+ */
 class Validation {
 
     interface Handler extends ParseErrorHandler {
@@ -72,7 +76,12 @@ class Validation {
 
                 HqlSqlWalker walker = new HqlSqlWalker(
                         new QueryTranslatorImpl("", hql, emptyMap(), factory),
-                        factory, parser, emptyMap(), null);
+                        factory, parser, emptyMap(), null) {
+                    @Override
+                    public Dialect getDialect() {
+                        return factory.getDialect();
+                    }
+                };
                 walker.setASTFactory(new SqlASTFactory(walker) {
                     @Override
                     public Class<?> getASTNodeType(int tokenType) {
@@ -230,9 +239,20 @@ class Validation {
     }
 
 
-    private static void setHandler(Object object, ParseErrorHandler handler) {
+    private static void setHandler(HqlParser object, ParseErrorHandler handler) {
         try {
-            Field field = object.getClass().getDeclaredField("parseErrorHandler");
+            Field field = HqlParser.class.getDeclaredField("parseErrorHandler");
+            field.setAccessible(true);
+            field.set(object, handler);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void setHandler(HqlSqlWalker object, ParseErrorHandler handler) {
+        try {
+            Field field = HqlSqlWalker.class.getDeclaredField("parseErrorHandler");
             field.setAccessible(true);
             field.set(object, handler);
         }

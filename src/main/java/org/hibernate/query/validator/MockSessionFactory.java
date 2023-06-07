@@ -35,6 +35,9 @@ import java.util.stream.Collectors;
 import static java.util.Collections.*;
 import static org.hibernate.internal.util.StringHelper.isEmpty;
 
+/**
+ * @author Gavin King
+ */
 public abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     private static final SessionFactoryOptions options = Mocker.nullary(MockSessionFactoryOptions.class).get();
@@ -252,6 +255,8 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
     public FastSessionServices getFastSessionServices() {
         throw new UnsupportedOperationException();
     }
+
+
 
     @Override
     public SQLFunctionRegistry getSqlFunctionRegistry() {

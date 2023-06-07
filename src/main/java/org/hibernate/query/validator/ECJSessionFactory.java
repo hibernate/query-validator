@@ -17,6 +17,9 @@ import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.hibernate.internal.util.StringHelper.*;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 
+/**
+ * @author Gavin King
+ */
 public abstract class ECJSessionFactory extends MockSessionFactory {
 
     private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class);

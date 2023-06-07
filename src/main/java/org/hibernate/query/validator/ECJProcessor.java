@@ -55,6 +55,8 @@ import antlr.RecognitionException;
  * for ECJ.
  *
  * @see CheckHQL
+ *
+ * @author Gavin King
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
 public class ECJProcessor extends AbstractProcessor {

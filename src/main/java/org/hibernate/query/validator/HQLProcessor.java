@@ -12,6 +12,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Set;
 
+/**
+ * @author Gavin King
+ */
 @SupportedAnnotationTypes("*")
 public class HQLProcessor extends AbstractProcessor {
 

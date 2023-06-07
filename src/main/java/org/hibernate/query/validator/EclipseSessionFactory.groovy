@@ -11,6 +11,9 @@ import static java.util.Arrays.stream
 import static org.hibernate.internal.util.StringHelper.*
 import static org.hibernate.query.validator.HQLProcessor.jpa
 
+/**
+ * @author Gavin King
+ */
 abstract class EclipseSessionFactory extends MockSessionFactory {
 
     private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class)

@@ -1,12 +1,20 @@
 package org.hibernate.query.validator;
 
-import com.sun.tools.javac.code.*;
+import com.sun.tools.javac.code.Flags;
+import com.sun.tools.javac.code.Symbol;
+import com.sun.tools.javac.code.Symtab;
+import com.sun.tools.javac.code.TypeTag;
+import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
 import org.hibernate.hql.internal.ast.ParseErrorHandler;
+import org.hibernate.type.BasicType;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.CompositeCustomType;
+import org.hibernate.type.EntityType;
+import org.hibernate.type.PrimitiveType;
 import org.hibernate.type.Type;
-import org.hibernate.type.*;
 import org.hibernate.usertype.CompositeUserType;
 
 import javax.lang.model.element.AnnotationMirror;
@@ -16,13 +24,20 @@ import javax.lang.model.type.TypeKind;
 import javax.persistence.AccessType;
 import java.beans.Introspector;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import static java.util.Arrays.stream;
-import static org.hibernate.internal.util.StringHelper.*;
+import static org.hibernate.internal.util.StringHelper.qualify;
+import static org.hibernate.internal.util.StringHelper.root;
+import static org.hibernate.internal.util.StringHelper.split;
+import static org.hibernate.internal.util.StringHelper.unroot;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 
+/**
+ * @author Gavin King
+ */
 public abstract class JavacSessionFactory extends MockSessionFactory {
 
     private static final Mocker<Component> component = Mocker.variadic(Component.class);
@@ -272,8 +287,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
             Symbol.ClassSymbol type = findClassByQualifiedName(entityName);
             return isEntity(type) ? type : null;
         }
-        for (Symbol pack: syms.unnamedModule.members()
-                .getSymbols(symbol -> symbol instanceof Symbol.PackageSymbol)) {
+        for (Symbol pack: syms.unnamedModule.enclosedPackages) {
             try {
                 for (Symbol type: pack.members()
                         .getSymbols(symbol -> isMatchingEntity(symbol, entityName))) {
@@ -318,7 +332,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     private static boolean isMatchingProperty(Symbol symbol, String propertyName,
                                               AccessType accessType) {
         return isPersistable(symbol, accessType)
-                && propertyName.equals(propertyName(symbol));
+            && propertyName.equals(propertyName(symbol));
     }
 
     private static boolean isGetterMethod(Symbol.MethodSymbol method) {
@@ -328,7 +342,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         String methodName = method.name.toString();
         TypeTag returnType = method.getReturnType().getTag();
         return methodName.startsWith("get") && returnType != TypeTag.VOID
-                || methodName.startsWith("is") && returnType == TypeTag.BOOLEAN;
+            || methodName.startsWith("is") && returnType == TypeTag.BOOLEAN;
     }
 
     private static boolean hasAnnotation(Symbol member, String annotationName) {
@@ -342,6 +356,16 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                 return mirror;
             }
         }
+        if (annotationName.startsWith("javax.persistence")) {
+            annotationName = annotationName.replace("javax", "jakarta");
+            for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
+                if (qualifiedName((com.sun.tools.javac.code.Type.ClassType) mirror.getAnnotationType())
+                        .equals(annotationName)) {
+                    return mirror;
+                }
+            }
+        }
+
         return null;
     }
 
@@ -357,13 +381,13 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
 
     private static boolean isMappedClass(Symbol.TypeSymbol type) {
         return hasAnnotation(type, jpa("Entity"))
-                || hasAnnotation(type, jpa("Embeddable"))
-                || hasAnnotation(type, jpa("MappedSuperclass"));
+            || hasAnnotation(type, jpa("Embeddable"))
+            || hasAnnotation(type, jpa("MappedSuperclass"));
     }
 
     private static boolean isEntity(Symbol.TypeSymbol member) {
         return member instanceof Symbol.ClassSymbol
-                && hasAnnotation(member, jpa("Entity"));
+            && hasAnnotation(member, jpa("Entity"));
     }
 
     private static boolean isId(Symbol member) {
@@ -372,7 +396,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
 
     private static boolean isTransient(Symbol member) {
         return hasAnnotation(member, jpa("Transient"))
-                || (member.flags() & Flags.TRANSIENT)!=0;
+            || (member.flags() & Flags.TRANSIENT)!=0;
     }
 
     private static boolean isEmbeddableType(Symbol.TypeSymbol type) {
@@ -381,7 +405,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
 
     private static boolean isEmbeddedProperty(Symbol member) {
         return hasAnnotation(member, jpa("Embedded"))
-                || hasAnnotation(member.type.tsym, jpa("Embeddable"));
+            || hasAnnotation(member.type.tsym, jpa("Embeddable"));
     }
 
     private static boolean isElementCollectionProperty(Symbol member) {
@@ -390,12 +414,12 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
 
     private static boolean isToOneAssociation(Symbol member) {
         return hasAnnotation(member, jpa("ManyToOne"))
-                || hasAnnotation(member, jpa("OneToOne"));
+            || hasAnnotation(member, jpa("OneToOne"));
     }
 
     private static boolean isToManyAssociation(Symbol member) {
         return hasAnnotation(member, jpa("ManyToMany"))
-                || hasAnnotation(member, jpa("OneToMany"));
+            || hasAnnotation(member, jpa("OneToMany"));
     }
 
     private static AnnotationMirror toOneAnnotation(Symbol member) {
@@ -501,7 +525,8 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                 jpa("ElementCollection"));
         com.sun.tools.javac.code.Type classType = (com.sun.tools.javac.code.Type)
                 getAnnotationMember(annotation, "getElementCollectionClass");
-        return classType == null || classType.getKind() == TypeKind.VOID ?
+        return classType == null
+            || classType.getKind() == TypeKind.VOID ?
                 getCollectionElementType(property) :
                 classType;
     }
@@ -608,7 +633,8 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     }
 
     private Symbol.ClassSymbol findClassByQualifiedName(String path) {
-        return syms.getClass(null, names.fromString(path));
+        Iterator<Symbol.ClassSymbol> it = syms.getClassesForName(names.fromString(path)).iterator();
+        return it.hasNext() ? it.next() : null;
     }
 
     private static AccessType getDefaultAccessType(Symbol.TypeSymbol type) {
@@ -649,11 +675,11 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         }
         else if (member instanceof Symbol.VarSymbol) {
             return accessType == AccessType.FIELD
-                    || hasAnnotation(member, jpa("Access"));
+                || hasAnnotation(member, jpa("Access"));
         }
         else if (member instanceof Symbol.MethodSymbol) {
             return isGetterMethod((Symbol.MethodSymbol) member)
-                    && (accessType == AccessType.PROPERTY
+                && (accessType == AccessType.PROPERTY
                     || hasAnnotation(member, jpa("Access")));
         }
         else {

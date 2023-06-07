@@ -21,6 +21,8 @@ import static org.hibernate.query.validator.Validation.validate
  * for Eclipse.
  *
  * @see CheckHQL
+ *
+ * @author Gavin King
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
 class EclipseProcessor extends AbstractProcessor {
