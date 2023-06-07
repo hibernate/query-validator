@@ -187,6 +187,7 @@ class EclipseProcessor extends AbstractProcessor {
                     switch (name) {
                         case "getResultList":
                         case "getSingleResult":
+                        case "getSingleResultOrNull":
                             immediatelyCalled = true
                             break
                         case "count":
@@ -213,6 +214,8 @@ class EclipseProcessor extends AbstractProcessor {
                             }
                             break;
                         case "createQuery":
+                        case "createSelectionQuery":
+                        case "createMutationQuery":
                             statement.arguments.each { arg ->
                                 if (arg.getClass().simpleName == "StringLiteral"
                                         || arg.getClass().simpleName == "ExtendedStringLiteral") {

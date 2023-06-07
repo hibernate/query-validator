@@ -183,6 +183,7 @@ public class JavacChecker {
 						switch (name) {
 							case "getResultList":
 							case "getSingleResult":
+							case "getSingleResultOrNull":
 								immediatelyCalled = true;
 								super.visitApply(jcMethodInvocation);
 								immediatelyCalled = false;
@@ -220,6 +221,8 @@ public class JavacChecker {
 								super.visitApply(jcMethodInvocation); //needed!
 								break;
 							case "createQuery":
+							case "createSelectionQuery":
+							case "createMutationQuery":
 								JCTree.JCLiteral queryArg = firstArgument(jcMethodInvocation);
 								if (queryArg != null && queryArg.value instanceof String) {
 									String hql = (String) queryArg.value;
