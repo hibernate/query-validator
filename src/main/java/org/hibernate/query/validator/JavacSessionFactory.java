@@ -356,8 +356,8 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                 return mirror;
             }
         }
-        if (annotationName.startsWith("javax.persistence")) {
-            annotationName = annotationName.replace("javax", "jakarta");
+        if (annotationName.startsWith(new StringBuilder("javax.").append("persistence.").toString())) {
+            annotationName = "jakarta" + annotationName.substring(5);
             for (AnnotationMirror mirror : member.getAnnotationMirrors()) {
                 if (qualifiedName((com.sun.tools.javac.code.Type.ClassType) mirror.getAnnotationType())
                         .equals(annotationName)) {
