@@ -1,7 +1,6 @@
 package org.hibernate.query.validator;
 
 import static java.lang.Integer.parseInt;
-import static java.util.Collections.emptyList;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
@@ -11,9 +10,8 @@ import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 import static org.hibernate.query.validator.Validation.validate;
 
-import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
@@ -22,6 +20,13 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
 
+import org.antlr.v4.runtime.LexerNoViableAltException;
+import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.atn.ATNConfigSet;
+import org.antlr.v4.runtime.dfa.DFA;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.internal.compiler.ASTVisitor;
 import org.eclipse.jdt.internal.compiler.CompilationResult;
@@ -37,18 +42,11 @@ import org.eclipse.jdt.internal.compiler.ast.SingleNameReference;
 import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
 import org.eclipse.jdt.internal.compiler.ast.ThisReference;
 import org.eclipse.jdt.internal.compiler.ast.TypeDeclaration;
-import org.eclipse.jdt.internal.compiler.impl.StringConstant;
 import org.eclipse.jdt.internal.compiler.lookup.AnnotationBinding;
-import org.eclipse.jdt.internal.compiler.lookup.BinaryTypeBinding;
 import org.eclipse.jdt.internal.compiler.lookup.Binding;
 import org.eclipse.jdt.internal.compiler.lookup.BlockScope;
-import org.eclipse.jdt.internal.compiler.lookup.ElementValuePair;
 import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
 import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
-import org.hibernate.QueryException;
-import org.hibernate.dialect.Dialect;
-
-import antlr.RecognitionException;
 
 /**
  * Annotation processor that validates HQL and JPQL queries
@@ -78,7 +76,7 @@ public class ECJProcessor extends AbstractProcessor {
     private void checkHQL(CompilationUnitDeclaration unit, Compiler compiler) {
         for (TypeDeclaration type : unit.types) {
             if (isCheckable(type.binding, unit)) {
-                List<String> whitelist = getWhitelist(type.binding, unit, compiler);
+//                List<String> whitelist = getWhitelist(type.binding, unit, compiler);
                 Elements elements = processingEnv.getElementUtils();
                 TypeElement typeElement = elements.getTypeElement(qualifiedName(type.binding));
                 TypeElement panacheEntity = PanacheUtils.isPanache(typeElement, processingEnv.getTypeUtils(), elements);
@@ -187,7 +185,7 @@ public class ECJProcessor extends AbstractProcessor {
                         ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
-                                sessionFactory.make(whitelist, handler, unit));
+                                sessionFactory.make(unit));
                     }
                     
                     void checkPanacheQuery(StringLiteral stringLiteral, String targetType, String methodName, String panacheQl, Expression[] args) {
@@ -200,7 +198,7 @@ public class ECJProcessor extends AbstractProcessor {
                             return;
                         validate(hql, true,
                                  setParameterLabels, setParameterNames, handler,
-                                 sessionFactory.make(whitelist, handler, unit), offset[0]);
+                                 sessionFactory.make(unit), offset[0]);
                     }
 
                     private void collectPanacheArguments(Expression[] args) {
@@ -297,45 +295,35 @@ public class ECJProcessor extends AbstractProcessor {
     private static boolean isCheckable(TypeBinding type, CompilationUnitDeclaration unit) {
         return getCheckAnnotation(type, unit)!=null;
     }
-
-    private static List<String> getWhitelist(TypeBinding type,
-                                             CompilationUnitDeclaration unit,
-                                             Compiler compiler) {
-        ElementValuePair[] members =
-                getCheckAnnotation(type, unit).getElementValuePairs();
-        if (members==null || members.length==0) {
-            return emptyList();
-        }
-        List<String> names = new ArrayList<>();
-        for (ElementValuePair pair: members) {
-            Object value = pair.value;
-            if (value instanceof Object[]) {
-                for (Object literal : (Object[]) value) {
-                    if (literal instanceof StringConstant) {
-                        names.add(((StringConstant) literal).stringValue());
-                    }
-                }
-            }
-            else if (value instanceof StringConstant) {
-                names.add(((StringConstant) value).stringValue());
-            }
-            else if (value instanceof BinaryTypeBinding) {
-                String name = qualifiedName((BinaryTypeBinding) value);
-                Dialect dialect;
-                try {
-                    dialect = (Dialect) Class.forName(name).newInstance();
-                }
-                catch (Exception e) {
-                    //TODO: this error doesn't have location info!!
-                    new ErrorReporter(null, unit, compiler)
-                            .reportError("could not create dialect " + name);
-                    continue;
-                }
-                names.addAll(dialect.getFunctions().keySet());
-            }
-        }
-        return names;
-    }
+//
+//    private static List<String> getWhitelist(TypeBinding type,
+//                                             CompilationUnitDeclaration unit,
+//                                             Compiler compiler) {
+//        ElementValuePair[] members =
+//                getCheckAnnotation(type, unit).getElementValuePairs();
+//        if (members==null || members.length==0) {
+//            return emptyList();
+//        }
+//        List<String> names = new ArrayList<>();
+//        for (ElementValuePair pair: members) {
+//            Object value = pair.value;
+//            if (value instanceof Object[]) {
+//                for (Object literal : (Object[]) value) {
+//                    if (literal instanceof StringConstant) {
+//                        names.add(((StringConstant) literal).stringValue());
+//                    }
+//                }
+//            }
+//            else if (value instanceof StringConstant) {
+//                names.add(((StringConstant) value).stringValue());
+//            }
+//            else if (value instanceof BinaryTypeBinding) {
+////                String name = qualifiedName((BinaryTypeBinding) value);
+//                names.addAll(MockSessionFactory.functionRegistry.getValidFunctionKeys());
+//            }
+//        }
+//        return names;
+//    }
 
     private static AnnotationBinding getCheckAnnotation(TypeBinding type,
                                                         CompilationUnitDeclaration unit) {
@@ -352,9 +340,9 @@ public class ECJProcessor extends AbstractProcessor {
 
     static class ErrorReporter implements Validation.Handler {
 
-        private ASTNode node;
-        private CompilationUnitDeclaration unit;
-        private Compiler compiler;
+        private final ASTNode node;
+        private final CompilationUnitDeclaration unit;
+        private final Compiler compiler;
 
         ErrorReporter(ASTNode node,
                       CompilationUnitDeclaration unit,
@@ -365,12 +353,54 @@ public class ECJProcessor extends AbstractProcessor {
         }
 
         @Override
-        public int getErrorCount() {
-            return 0;
+        public void syntaxError(Recognizer<?, ?> recognizer, Object symbol, int line, int charInLine, String message, RecognitionException e) {
+            CompilationResult result = unit.compilationResult();
+            char[] fileName = result.fileName;
+            int[] lineEnds = result.getLineSeparatorPositions();
+            int startIndex;
+            int stopIndex;
+            int lineNum = getLineNumber(node.sourceStart, lineEnds, 0, lineEnds.length - 1);
+            Token offendingToken = e.getOffendingToken();
+            if ( offendingToken != null ) {
+                startIndex = offendingToken.getStartIndex();
+                stopIndex = offendingToken.getStopIndex();
+            }
+            else if ( e instanceof LexerNoViableAltException ) {
+                startIndex = ((LexerNoViableAltException) e).getStartIndex();
+                stopIndex = startIndex;
+            }
+            else {
+                startIndex = lineEnds[line-1] + charInLine;
+                stopIndex = startIndex;
+            }
+            int startPosition = node.sourceStart + startIndex + 1;
+            int endPosition = node.sourceStart + stopIndex + 1;
+            if ( endPosition < startPosition ) {
+                endPosition = startPosition;
+            }
+            CategorizedProblem problem =
+                    compiler.problemReporter.problemFactory
+                            .createProblem(fileName, 0,
+                                    new String[]{message},
+                                    new String[]{message},
+                                    ProblemSeverities.Error,
+                                    startPosition,
+                                    endPosition,
+                                    lineNum+line-1, -1);
+            compiler.problemReporter.record(problem, result, unit, true);
         }
 
         @Override
-        public void throwQueryException() throws QueryException {}
+        public void reportAmbiguity(Parser parser, DFA dfa, int i, int i1, boolean b, BitSet bitSet, ATNConfigSet atnConfigSet) {
+        }
+
+        @Override
+        public void reportAttemptingFullContext(Parser parser, DFA dfa, int i, int i1, BitSet bitSet, ATNConfigSet atnConfigSet) {
+        }
+
+        @Override
+        public void reportContextSensitivity(Parser parser, DFA dfa, int i, int i1, int i2, ATNConfigSet atnConfigSet) {
+        }
 
         @Override
         public void error(int start, int end, String message) {
@@ -415,22 +445,6 @@ public class ECJProcessor extends AbstractProcessor {
                                     lineNumber, columnNumber);
             compiler.problemReporter.record(problem, result, unit, true);
         }
-
-        @Override
-        public void reportError(RecognitionException e) {
-            report(ProblemSeverities.Error, e.getMessage(), e.getColumn(), -1);
-        }
-
-        @Override
-        public void reportError(String text) {
-            report(ProblemSeverities.Error, text, 1, -1);
-        }
-
-        @Override
-        public void reportWarning(String text) {
-            report(ProblemSeverities.Warning, text, 1, -1);
-        }
-
     }
 
 }

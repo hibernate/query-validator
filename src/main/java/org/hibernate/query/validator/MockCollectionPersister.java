@@ -12,6 +12,8 @@ import java.io.Serializable;
 
 import static org.hibernate.internal.util.StringHelper.root;
 
+import static org.hibernate.query.validator.MockSessionFactory.typeConfiguration;
+
 /**
  * @author Gavin King
  */
@@ -20,11 +22,11 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     private static final String[] ID_COLUMN = {"id"};
     private static final String[] INDEX_COLUMN = {"pos"};
 
-    private String role;
-    private SessionFactoryImplementor factory;
-    private CollectionType collectionType;
-    private String ownerEntityName;
-    private Type elementType;
+    private final String role;
+    private final SessionFactoryImplementor factory;
+    private final CollectionType collectionType;
+    private final String ownerEntityName;
+    private final Type elementType;
 
     public MockCollectionPersister(String role, CollectionType collectionType,
                             Type elementType,
@@ -48,11 +50,6 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     @Override
     public String getName() {
         return role;
-    }
-
-    @Override
-    public Type getType() {
-        return getElementType();
     }
 
     @Override
@@ -94,10 +91,10 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     @Override
     public Type getIndexType() {
         if (collectionType instanceof ListType) {
-            return IntegerType.INSTANCE;
+            return typeConfiguration.getBasicTypeForJavaType(Integer.class);
         }
         else if (collectionType instanceof MapType) {
-            return StringType.INSTANCE; //TODO!!!
+            return typeConfiguration.getBasicTypeForJavaType(String.class); //TODO!!!
         }
         else {
             return null;
@@ -111,7 +108,7 @@ public abstract class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public Type getIdentifierType() {
-        return IntegerType.INSTANCE;
+        return typeConfiguration.getBasicTypeForJavaType(Long.class);
     }
 
     @Override
@@ -149,11 +146,6 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     @Override
     public String getMappedByProperty() {
         return null;
-    }
-
-    @Override
-    public CollectionPersister getCollectionPersister() {
-        return this;
     }
 
     @Override
@@ -204,11 +196,6 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     @Override
     public boolean consumesCollectionAlias() {
         return true;
-    }
-
-    @Override
-    public String[] toColumns(String alias, String propertyName) {
-        return new String[] {""};
     }
 
     @Override

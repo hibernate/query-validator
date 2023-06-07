@@ -8,13 +8,11 @@ import com.sun.tools.javac.code.Attribute;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeScanner;
-import org.hibernate.dialect.Dialect;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
-import javax.tools.Diagnostic;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +35,7 @@ public class JavacChecker {
 	void checkHQL(Element element) {
 		Elements elementUtils = javacProcessor.getProcessingEnv().getElementUtils();
 		if (isCheckable(element) || isCheckable(element.getEnclosingElement())) {
-			List<String> whitelist = getWhitelist(element);
+//			List<String> whitelist = getWhitelist(element);
 			JCTree tree = ((JavacElements) elementUtils).getTree(element);
 			TypeElement panacheEntity = PanacheUtils.isPanache(element, javacProcessor.getProcessingEnv().getTypeUtils(), elementUtils);
 			if (tree != null) {
@@ -52,7 +50,7 @@ public class JavacChecker {
 						ErrorReporter handler = new ErrorReporter(javacProcessor, jcLiteral, element);
 						validate(hql, inCreateQueryMethod && immediatelyCalled,
 								setParameterLabels, setParameterNames, handler,
-								JavacProcessor.sessionFactory.make(whitelist, handler, javacProcessor.getProcessingEnv()));
+								JavacProcessor.sessionFactory.make(javacProcessor.getProcessingEnv()));
 					}
 
 					private void checkPanacheQuery(JCTree.JCLiteral jcLiteral, String targetType, String methodName, String panacheQl,
@@ -66,7 +64,8 @@ public class JavacChecker {
 							return;
 						validate(hql, true,
 								setParameterLabels, setParameterNames, handler,
-								JavacProcessor.sessionFactory.make(whitelist, handler, javacProcessor.getProcessingEnv()), offset[0]);
+								JavacProcessor.sessionFactory.make(javacProcessor.getProcessingEnv()),
+								offset[0]);
 					}
 
 					private void collectPanacheArguments(com.sun.tools.javac.util.List<JCTree.JCExpression> args) {
@@ -309,16 +308,7 @@ public class JavacChecker {
 						case "dialect":
 							if (act instanceof Attribute.Class) {
 								String name = act.getValue().toString().replace(".class","");
-								try {
-									Dialect dialect = (Dialect) Class.forName(name).newInstance();
-									list.addAll(dialect.getFunctions().keySet());
-								}
-								catch (Exception e2) {
-									javacProcessor.getProcessingEnv().getMessager()
-											.printMessage(Diagnostic.Kind.ERROR,
-													"could not create dialect " + name,
-													element, am, act);
-								}
+								list.addAll(MockSessionFactory.functionRegistry.getValidFunctionKeys());
 							}
 							break;
 					}

@@ -2,38 +2,34 @@ package org.hibernate.query.validator;
 
 import org.hibernate.CustomEntityDirtinessStrategy;
 import org.hibernate.MappingException;
-import org.hibernate.TypeHelper;
+import org.hibernate.boot.model.FunctionContributions;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.internal.StandardServiceRegistryImpl;
 import org.hibernate.boot.spi.SessionFactoryOptions;
 import org.hibernate.cache.internal.DisabledCaching;
 import org.hibernate.cache.spi.CacheImplementor;
-import org.hibernate.cfg.Settings;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
-import org.hibernate.dialect.function.SQLFunction;
-import org.hibernate.dialect.function.SQLFunctionRegistry;
+import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
-import org.hibernate.engine.spi.Mapping;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.graph.spi.RootGraphImplementor;
-import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.internal.FastSessionServices;
-import org.hibernate.internal.TypeLocatorImpl;
-import org.hibernate.metamodel.internal.MetamodelImpl;
+import org.hibernate.metamodel.model.domain.internal.MappingMetamodelImpl;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.proxy.EntityNotFoundDelegate;
+import org.hibernate.query.sqm.function.SqmFunctionRegistry;
+import org.hibernate.service.ServiceRegistry;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.type.*;
+import org.hibernate.type.descriptor.jdbc.JdbcTypeIndicators;
 import org.hibernate.type.spi.TypeConfiguration;
-import org.hibernate.usertype.UserType;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.*;
-import static org.hibernate.internal.util.StringHelper.isEmpty;
 
 /**
  * @author Gavin King
@@ -42,23 +38,70 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
 
     private static final SessionFactoryOptions options = Mocker.nullary(MockSessionFactoryOptions.class).get();
 
-    private static final SQLFunction unknownSQLFunction = new UnknownSQLFunction();
-
-    static final CustomType unknownType = new CustomType(Mocker.nullary(UserType.class).get());
-
     private final Map<String,MockEntityPersister> entityPersistersByName = new HashMap<>();
     private final Map<String,MockCollectionPersister> collectionPersistersByName = new HashMap<>();
-    private final Set<String> unknownFunctions = new HashSet<>();
-    private final List<String> functionWhitelist;
 
-    private static final TypeConfiguration typeConfiguration = new TypeConfiguration();
+    static final TypeConfiguration typeConfiguration = new TypeConfiguration() {
+        @Override
+        public JdbcTypeIndicators getCurrentBaseSqlTypeIndicators() {
+            return new JdbcTypeIndicators() {
+                @Override
+                public TypeConfiguration getTypeConfiguration() {
+                    return typeConfiguration;
+                }
 
-    @SuppressWarnings("deprecation")
-    static final TypeResolver typeResolver =
-            new TypeResolver(typeConfiguration,
-                    new TypeFactory(typeConfiguration));
+                @Override
+                public Dialect getDialect() {
+                    return new GenericDialect();
+                }
 
-    static final TypeHelper typeHelper = new TypeLocatorImpl(typeResolver);
+                @Override
+                public int getPreferredSqlTypeCodeForBoolean() {
+                    return SqlTypes.BOOLEAN;
+                }
+
+                @Override
+                public int getPreferredSqlTypeCodeForDuration() {
+                    return SqlTypes.NUMERIC;
+                }
+
+                @Override
+                public int getPreferredSqlTypeCodeForUuid() {
+                    return SqlTypes.UUID;
+                }
+
+                @Override
+                public int getPreferredSqlTypeCodeForInstant() {
+                    return SqlTypes.TIMESTAMP_WITH_TIMEZONE;
+                }
+
+                @Override
+                public int getPreferredSqlTypeCodeForArray() {
+                    return SqlTypes.ARRAY;
+                }
+            };
+        }
+    };
+
+    static final SqmFunctionRegistry functionRegistry = new SqmFunctionRegistry();
+    static {
+        new GenericDialect().initializeFunctionRegistry(new FunctionContributions() {
+            @Override
+            public SqmFunctionRegistry getFunctionRegistry() {
+                return MockSessionFactory.functionRegistry;
+            }
+
+            @Override
+            public TypeConfiguration getTypeConfiguration() {
+                return MockSessionFactory.typeConfiguration;
+            }
+
+            @Override
+            public ServiceRegistry getServiceRegistry() {
+                return MockSessionFactory.serviceRegistry;
+            }
+        });
+    }
 
     static final StandardServiceRegistryImpl serviceRegistry =
             new StandardServiceRegistryImpl(
@@ -68,12 +111,7 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
                     emptyMap());
 
     private final MetamodelImplementor metamodel =
-            new MetamodelImpl(MockSessionFactory.this, typeConfiguration) {
-                @Override
-                public String getImportedClassName(String className) {
-                    return className;
-                }
-
+            new MappingMetamodelImpl(typeConfiguration, serviceRegistry) {
                 @Override
                 public EntityPersister entityPersister(String entityName)
                         throws MappingException {
@@ -92,30 +130,29 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
                 }
             };
 
-    private ParseErrorHandler handler;
+    public MockSessionFactory() {
+    }
 
-    public MockSessionFactory(List<String> functionWhitelist, ParseErrorHandler handler) {
-        this.functionWhitelist = functionWhitelist;
-        this.handler = handler;
+    @Override
+    public TypeConfiguration getTypeConfiguration() {
+        return typeConfiguration;
     }
 
     static CollectionType createCollectionType(String role, String name) {
-        @SuppressWarnings("deprecation")
-        TypeFactory typeFactory = typeResolver.getTypeFactory();
         switch (name) {
             case "Set":
             case "SortedSet":
                 //might actually be a bag!
                 //TODO: look for @OrderColumn on the property
-                return typeFactory.set(role, null);
+                return new SetType(role, null);
             case "List":
             case "SortedList":
-                return typeFactory.list(role, null);
+                return new ListType(role, null);
             case "Map":
             case "SortedMap":
-                return typeFactory.map(role, null);
+                return new MapType(role, null);
             default:
-                return typeFactory.bag(role, null);
+                return new BagType(role, null);
         }
     }
 
@@ -156,12 +193,6 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
                 .stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    public TypeResolver getTypeResolver() {
-        return typeResolver;
     }
 
     @Override
@@ -215,25 +246,14 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
         return options;
     }
 
-    @SuppressWarnings("deprecation")
     @Override
-    public Settings getSettings() {
-        return new Settings(options);
-    }
-
-    @Override
-    public Set<?> getDefinedFilterNames() {
+    public Set<String> getDefinedFilterNames() {
         return emptySet();
     }
 
     @Override
     public CacheImplementor getCache() {
         return new DisabledCaching(this);
-    }
-
-    @Override
-    public TypeHelper getTypeHelper() {
-        return typeHelper;
     }
 
     @Override
@@ -257,32 +277,6 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
     }
 
 
-
-    @Override
-    public SQLFunctionRegistry getSqlFunctionRegistry() {
-        return new SQLFunctionRegistry(getJdbcServices().getDialect(),
-                options.getCustomSqlFunctionMap()) {
-            @Override
-            public SQLFunction findSQLFunction(String functionName) {
-                if (isEmpty(functionName)) {
-                    return null;
-                }
-                SQLFunction sqlFunction = super.findSQLFunction(functionName);
-                if (sqlFunction==null) {
-                    if (!functionWhitelist.contains(functionName)
-                            && unknownFunctions.add(functionName)) {
-                        handler.reportWarning(functionName
-                                + " is not defined (add it to whitelist)");
-                    }
-                    return unknownSQLFunction;
-                }
-                else {
-                    return sqlFunction;
-                }
-            }
-        };
-    }
-
     @Override
     public void close() {}
 
@@ -291,25 +285,27 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
         throw new UnsupportedOperationException();
     }
 
-    private static class UnknownSQLFunction implements SQLFunction {
-        @Override
-        public boolean hasArguments() {
-            return true;
-        }
-
-        @Override
-        public boolean hasParenthesesIfNoArguments() {
-            return true;
-        }
-
-        @Override
-        public Type getReturnType(Type firstArgumentType, Mapping mapping) {
-            return FloatType.INSTANCE; // ¯\_(ツ)_/¯
-        }
-
-        @Override
-        public String render(Type firstArgumentType, List arguments, SessionFactoryImplementor factory) {
-            throw new UnsupportedOperationException();
+    static Class<?> toPrimitiveClass(Class<?> type) {
+        switch (type.getName()) {
+            case "java.lang.Boolean":
+                return boolean.class;
+            case "java.lang.Character":
+                return char.class;
+            case "java.lang.Integer":
+                return int.class;
+            case "java.lang.Short":
+                return short.class;
+            case "java.lang.Byte":
+                return byte.class;
+            case "java.lang.Long":
+                return long.class;
+            case "java.lang.Float":
+                return float.class;
+            case "java.lang.Double":
+                return double.class;
+            default:
+                return Object.class;
         }
     }
+
 }

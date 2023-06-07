@@ -8,12 +8,10 @@ import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
-import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.CollectionType;
-import org.hibernate.type.CompositeCustomType;
 import org.hibernate.type.EntityType;
-import org.hibernate.type.PrimitiveType;
+import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.Type;
 import org.hibernate.usertype.CompositeUserType;
 
@@ -40,7 +38,7 @@ import static org.hibernate.query.validator.HQLProcessor.jpa;
  */
 public abstract class JavacSessionFactory extends MockSessionFactory {
 
-    private static final Mocker<Component> component = Mocker.variadic(Component.class);
+//    private static final Mocker<Component> component = Mocker.variadic(Component.class);
     private static final Mocker<ToManyAssociationPersister> toManyPersister = Mocker.variadic(ToManyAssociationPersister.class);
     private static final Mocker<ElementCollectionPersister> collectionPersister = Mocker.variadic(ElementCollectionPersister.class);
     private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class);
@@ -49,10 +47,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     private final Types types;
     private final Symtab syms;
 
-    public JavacSessionFactory(List<String> functionWhitelist,
-                        ParseErrorHandler handler,
-                        JavacProcessingEnvironment processingEnv) {
-        super(functionWhitelist, handler);
+    public JavacSessionFactory(JavacProcessingEnvironment processingEnv) {
         final Context context = processingEnv.getContext();
         names = Names.instance(context);
         types = Types.instance(context);
@@ -105,19 +100,21 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                              String entityName, String path,
                              AccessType defaultAccessType) {
         com.sun.tools.javac.code.Type memberType = getMemberType(member);
+        //TODO:
         if (isEmbeddedProperty(member)) {
-            return new CompositeCustomType(
-                    component.make(memberType.tsym, entityName, path,
-                            defaultAccessType)) {
-                @Override
-                public String getName() {
-                    return simpleName(memberType);
-                }
-            };
+            throw new UnsupportedOperationException();
+//            return new CompositeCustomType(
+//                    component.make(memberType.tsym, entityName, path,
+//                            defaultAccessType)) {
+//                @Override
+//                public String getName() {
+//                    return simpleName(memberType);
+//                }
+//            };
         }
         else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member);
-            return typeHelper.entity(targetEntity);
+            return new ManyToOneType(typeConfiguration, targetEntity);
         }
         else if (isToManyAssociation(member)) {
             return collectionType(memberType, qualify(entityName, path));
@@ -126,8 +123,9 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
             return collectionType(memberType, qualify(entityName,path));
         }
         else {
-            Type result = typeResolver.basic(qualifiedName(memberType));
-            return result == null ? unknownType : result;
+            Type result = typeConfiguration.getBasicTypeRegistry()
+                    .getRegisteredType(qualifiedName(memberType));
+            return result; //TODO: result == null ? unknownType : result;
         }
     }
 
@@ -135,17 +133,19 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                                                      String role, String path,
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
-            return new CompositeCustomType(
-                    component.make(elementType, role, path,
-                            defaultAccessType)) {
-                @Override
-                public String getName() {
-                    return simpleName(elementType.type);
-                }
-            };
+            throw new UnsupportedOperationException();
+//            return new CompositeCustomType(
+//                    component.make(elementType, role, path,
+//                            defaultAccessType)) {
+//                @Override
+//                public String getName() {
+//                    return simpleName(elementType.type);
+//                }
+//            };
         }
         else {
-            return typeResolver.basic(qualifiedName(elementType.type));
+            return typeConfiguration.getBasicTypeRegistry()
+                    .getRegisteredType(qualifiedName(elementType.type));
         }
     }
 
@@ -194,17 +194,6 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
             propertyNames = names.toArray(new String[0]);
             propertyTypes = types.toArray(new Type[0]);
         }
-
-        @Override
-        public String[] getPropertyNames() {
-            return propertyNames;
-        }
-
-        @Override
-        public Type[] getPropertyTypes() {
-            return propertyTypes;
-        }
-
     }
 
     public static abstract class EntityPersister extends MockEntityPersister {
@@ -243,7 +232,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                                    String targetEntityName,
                                    JavacSessionFactory that) {
             super(role, collectionType,
-                    typeHelper.entity(targetEntityName),
+                    new ManyToOneType(typeConfiguration, targetEntityName),
                     that);
         }
 
@@ -555,11 +544,10 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                 for (int i=0; i<argumentTypes.size(); i++) {
                     org.hibernate.type.Type type = argumentTypes.get(i);
                     Symbol.VarSymbol param = constructor.params.get(i);
-                    if (type instanceof PrimitiveType
-                            && param.type.isPrimitive()) {
+                    if (param.type.isPrimitive()) {
                         Class<?> primitive;
                         try {
-                            primitive = ((PrimitiveType<?>) type).getPrimitiveClass();
+                            primitive = toPrimitiveClass( type.getReturnedClass() );
                         }
                         catch (Exception e) {
                             continue;
@@ -575,9 +563,10 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                             String entityName = ((EntityType) type).getAssociatedEntityName();
                             typeClass = findEntityClass(entityName);
                         }
-                        else if (type instanceof CompositeCustomType) {
-                            typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
-                        }
+                        //TODO:
+//                        else if (type instanceof CompositeCustomType) {
+//                            typeClass = ((Component) ((CompositeCustomType) type).getUserType()).type;
+//                        }
                         else if (type instanceof BasicType) {
                             String className;
                             //sadly there is no way to get the classname

@@ -1,15 +1,22 @@
 package org.hibernate.query.validator;
 
-import antlr.RecognitionException;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Log;
 import com.sun.tools.javac.util.Pair;
-import org.hibernate.QueryException;
+import org.antlr.v4.runtime.LexerNoViableAltException;
+import org.antlr.v4.runtime.Parser;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.atn.ATNConfigSet;
+import org.antlr.v4.runtime.dfa.DFA;
 
 import javax.lang.model.element.Element;
 import javax.tools.JavaFileObject;
+
+import java.util.BitSet;
 
 import static com.sun.tools.javac.resources.CompilerProperties.Warnings.ProcMessager;
 
@@ -37,38 +44,44 @@ class ErrorReporter implements Validation.Handler {
 	}
 
 	@Override
-	public int getErrorCount() {
-		return 0;
-	}
-
-	@Override
-	public void throwQueryException() throws QueryException {
-	}
-
-	@Override
 	public void error(int start, int end, String message) {
 		log.error(literal.pos + start, KEY, message);
 	}
 
 	@Override
 	public void warn(int start, int end, String message) {
-
 		log.warning(literal.pos + start, ProcMessager(message));
 	}
 
 	@Override
-	public void reportError(RecognitionException e) {
-		log.error(literal.pos + e.column, KEY, e.getMessage());
+	public void syntaxError(
+			Recognizer<?, ?> recognizer,
+			Object offendingSymbol,
+			int line,
+			int charPositionInLine,
+			String message,
+			RecognitionException e) {
+		Token offendingToken = e.getOffendingToken();
+		if ( offendingToken != null ) {
+			log.error(literal.pos+1+offendingToken.getStartIndex(), KEY, message);
+		}
+		else if ( e instanceof LexerNoViableAltException ) {
+			log.error(literal.pos+1+((LexerNoViableAltException) e).getStartIndex(), KEY, message);
+		}
+		else {
+			log.error(literal.pos+1, KEY, message);
+		}
 	}
 
 	@Override
-	public void reportError(String text) {
-		log.error(literal.pos, KEY, text);
+	public void reportAmbiguity(Parser parser, DFA dfa, int i, int i1, boolean b, BitSet bitSet, ATNConfigSet atnConfigSet) {
 	}
 
 	@Override
-	public void reportWarning(String text) {
-		log.warning(literal.pos, ProcMessager(text));
+	public void reportAttemptingFullContext(Parser parser, DFA dfa, int i, int i1, BitSet bitSet, ATNConfigSet atnConfigSet) {
 	}
 
+	@Override
+	public void reportContextSensitivity(Parser parser, DFA dfa, int i, int i1, int i2, ATNConfigSet atnConfigSet) {
+	}
 }

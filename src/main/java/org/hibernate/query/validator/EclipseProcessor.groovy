@@ -1,7 +1,14 @@
+//file:noinspection GroovyFallthrough
 package org.hibernate.query.validator
 
-import antlr.RecognitionException
-import org.hibernate.QueryException
+import org.antlr.v4.runtime.LexerNoViableAltException
+import org.antlr.v4.runtime.Parser
+import org.antlr.v4.runtime.RecognitionException
+import org.antlr.v4.runtime.Recognizer
+import org.antlr.v4.runtime.Token
+import org.antlr.v4.runtime.atn.ATNConfigSet
+import org.antlr.v4.runtime.dfa.DFA
+import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities
 
 import javax.annotation.processing.AbstractProcessor
 import javax.annotation.processing.ProcessingEnvironment
@@ -10,7 +17,6 @@ import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
 
 import static java.lang.Integer.parseInt
-import static java.util.Collections.emptyList
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
 import static org.hibernate.query.validator.HQLProcessor.jpa
@@ -52,58 +58,15 @@ class EclipseProcessor extends AbstractProcessor {
         return getCheckAnnotation(type, unit)!=null
     }
 
-    private static List<String> getWhitelist(type, unit, compiler) {
-        def members = getCheckAnnotation(type, unit).getElementValuePairs()
-        if (members==null || members.length==0) {
-            return emptyList()
-        }
-        List<String> names = new ArrayList<>()
-        for (pair in members) {
-            def value = pair.value
-            if (value instanceof Object[]) {
-                for (literal in (Object[]) value) {
-                    if (literal.getClass().simpleName == "StringConstant") {
-                        names.add(literal.stringValue())
-                    }
-                }
-            }
-            else if (value.getClass().simpleName == "StringConstant") {
-                names.add(value.stringValue())
-            }
-            else if (value.getClass().simpleName == "BinaryTypeBinding") {
-                String name = qualifiedTypeName(value)
-                def dialect
-                try {
-                    dialect = Class.forName(name).newInstance()
-                    dialect.getFunctions()
-                }
-                catch (Exception e) {
-                    try {
-                        dialect = Class.forName(shadow(name)).newInstance()
-                        dialect.getFunctions()
-                    }
-                    catch (Exception e2) {
-                        //TODO: this error doesn't have location info!!
-                        new ErrorReporter(null, unit, compiler)
-                                .reportError("could not create dialect " + name);
-                        continue
-                    }
-                }
-                names.addAll(dialect.getFunctions().keySet())
-            }
-        }
-        return names
-    }
+//    private final static String ORG_HIBERNATE =
+//            new StringBuilder("org.")
+//                    .append("hibernate.")
+//                    .toString()
 
-    private final static String ORG_HIBERNATE =
-            new StringBuilder("org.")
-                    .append("hibernate.")
-                    .toString()
-
-    private static String shadow(String name) {
-        return name.replace(ORG_HIBERNATE + "dialect",
-                ORG_HIBERNATE + "query.validator.hibernate.dialect")
-    }
+//    private static String shadow(String name) {
+//        return name.replace(ORG_HIBERNATE + "dialect",
+//                ORG_HIBERNATE + "query.validator.hibernate.dialect")
+//    }
 
     private static def getCheckAnnotation(type, unit) {
         def result = getAnnotation(type, CHECK_HQL)
@@ -121,24 +84,24 @@ class EclipseProcessor extends AbstractProcessor {
 
         Set<Integer> setParameterLabels = new HashSet<>()
         Set<String> setParameterNames = new HashSet<>()
-        Set<String> setOrderBy = new HashSet<>();
+        Set<String> setOrderBy = new HashSet<>()
         boolean immediatelyCalled = false
 
         private def unit
         private def compiler
-        private List<String> whitelist
-        private def processingEnv;
+//        private List<String> whitelist
+        private def processingEnv
 
         Checker(unit, compiler, processingEnv) {
             this.compiler = compiler
             this.unit = unit
-            this.processingEnv = processingEnv;
+            this.processingEnv = processingEnv
         }
 
         void checkHQL() {
             for (type in unit.types) {
                 if (isCheckable(type.binding, unit)) {
-                    whitelist = getWhitelist(type.binding, unit, compiler)
+//                    whitelist = getWhitelist(type.binding, unit, compiler)
                     type.annotations.each { annotation ->
                         switch (qualifiedTypeName(annotation.resolvedType)) {
                             case jpa("NamedQuery"):
@@ -159,9 +122,9 @@ class EclipseProcessor extends AbstractProcessor {
                                 break
                         }
                     }
-                    def elements = processingEnv.getElementUtils();
-                    def typeElement = elements.getTypeElement(qualifiedName(type.binding));
-                    def panacheEntity = PanacheUtils.isPanache(typeElement, processingEnv.getTypeUtils(), elements);
+                    def elements = processingEnv.getElementUtils()
+                    def typeElement = elements.getTypeElement(qualifiedName(type.binding))
+                    def panacheEntity = PanacheUtils.isPanache(typeElement, processingEnv.getTypeUtils(), elements)
                     type.methods.each { method ->
                         validateStatements(type, panacheEntity, method.statements)
                     }
@@ -169,10 +132,10 @@ class EclipseProcessor extends AbstractProcessor {
             }
         }
 
-        private String qualifiedName(type) {
-            String pkgName = charToString(type.qualifiedPackageName());
-            String className = charToString(type.qualifiedSourceName());
-            return pkgName.isEmpty() ? className : pkgName + "."  + className;
+        private static String qualifiedName(type) {
+            String pkgName = charToString(type.qualifiedPackageName())
+            String className = charToString(type.qualifiedSourceName())
+            return pkgName.isEmpty() ? className : pkgName + "."  + className
         }
 
         private void validateStatements(type, panacheEntity, statements) {
@@ -203,16 +166,16 @@ class EclipseProcessor extends AbstractProcessor {
 //                                String target = charToString(ref.token);
 //                                def queryArg = firstArgument(statement);
 //                                if (queryArg != null) {
-//                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
+//                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments)
 //                                }
                             if (statement.receiver.getClass().simpleName == "ThisReference" && panacheEntity != null) {
-                                String target = panacheEntity.getSimpleName().toString();
-                                def queryArg = firstArgument(statement);
+                                String target = panacheEntity.getSimpleName().toString()
+                                def queryArg = firstArgument(statement)
                                 if (queryArg != null) {
-                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
+                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments)
                                 }
                             }
-                            break;
+                            break
                         case "createQuery":
                         case "createSelectionQuery":
                         case "createMutationQuery":
@@ -323,14 +286,14 @@ class EclipseProcessor extends AbstractProcessor {
             }
         }
 
-        def firstArgument(messageSend) {
+        static def firstArgument(messageSend) {
             for (argument in messageSend.arguments) {
                 if (argument.getClass().simpleName == "StringLiteral" ||
                         argument.getClass().simpleName == "ExtendedStringLiteral") {
-                    return argument;
+                    return argument
                 }
             }
-            return null;
+            return null
         }
 
         void validateArgument(arg, boolean inCreateQueryMethod) {
@@ -338,45 +301,45 @@ class EclipseProcessor extends AbstractProcessor {
             ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
             validate(hql, inCreateQueryMethod && immediatelyCalled,
                     setParameterLabels, setParameterNames, handler,
-                    sessionFactory.make(whitelist, handler, unit))
+                    sessionFactory.make(unit))
         }
 
         void checkPanacheQuery(stringLiteral, targetType, methodName, panacheQl, args) {
-            ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
-            collectPanacheArguments(args);
-            int[] offset = new int[1];
+            ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler)
+            collectPanacheArguments(args)
+            int[] offset = new int[1]
             String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
-                                                     panacheQl, offset, setParameterLabels, setOrderBy);
+                                                     panacheQl, offset, setParameterLabels, setOrderBy)
             if (hql == null)
-                return;
+                return
             validate(hql, true,
                      setParameterLabels, setParameterNames, handler,
-                     sessionFactory.make(whitelist, handler, unit), offset[0]);
+                     sessionFactory.make(unit), offset[0])
         }
 
-        String charToString(char[] charArray) {
-            if (charArray == null) return null;
-            return new String(charArray);
+        static String charToString(char[] charArray) {
+            if (charArray == null) return null
+            return new String(charArray)
         }
 
         void collectPanacheArguments(args) {
             // first arg is pql
             // second arg can be Sort, Object..., Map or Parameters
-            setParameterLabels.clear();
-            setParameterNames.clear();
-            setOrderBy.clear();
+            setParameterLabels.clear()
+            setParameterNames.clear()
+            setOrderBy.clear()
             if (args.length > 1) {
-                int firstArgIndex = 1;
+                int firstArgIndex = 1
                 if (isSortCall(args[firstArgIndex])) {
-                    firstArgIndex++;
+                    firstArgIndex++
                 }
                 
                 if (args.length > firstArgIndex) {
-                    def firstArg = args[firstArgIndex];
-                    isParametersCall(firstArg);
+                    def firstArg = args[firstArgIndex]
+                    isParametersCall(firstArg)
                     if (setParameterNames.isEmpty()) {
                         for (int i = 0 ; i < args.length - firstArgIndex ; i++) {
-                            setParameterLabels.add(1 + i);
+                            setParameterLabels.add(1 + i)
                         }
                     }
                 }
@@ -384,35 +347,35 @@ class EclipseProcessor extends AbstractProcessor {
         }
         boolean isParametersCall(firstArg) {
             if (firstArg.getClass().simpleName == "MessageSend") {
-                def invocation = firstArg;
-                String fieldName = charToString(invocation.selector);
+                def invocation = firstArg
+                String fieldName = charToString(invocation.selector)
                 if (fieldName.equals("and") && isParametersCall(invocation.receiver)) {
-                    def queryArg = firstArgument(invocation);
+                    def queryArg = firstArgument(invocation)
                     if (queryArg != null) {
-                        setParameterNames.add(charToString(queryArg.source()));
-                        return true;
+                        setParameterNames.add(charToString(queryArg.source()))
+                        return true
                     }
                 }
                 else if (fieldName.equals("with")
                         && invocation.receiver.getClass().simpleName == "SingleNameReference") {
-                    def receiver = invocation.receiver;
-                    String target = charToString(receiver.token);
+                    def receiver = invocation.receiver
+                    String target = charToString(receiver.token)
                     if (target.equals("Parameters")) {
-                        def queryArg = firstArgument(invocation);
+                        def queryArg = firstArgument(invocation)
                         if (queryArg != null) {
-                            setParameterNames.add(charToString(queryArg.source()));
-                            return true;
+                            setParameterNames.add(charToString(queryArg.source()))
+                            return true
                         }
                     }
                 }
             }
-            return false;
+            return false
         }
 
         boolean isSortCall(firstArg) {
             if (firstArg.getClass().simpleName == "MessageSend") {
-                def invocation = firstArg;
-                String fieldName = charToString(invocation.selector);
+                def invocation = firstArg
+                String fieldName = charToString(invocation.selector)
                     if ((fieldName.equals("and")
                             || fieldName.equals("descending")
                             || fieldName.equals("ascending")
@@ -420,28 +383,28 @@ class EclipseProcessor extends AbstractProcessor {
                             && isSortCall(invocation.receiver)) {
                         for (e in invocation.arguments) {
                             if (e.getClass().simpleName == "StringLiteral") {
-                                setOrderBy.add(charToString(e.source()));
+                                setOrderBy.add(charToString(e.source()))
                             }
                         }
-                        return true;
+                        return true
                     }
                     else if ((fieldName.equals("by")
                             || fieldName.equals("descending")
                             || fieldName.equals("ascending"))
                             && invocation.receiver.getClass().simpleName == "SingleNameReference") {
-                        def receiver = invocation.receiver;
-                        String target = charToString(receiver.token);
+                        def receiver = invocation.receiver
+                        String target = charToString(receiver.token)
                         if (target.equals("Sort")) {
                             for (e in invocation.arguments) {
                                 if (e.getClass().simpleName == "StringLiteral") {
-                                    setOrderBy.add(charToString(e.source()));
+                                    setOrderBy.add(charToString(e.source()))
                                 }
                             }
-                            return true;
+                            return true
                         }
                     }
             }
-            return false;
+            return false
         }
 
     }
@@ -459,12 +422,54 @@ class EclipseProcessor extends AbstractProcessor {
         }
 
         @Override
-        int getErrorCount() {
-            return 0
+        void syntaxError(Recognizer<?, ?> recognizer, Object symbol, int line, int charInLine, String message, RecognitionException e) {
+            def result = unit.compilationResult()
+            char[] fileName = result.fileName
+            int[] lineEnds = result.getLineSeparatorPositions()
+            int startIndex
+            int stopIndex
+            int lineNum = getLineNumber(node.sourceStart, lineEnds, 0, lineEnds.length - 1)
+            Token offendingToken = e.getOffendingToken()
+            if ( offendingToken != null ) {
+                startIndex = offendingToken.getStartIndex()
+                stopIndex = offendingToken.getStopIndex()
+            }
+            else if ( e instanceof LexerNoViableAltException ) {
+                startIndex = ((LexerNoViableAltException) e).getStartIndex()
+                stopIndex = startIndex;
+            }
+            else {
+                startIndex = lineEnds[line-1] + charInLine
+                stopIndex = startIndex
+            }
+            int startPosition = node.sourceStart + startIndex + 1
+            int endPosition = node.sourceStart + stopIndex + 1
+            if ( endPosition < startPosition ) {
+                endPosition = startPosition
+            }
+            def problem =
+                    compiler.problemReporter.problemFactory
+                            .createProblem(fileName, 0,
+                                    new String[]{message},
+                                    new String[]{message},
+                                    ProblemSeverities.Error,
+                                    startPosition,
+                                    endPosition,
+                                    lineNum+line-1, -1)
+            compiler.problemReporter.record(problem, result, unit, true)
         }
 
         @Override
-        void throwQueryException() throws QueryException {}
+        void reportAmbiguity(Parser parser, DFA dfa, int i, int i1, boolean b, BitSet bitSet, ATNConfigSet atnConfigSet) {
+        }
+
+        @Override
+        void reportAttemptingFullContext(Parser parser, DFA dfa, int i, int i1, BitSet bitSet, ATNConfigSet atnConfigSet) {
+        }
+
+        @Override
+        void reportContextSensitivity(Parser parser, DFA dfa, int i, int i1, int i2, ATNConfigSet atnConfigSet) {
+        }
 
         @Override
         void error(int start, int end, String message) {
@@ -504,21 +509,6 @@ class EclipseProcessor extends AbstractProcessor {
                             startPosition, endPosition,
                             lineNumber, columnNumber)
             compiler.problemReporter.record(problem, result, unit, true)
-        }
-
-        @Override
-        void reportError(RecognitionException e) {
-            report(1, e.getMessage(), e.getColumn(), -1)
-        }
-
-        @Override
-        void reportError(String text) {
-            report(1, text, 1, -1)
-        }
-
-        @Override
-        void reportWarning(String text) {
-            report(0, text, 1, -1)
         }
 
         static int getLineNumber(int position, int[] lineEnds, int g, int d) {
