@@ -12,6 +12,9 @@ import java.io.Serializable;
 
 import static org.hibernate.internal.util.StringHelper.root;
 
+/**
+ * @author Gavin King
+ */
 public abstract class MockCollectionPersister implements QueryableCollection {
 
     private static final String[] ID_COLUMN = {"id"};

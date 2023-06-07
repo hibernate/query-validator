@@ -7,6 +7,7 @@ import org.hibernate.persister.entity.DiscriminatorMetadata;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.Queryable;
 import org.hibernate.sql.SelectFragment;
+import org.hibernate.tuple.entity.EntityMetamodel;
 import org.hibernate.type.ClassType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
@@ -17,6 +18,9 @@ import java.util.*;
 
 import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
 
+/**
+ * @author Gavin King
+ */
 public abstract class MockEntityPersister implements EntityPersister, Queryable, DiscriminatorMetadata {
 
     private static final String[] ID_COLUMN = {"id"};
@@ -61,6 +65,12 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     @Override
     public SessionFactoryImplementor getFactory() {
         return factory;
+    }
+
+    @Override
+    public EntityMetamodel getEntityMetamodel() {
+        //TODO: this is bad
+        throw new UnsupportedOperationException();
     }
 
     @Override

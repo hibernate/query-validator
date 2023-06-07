@@ -55,6 +55,8 @@ import antlr.RecognitionException;
  * for ECJ.
  *
  * @see CheckHQL
+ *
+ * @author Gavin King
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
 public class ECJProcessor extends AbstractProcessor {
@@ -81,9 +83,9 @@ public class ECJProcessor extends AbstractProcessor {
                 TypeElement typeElement = elements.getTypeElement(qualifiedName(type.binding));
                 TypeElement panacheEntity = PanacheUtils.isPanache(typeElement, processingEnv.getTypeUtils(), elements);
                 type.traverse(new ASTVisitor() {
-                    Set<Integer> setParameterLabels = new HashSet<>();
-                    Set<String> setParameterNames = new HashSet<>();
-                    Set<String> setOrderBy = new HashSet<>();
+                    final Set<Integer> setParameterLabels = new HashSet<>();
+                    final Set<String> setParameterNames = new HashSet<>();
+                    final Set<String> setOrderBy = new HashSet<>();
                     boolean immediatelyCalled;
 
                     @Override
@@ -92,6 +94,7 @@ public class ECJProcessor extends AbstractProcessor {
                         switch (name) {
                             case "getResultList":
                             case "getSingleResult":
+                            case "getSingleResultOrNull":
                                 immediatelyCalled = true;
                                 break;
                             case "count":
@@ -118,6 +121,8 @@ public class ECJProcessor extends AbstractProcessor {
                                 }
                                 break;
                             case "createQuery":
+                            case "createSelectionQuery":
+                            case "createMutationQuery":
                                 for (Expression argument : messageSend.arguments) {
                                     if (argument instanceof StringLiteral) {
                                         check((StringLiteral) argument, true);

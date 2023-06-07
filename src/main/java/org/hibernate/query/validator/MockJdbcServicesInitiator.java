@@ -7,6 +7,9 @@ import org.hibernate.service.spi.ServiceRegistryImplementor;
 
 import java.util.Map;
 
+/**
+ * @author Gavin King
+ */
 class MockJdbcServicesInitiator extends JdbcServicesInitiator {
 
     static final JdbcServicesInitiator INSTANCE = new MockJdbcServicesInitiator();

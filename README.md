@@ -7,15 +7,20 @@ Compile time validation for queries written in HQL, JPQL, and [Panache][].
 [Panache]: https://quarkus.io/guides/hibernate-orm-panache
 [Hibernate logo]: http://static.jboss.org/hibernate/images/hibernate_logo_whitebkg_200px.png
 
+## Requirements
+
+This project now requires at least JDK 11, but JDK 15 or above 
+is preferred.
+
 ## Building
 
 Type `./gradlew` from this project directory.
 
 This produces an artifact with the Maven coordinates 
-`org.hibernate:query-validator:1.0-SNAPSHOT` in your local
+`org.hibernate:query-validator:2.0-SNAPSHOT` in your local
 Maven repository.
 
-It also creates a far jar `query-validator-1.0-SNAPSHOT-all.jar`
+It also creates a far jar `query-validator-2.0-SNAPSHOT-all.jar`
 in the `build/libs` directory of this project.
 
 ## Usage
@@ -27,9 +32,9 @@ basic JPA metadata annotations like `@Entity`, `@ManyToOne`,
 mapping information like table and column names if that's what 
 you prefer.
 
-1. Put `query-validator-1.0-SNAPSHOT-all.jar` in the 
+1. Put `query-validator-2.0-SNAPSHOT-all.jar` in the 
    compile-time classpath of your project. (Or depend on
-   `org.hibernate:query-validator:1.0-SNAPSHOT`.)
+   `org.hibernate:query-validator:2.0-SNAPSHOT`.)
 2. Annotate a package or toplevel class with `@CheckHQL`.
 
 #### Usage with plain Hibernate or JPA
@@ -107,7 +112,7 @@ Just compile your code with `javac`, or even with ECJ
 (`java -jar ecj-4.6.1.jar`), with the query validator `jar` in 
 the classpath: 
 
-    -classpath query-validator-1.0-SNAPSHOT-all.jar
+    -classpath query-validator-2.0-SNAPSHOT-all.jar
 
 #### Gradle
 
@@ -115,8 +120,8 @@ Annoyingly, Gradle requires that the dependency on the query
 validator be declared *twice*:
 
     dependencies {
-        implementation 'org.hibernate:query-validator:1.0-SNAPSHOT'
-        annotationProcessor 'org.hibernate:query-validator:1.0-SNAPSHOT'
+        implementation 'org.hibernate:query-validator:2.0-SNAPSHOT'
+        annotationProcessor 'org.hibernate:query-validator:2.0-SNAPSHOT'
     }
 
 #### Maven
@@ -128,7 +133,7 @@ the dependency to the query validator.
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>query-validator</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>2.0-SNAPSHOT</version>
             <optional>true</optional>
         </dependency>
     <dependencies>
@@ -161,7 +166,7 @@ manually.
    processing**. 
 2. Then go to **Java Compiler > Annotation Processing > 
    Factory Path** and click **Add External JARs...** and
-   add `build/libs/query-validator-1.0-SNAPSHOT-all.jar` 
+   add `build/libs/query-validator-2.0-SNAPSHOT-all.jar` 
    from this project directory.
 
 Your project properties should look like this:
@@ -185,21 +190,15 @@ If the query validator doesn't run, please ensure that:
 
 The query validator was developed and tested with:
 
-- JDK 1.8.0
-- Hibernate 5.4.10.Final
-- ECJ 4.6.1
-- Eclipse IDE 2019-03 to 2020-03 (JDT Core 3.17.0 to 3.18.300)
+- JDK 15, JDK 17, JDK 20
+- Hibernate 5.6.15.Final
+- ECJ 3.33.0
+- Eclipse IDE with JDT Core 3.33.0
 
 Other versions of `javac`, ECJ, and Hibernate may or may not 
 work. The query validator depends on internal compiler APIs in 
 `javac` and ECJ, and is therefore sensitive to changes in the 
 compilers.
-
-_NOTE: this version of the query validator does not work on
-JDK 9 and above. The [jdk10][] branch in git is a preview of
-the changes required to make it work on JDK 9-12._
-
-[jdk10]: https://github.com/hibernate/query-validator/tree/jdk10
 
 ## Caveats
 
@@ -210,13 +209,6 @@ Please be aware of the following issues.
 Queries are interpreted according to Hibernate's flavor of JPQL 
 (i.e. HQL), which is a superset of the query language defined by 
 the JPA specification.
-
-One important example of how the languages are different is the
-handling of function names. In the JPA spec, function names like
-`SUBSTRING`, `SQRT`, and `COALESCE` are *reserved words*. In HQL, 
-they're just regular identifiers, and you may even write a HQL
-query that directly calls a user-defined or non-portable SQL 
-function.
 
 #### Function arguments are not checked
 

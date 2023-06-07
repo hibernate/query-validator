@@ -4,6 +4,7 @@ import antlr.RecognitionException
 import org.hibernate.QueryException
 
 import javax.annotation.processing.AbstractProcessor
+import javax.annotation.processing.ProcessingEnvironment
 import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
@@ -20,9 +21,18 @@ import static org.hibernate.query.validator.Validation.validate
  * for Eclipse.
  *
  * @see CheckHQL
+ *
+ * @author Gavin King
  */
 //@SupportedAnnotationTypes(CHECK_HQL)
 class EclipseProcessor extends AbstractProcessor {
+
+    private ProcessingEnvironment processingEnv
+
+    synchronized void init(ProcessingEnvironment processingEnv) {
+        this.processingEnv = processingEnv
+        super.init(processingEnv)
+    }
 
     static Mocker<EclipseSessionFactory> sessionFactory = Mocker.variadic(EclipseSessionFactory.class)
 
@@ -52,15 +62,15 @@ class EclipseProcessor extends AbstractProcessor {
             def value = pair.value
             if (value instanceof Object[]) {
                 for (literal in (Object[]) value) {
-                    if (literal.class.simpleName == "StringConstant") {
+                    if (literal.getClass().simpleName == "StringConstant") {
                         names.add(literal.stringValue())
                     }
                 }
             }
-            else if (value.class.simpleName == "StringConstant") {
+            else if (value.getClass().simpleName == "StringConstant") {
                 names.add(value.stringValue())
             }
-            else if (value.class.simpleName == "BinaryTypeBinding") {
+            else if (value.getClass().simpleName == "BinaryTypeBinding") {
                 String name = qualifiedTypeName(value)
                 def dialect
                 try {
@@ -170,13 +180,14 @@ class EclipseProcessor extends AbstractProcessor {
         }
 
         private void validateStatement(type, panacheEntity, statement) {
-            if (statement != null) switch (statement.class.simpleName) {
+            if (statement != null) switch (statement.getClass().simpleName) {
                 case "MessageSend":
                     boolean ic = immediatelyCalled
                     def name = simpleMethodName(statement)
                     switch (name) {
                         case "getResultList":
                         case "getSingleResult":
+                        case "getSingleResultOrNull":
                             immediatelyCalled = true
                             break
                         case "count":
@@ -187,14 +198,14 @@ class EclipseProcessor extends AbstractProcessor {
                         case "list":
                         case "find":
                         // Disabled until we find how to support this type-safe in Javac
-//                            if (statement.receiver.class.simpleName == "SingleNameReference") {
+//                            if (statement.receiver.getClass().simpleName == "SingleNameReference") {
 //                                def ref = statement.receiver;
 //                                String target = charToString(ref.token);
 //                                def queryArg = firstArgument(statement);
 //                                if (queryArg != null) {
 //                                    checkPanacheQuery(queryArg, target, name, charToString(queryArg.source()), statement.arguments);
 //                                }
-                            if (statement.receiver.class.simpleName == "ThisReference" && panacheEntity != null) {
+                            if (statement.receiver.getClass().simpleName == "ThisReference" && panacheEntity != null) {
                                 String target = panacheEntity.getSimpleName().toString();
                                 def queryArg = firstArgument(statement);
                                 if (queryArg != null) {
@@ -203,16 +214,18 @@ class EclipseProcessor extends AbstractProcessor {
                             }
                             break;
                         case "createQuery":
+                        case "createSelectionQuery":
+                        case "createMutationQuery":
                             statement.arguments.each { arg ->
-                                if (arg.class.simpleName == "StringLiteral"
-                                        || arg.class.simpleName == "ExtendedStringLiteral") {
+                                if (arg.getClass().simpleName == "StringLiteral"
+                                        || arg.getClass().simpleName == "ExtendedStringLiteral") {
                                     validateArgument(arg, true)
                                 }
                             }
                             break
                         case "setParameter":
                             def arg = statement.arguments.first()
-                            switch (arg.class.simpleName) {
+                            switch (arg.getClass().simpleName) {
                                 case "IntLiteral":
                                     setParameterLabels.add(parseInt(new String((char[])arg.source())))
                                     break
@@ -312,8 +325,8 @@ class EclipseProcessor extends AbstractProcessor {
 
         def firstArgument(messageSend) {
             for (argument in messageSend.arguments) {
-                if (argument.class.simpleName == "StringLiteral" ||
-                        argument.class.simpleName == "ExtendedStringLiteral") {
+                if (argument.getClass().simpleName == "StringLiteral" ||
+                        argument.getClass().simpleName == "ExtendedStringLiteral") {
                     return argument;
                 }
             }
@@ -370,7 +383,7 @@ class EclipseProcessor extends AbstractProcessor {
             }
         }
         boolean isParametersCall(firstArg) {
-            if (firstArg.class.simpleName == "MessageSend") {
+            if (firstArg.getClass().simpleName == "MessageSend") {
                 def invocation = firstArg;
                 String fieldName = charToString(invocation.selector);
                 if (fieldName.equals("and") && isParametersCall(invocation.receiver)) {
@@ -381,7 +394,7 @@ class EclipseProcessor extends AbstractProcessor {
                     }
                 }
                 else if (fieldName.equals("with")
-                        && invocation.receiver.class.simpleName == "SingleNameReference") {
+                        && invocation.receiver.getClass().simpleName == "SingleNameReference") {
                     def receiver = invocation.receiver;
                     String target = charToString(receiver.token);
                     if (target.equals("Parameters")) {
@@ -397,7 +410,7 @@ class EclipseProcessor extends AbstractProcessor {
         }
 
         boolean isSortCall(firstArg) {
-            if (firstArg.class.simpleName == "MessageSend") {
+            if (firstArg.getClass().simpleName == "MessageSend") {
                 def invocation = firstArg;
                 String fieldName = charToString(invocation.selector);
                     if ((fieldName.equals("and")
@@ -406,7 +419,7 @@ class EclipseProcessor extends AbstractProcessor {
                             || fieldName.equals("direction"))
                             && isSortCall(invocation.receiver)) {
                         for (e in invocation.arguments) {
-                            if (e.class.simpleName == "StringLiteral") {
+                            if (e.getClass().simpleName == "StringLiteral") {
                                 setOrderBy.add(charToString(e.source()));
                             }
                         }
@@ -415,12 +428,12 @@ class EclipseProcessor extends AbstractProcessor {
                     else if ((fieldName.equals("by")
                             || fieldName.equals("descending")
                             || fieldName.equals("ascending"))
-                            && invocation.receiver.class.simpleName == "SingleNameReference") {
+                            && invocation.receiver.getClass().simpleName == "SingleNameReference") {
                         def receiver = invocation.receiver;
                         String target = charToString(receiver.token);
                         if (target.equals("Sort")) {
                             for (e in invocation.arguments) {
-                                if (e.class.simpleName == "StringLiteral") {
+                                if (e.getClass().simpleName == "StringLiteral") {
                                     setOrderBy.add(charToString(e.source()));
                                 }
                             }
