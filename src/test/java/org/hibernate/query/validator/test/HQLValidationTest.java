@@ -29,11 +29,11 @@ public class HQLValidationTest {
         assertFalse(errors.contains("PanachePerson.java:"));
         assertFalse(errors.contains("PanacheRepository.java:"));
 
-        assertTrue(errors.contains("BadQueries.java:9: error: unexpected token: do"));
-        assertTrue(errors.contains("BadQueries.java:10: error: unexpected token"));
-        assertTrue(errors.contains("BadQueries.java:11: error: unexpected token: select"));
-        assertTrue(errors.contains("BadQueries.java:12: error: unexpected token: ="));
-        assertTrue(errors.contains("BadQueries.java:13: error: unexpected token: from"));
+        assertTrue(errors.contains("BadQueries.java:9: error: no viable alternative at input 'do'"));
+        assertTrue(errors.contains("BadQueries.java:10: error: no viable alternative at input 'from'"));
+        assertTrue(errors.contains("BadQueries.java:11: error: no viable alternative at input '"));
+        assertTrue(errors.contains("BadQueries.java:12: error: no viable alternative at input '"));
+        assertTrue(errors.contains("BadQueries.java:13: error: mismatched input 'from"));
         assertTrue(errors.contains("BadQueries.java:13: error: missing from clause or select list"));
 
         assertTrue(errors.contains("BadQueries.java:15: error: test.Nil does not exist"));
@@ -115,11 +115,11 @@ public class HQLValidationTest {
         assertFalse(errors.contains("PanachePerson.java"));
         assertFalse(errors.contains("PanachePersonRepository.java"));
 
-        assertTrue(errors.contains("unexpected token: do") && errors.contains("BadQueries.java (at line 9)"));
-        assertTrue(errors.contains("unexpected token"));
-        assertTrue(errors.contains("unexpected token: select") && errors.contains("BadQueries.java (at line 11)"));
-        assertTrue(errors.contains("unexpected token: =") && errors.contains("BadQueries.java (at line 12)"));
-        assertTrue(errors.contains("unexpected token: from") && errors.contains("BadQueries.java (at line 13)"));
+        assertTrue(errors.contains("mismatched input 'do'") && errors.contains("BadQueries.java (at line 9)"));
+        assertTrue(errors.contains("no viable alternative at input 'from'") && errors.contains("BadQueries.java (at line 10)"));
+        assertTrue(errors.contains("no viable alternative at input '") && errors.contains("BadQueries.java (at line 11)"));
+        assertTrue(errors.contains("no viable alternative at input '") && errors.contains("BadQueries.java (at line 12)"));
+        assertTrue(errors.contains("mismatched input 'from") && errors.contains("BadQueries.java (at line 13)"));
         assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 13)"));
 
         assertTrue(errors.contains("test.Nil does not exist"));

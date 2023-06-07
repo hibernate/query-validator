@@ -1,22 +1,18 @@
 package org.hibernate.query.validator;
 
-import org.hibernate.EntityMode;
 import org.hibernate.QueryException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.persister.entity.DiscriminatorMetadata;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.Queryable;
-import org.hibernate.sql.SelectFragment;
 import org.hibernate.tuple.entity.EntityMetamodel;
-import org.hibernate.type.ClassType;
-import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
 
 import javax.persistence.AccessType;
 import java.io.Serializable;
 import java.util.*;
 
-import static org.hibernate.query.validator.MockSessionFactory.typeHelper;
+import static org.hibernate.query.validator.MockSessionFactory.typeConfiguration;
 
 /**
  * @author Gavin King
@@ -107,7 +103,7 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     @Override
     public Type getIdentifierType() {
         //TODO: propertyType(getIdentifierPropertyName())
-        return StandardBasicTypes.INTEGER;
+        return typeConfiguration.getBasicTypeForJavaType(Long.class);
     }
 
     @Override
@@ -138,19 +134,8 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     }
 
     @Override
-    public String[] toColumns(String alias, String propertyName)
-            throws QueryException {
-        return new String[] { "" };
-    }
-
-    @Override
     public String[] toColumns(String propertyName) {
         return new String[] { "" };
-    }
-
-    @Override
-    public Type getType() {
-        return typeHelper.entity(entityName);
     }
 
     @Override
@@ -164,18 +149,8 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     }
 
     @Override
-    public EntityMode getEntityMode() {
-        return EntityMode.POJO;
-    }
-
-    @Override
     public EntityPersister getEntityPersister() {
         return this;
-    }
-
-    @Override
-    public SelectFragment propertySelectFragmentFragment(String alias, String suffix, boolean b) {
-        return new SelectFragment();
     }
 
     @Override
@@ -195,7 +170,7 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
 
     @Override
     public Type getResolutionType() {
-        return ClassType.INSTANCE;
+        return typeConfiguration.getBasicTypeForJavaType(Class.class);
     }
 
     @Override
@@ -225,6 +200,6 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
 
     @Override
     public Type getDiscriminatorType() {
-        return StandardBasicTypes.STRING;
+        return typeConfiguration.getBasicTypeForJavaType(String.class);
     }
 }

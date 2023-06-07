@@ -1,19 +1,11 @@
 package org.hibernate.query.validator;
 
-import org.hibernate.EntityMode;
 import org.hibernate.EntityNameResolver;
-import org.hibernate.NullPrecedence;
 import org.hibernate.SessionFactoryObserver;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.spi.SessionFactoryOptions;
-import org.hibernate.dialect.function.SQLFunction;
 import org.hibernate.jpa.spi.JpaCompliance;
 import org.hibernate.loader.BatchFetchStyle;
-import org.hibernate.tuple.entity.EntityTuplizerFactory;
-
-import java.util.Map;
-
-import static java.util.Collections.emptyMap;
 
 /**
  * @author Gavin King
@@ -41,18 +33,8 @@ public abstract class MockSessionFactoryOptions implements SessionFactoryOptions
     }
 
     @Override
-    public EntityTuplizerFactory getEntityTuplizerFactory() {
-        return new EntityTuplizerFactory();
-    }
-
-    @Override
     public StandardServiceRegistry getServiceRegistry() {
         return MockSessionFactory.serviceRegistry;
-    }
-
-    @Override
-    public EntityMode getDefaultEntityMode() {
-        return EntityMode.POJO;
     }
 
     @Override
@@ -63,11 +45,6 @@ public abstract class MockSessionFactoryOptions implements SessionFactoryOptions
     @Override
     public EntityNameResolver[] getEntityNameResolvers() {
         return NO_RESOLVERS;
-    }
-
-    @Override
-    public Map<String, SQLFunction> getCustomSqlFunctionMap() {
-        return emptyMap();
     }
 
     @Override
@@ -83,11 +60,6 @@ public abstract class MockSessionFactoryOptions implements SessionFactoryOptions
     @Override
     public Integer getMaximumFetchDepth() {
         return null;
-    }
-
-    @Override
-    public NullPrecedence getDefaultNullPrecedence() {
-        return NullPrecedence.NONE;
     }
 
     @Override

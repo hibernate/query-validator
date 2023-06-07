@@ -3,7 +3,6 @@ package org.hibernate.query.validator;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.*;
-import org.hibernate.hql.internal.ast.ParseErrorHandler;
 import org.hibernate.type.*;
 import org.hibernate.usertype.CompositeUserType;
 
@@ -25,14 +24,11 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
     private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class);
     private static final Mocker<ToManyAssociationPersister> toManyPersister = Mocker.variadic(ToManyAssociationPersister.class);
     private static final Mocker<ElementCollectionPersister> collectionPersister = Mocker.variadic(ElementCollectionPersister.class);
-    private static final Mocker<Component> component = Mocker.variadic(Component.class);
+//    private static final Mocker<Component> component = Mocker.variadic(Component.class);
 
     private final CompilationUnitDeclaration unit;
 
-    public ECJSessionFactory(List<String> functionWhitelist,
-                      ParseErrorHandler handler,
-                      CompilationUnitDeclaration unit) {
-        super(functionWhitelist, handler);
+    public ECJSessionFactory(CompilationUnitDeclaration unit) {
         this.unit = unit;
     }
 
@@ -82,18 +78,19 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                              AccessType defaultAccessType) {
         TypeBinding memberType = getMemberType(member);
         if (isEmbeddedProperty(member)) {
-            return new CompositeCustomType(
-                    component.make(memberType, entityName, path,
-                            defaultAccessType)) {
-                @Override
-                public String getName() {
-                    return simpleName(memberType);
-                }
-            };
+            throw new UnsupportedOperationException();
+//            return new CompositeCustomType(
+//                    component.make(memberType, entityName, path,
+//                            defaultAccessType)) {
+//                @Override
+//                public String getName() {
+//                    return simpleName(memberType);
+//                }
+//            };
         }
         else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member);
-            return typeHelper.entity(targetEntity);
+            return new ManyToOneType(typeConfiguration, targetEntity);
         }
         else if (isToManyAssociation(member)) {
             return collectionType(memberType, qualify(entityName, path));
@@ -102,8 +99,8 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
             return collectionType(memberType, qualify(entityName,path));
         }
         else {
-            Type result = typeResolver.basic(qualifiedName(memberType));
-            return result == null ? unknownType : result;
+            Type result = typeConfiguration.getBasicTypeRegistry().getRegisteredType(qualifiedName(memberType));
+            return result;// == null ? unknownType : result;
         }
     }
 
@@ -111,17 +108,18 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                                                      String role, String path,
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
-            return new CompositeCustomType(
-                    component.make(elementType, role, path,
-                            defaultAccessType)) {
-                @Override
-                public String getName() {
-                    return simpleName(elementType);
-                }
-            };
+            throw new UnsupportedOperationException();
+//            return new CompositeCustomType(
+//                    component.make(elementType, role, path,
+//                            defaultAccessType)) {
+//                @Override
+//                public String getName() {
+//                    return simpleName(elementType);
+//                }
+//            };
         }
         else {
-            return typeResolver.basic(qualifiedName(elementType));
+            return typeConfiguration.getBasicTypeRegistry().getRegisteredType(qualifiedName(elementType));
         }
     }
 
@@ -131,8 +129,8 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
     }
 
     public static abstract class Component implements CompositeUserType {
-        private String[] propertyNames;
-        private Type[] propertyTypes;
+        private final String[] propertyNames;
+        private final Type[] propertyTypes;
         TypeBinding type;
 
         public Component(TypeBinding type,
@@ -183,16 +181,6 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
             propertyTypes = types.toArray(new Type[0]);
         }
 
-        @Override
-        public String[] getPropertyNames() {
-            return propertyNames;
-        }
-
-        @Override
-        public Type[] getPropertyTypes() {
-            return propertyTypes;
-        }
-
     }
 
     public static abstract class EntityPersister extends MockEntityPersister {
@@ -229,7 +217,7 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                                           String targetEntityName,
                                           ECJSessionFactory that) {
             super(role, collectionType,
-                    typeHelper.entity(targetEntityName),
+                    new ManyToOneType(typeConfiguration, targetEntityName),
                     that);
         }
 
@@ -548,8 +536,8 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
 
     private static boolean isMappedClass(TypeBinding type) {
         return hasAnnotation(type, jpa("Entity"))
-                || hasAnnotation(type, jpa("Embeddable"))
-                || hasAnnotation(type, jpa("MappedSuperclass"));
+            || hasAnnotation(type, jpa("Embeddable"))
+            || hasAnnotation(type, jpa("MappedSuperclass"));
     }
 
     private static boolean isEntity(TypeBinding member) {
@@ -628,11 +616,10 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                 for (int i = 0; i < argumentTypes.size(); i++) {
                     Type argType = argumentTypes.get(i);
                     TypeBinding paramType = method.parameters[i];
-                    if (argType instanceof PrimitiveType
-                            && paramType.isPrimitiveType()) {
+                    if (paramType.isPrimitiveType()) {
                         Class<?> primitive;
                         try {
-                            primitive = ((PrimitiveType<?>) argType).getPrimitiveClass();
+                            primitive = toPrimitiveClass(argType.getReturnedClass());
                         }
                         catch (Exception e) {
                             continue;
@@ -648,9 +635,9 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                             String entityName = ((EntityType) argType).getAssociatedEntityName();
                             argTypeClass = findEntityClass(entityName);
                         }
-                        else if (argType instanceof CompositeCustomType) {
-                            argTypeClass = ((Component) ((CompositeCustomType) argType).getUserType()).type;
-                        }
+//                        else if (argType instanceof CompositeCustomType) {
+//                            argTypeClass = ((Component) ((CompositeCustomType) argType).getUserType()).type;
+//                        }
                         else if (argType instanceof BasicType) {
                             String className;
                             //sadly there is no way to get the classname

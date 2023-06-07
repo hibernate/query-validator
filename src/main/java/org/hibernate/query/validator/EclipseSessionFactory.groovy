@@ -1,6 +1,5 @@
 package org.hibernate.query.validator
 
-import org.hibernate.hql.internal.ast.ParseErrorHandler
 import org.hibernate.type.*
 import org.hibernate.usertype.CompositeUserType
 
@@ -19,13 +18,11 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class)
     private static final Mocker<ToManyAssociationPersister> toManyPersister = Mocker.variadic(ToManyAssociationPersister.class)
     private static final Mocker<ElementCollectionPersister> collectionPersister = Mocker.variadic(ElementCollectionPersister.class)
-    private static final Mocker<Component> component = Mocker.variadic(Component.class)
+//    private static final Mocker<Component> component = Mocker.variadic(Component.class)
 
     final def unit
 
-    EclipseSessionFactory(List<String> functionWhitelist,
-                          ParseErrorHandler handler, unit) {
-        super(functionWhitelist, handler)
+    EclipseSessionFactory(unit) {
         this.unit = unit
     }
 
@@ -79,18 +76,19 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                              AccessType defaultAccessType) {
         def memberType = getMemberType(member)
         if (isEmbeddedProperty(member)) {
-            return new CompositeCustomType(
-                    component.make(memberType, entityName, path,
-                            defaultAccessType)) {
-                @Override
-                String getName() {
-                    return simpleTypeName(memberType)
-                }
-            }
+            throw new UnsupportedOperationException();
+//            return new CompositeCustomType(
+//                    component.make(memberType, entityName, path,
+//                            defaultAccessType)) {
+//                @Override
+//                String getName() {
+//                    return simpleTypeName(memberType)
+//                }
+//            }
         }
         else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member)
-            return typeHelper.entity(targetEntity)
+            return new ManyToOneType(typeConfiguration, targetEntity)
         }
         else if (isToManyAssociation(member)) {
             return collectionType(memberType, qualify(entityName, path))
@@ -99,8 +97,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
             return collectionType(memberType, qualify(entityName, path))
         }
         else {
-            Type result = typeResolver.basic(qualifiedTypeName(memberType))
-            return result == null ? unknownType : result
+            Type result = typeConfiguration.getBasicTypeRegistry().getRegisteredType(qualifiedTypeName(memberType))
+            return result;// == null ? unknownType : result
         }
     }
 
@@ -108,17 +106,18 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                                                      String role, String path,
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
-            return new CompositeCustomType(
-                    component.make(elementType, role, path,
-                            defaultAccessType)) {
-                @Override
-                String getName() {
-                    return simpleTypeName(elementType)
-                }
-            }
+            throw new UnsupportedOperationException();
+//            return new CompositeCustomType(
+//                    component.make(elementType, role, path,
+//                            defaultAccessType)) {
+//                @Override
+//                String getName() {
+//                    return simpleTypeName(elementType)
+//                }
+//            }
         }
         else {
-            return typeResolver.basic(qualifiedTypeName(elementType))
+            return typeConfiguration.getBasicTypeRegistry().getRegisteredType(qualifiedTypeName(elementType))
         }
     }
 
@@ -177,16 +176,6 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
             propertyTypes = types.toArray([])
         }
 
-        @Override
-        String[] getPropertyNames() {
-            return propertyNames
-        }
-
-        @Override
-        Type[] getPropertyTypes() {
-            return propertyTypes
-        }
-
     }
 
     static abstract class EntityPersister extends MockEntityPersister {
@@ -224,7 +213,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                                    String targetEntityName,
                                    EclipseSessionFactory that) {
             super(role, collectionType,
-                    typeHelper.entity(targetEntityName),
+                    new ManyToOneType(typeConfiguration, targetEntityName),
                     that)
         }
 
@@ -280,10 +269,10 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                 : pkgPart + "." + new String((char[]) type.qualifiedSourceName())
     }
 
-    static String qualifiedMethodName(binding) {
-        return qualifiedTypeName(binding.declaringClass) +
-                "." + new String((char[]) binding.selector)
-    }
+//    static String qualifiedMethodName(binding) {
+//        return qualifiedTypeName(binding.declaringClass) +
+//                "." + new String((char[]) binding.selector)
+//    }
 
     static boolean hasAnnotation(annotations, String name) {
         for (ann in annotations.getAnnotations()) {
@@ -595,11 +584,10 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                 for (int i=0; i<argumentTypes.size(); i++) {
                     Type argType = argumentTypes.get(i)
                     def paramType = method.parameters[i]
-                    if (argType instanceof PrimitiveType &&
-                            paramType.isPrimitiveType()) {
+                    if (paramType.isPrimitiveType()) {
                         Class primitive
                         try {
-                            primitive = ((PrimitiveType) argType).getPrimitiveClass()
+                            primitive = toPrimitiveClass(argType.getReturnedClass())
                         }
                         catch (ignored) {
                             continue
@@ -615,9 +603,9 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                             String entityName = argType.getAssociatedEntityName()
                             argTypeClass = findEntityClass(entityName)
                         }
-                        else if (argType instanceof CompositeCustomType) {
-                            argTypeClass = argType.getUserType().type
-                        }
+//                        else if (argType instanceof CompositeCustomType) {
+//                            argTypeClass = argType.getUserType().type
+//                        }
                         else if (argType instanceof BasicType) {
                             String className
                             //sadly there is no way to get the classname
