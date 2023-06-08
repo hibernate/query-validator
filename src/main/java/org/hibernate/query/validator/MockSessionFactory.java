@@ -1,8 +1,13 @@
 package org.hibernate.query.validator;
 
 import org.hibernate.CustomEntityDirtinessStrategy;
+import org.hibernate.EntityNameResolver;
 import org.hibernate.MappingException;
+import org.hibernate.SessionFactoryObserver;
+import org.hibernate.TimeZoneStorageStrategy;
+import org.hibernate.boot.internal.DefaultCustomEntityDirtinessStrategy;
 import org.hibernate.boot.internal.MetadataImpl;
+import org.hibernate.boot.internal.StandardEntityNotFoundDelegate;
 import org.hibernate.boot.model.FunctionContributions;
 import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
 import org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl;
@@ -11,6 +16,8 @@ import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl;
 import org.hibernate.boot.model.relational.Database;
 import org.hibernate.boot.model.relational.SqlStringGenerationContext;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
+import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
+import org.hibernate.boot.registry.classloading.spi.ClassLoadingException;
 import org.hibernate.boot.registry.internal.StandardServiceRegistryImpl;
 import org.hibernate.boot.spi.BootstrapContext;
 import org.hibernate.boot.spi.MappingDefaults;
@@ -31,7 +38,10 @@ import org.hibernate.graph.spi.RootGraphImplementor;
 import org.hibernate.id.factory.IdentifierGeneratorFactory;
 import org.hibernate.id.factory.internal.StandardIdentifierGeneratorFactory;
 import org.hibernate.internal.FastSessionServices;
+import org.hibernate.jpa.internal.MutableJpaComplianceImpl;
 import org.hibernate.jpa.spi.JpaCompliance;
+import org.hibernate.jpa.spi.MutableJpaCompliance;
+import org.hibernate.loader.BatchFetchStyle;
 import org.hibernate.mapping.Property;
 import org.hibernate.metamodel.AttributeClassification;
 import org.hibernate.metamodel.CollectionClassification;
@@ -104,32 +114,39 @@ import static java.util.Collections.*;
  */
 public abstract class MockSessionFactory
         implements SessionFactoryImplementor, QueryEngine, RuntimeModelCreationContext, MetadataBuildingOptions,
-                BootstrapContext, MetadataBuildingContext, FunctionContributions {
+                BootstrapContext, MetadataBuildingContext, FunctionContributions, SessionFactoryOptions, JdbcTypeIndicators {
 
-    private static final SessionFactoryOptions options = Mocker.nullary(MockSessionFactoryOptions.class).get();
+    // static so other things can get at it
+    // TODO: make a static instance of this whole object instead!
+    static TypeConfiguration typeConfiguration;
 
-    private final Map<String,MockEntityPersister> entityPersistersByName = new HashMap<>();
-    private final Map<String,MockCollectionPersister> collectionPersistersByName = new HashMap<>();
-
-    static final TypeConfiguration typeConfiguration = new TypeConfiguration() {
-        @Override
-        public JdbcTypeIndicators getCurrentBaseSqlTypeIndicators() {
-            return new MockJdbcTypeIndicators();
-        }
-    };
-
-    static final StandardServiceRegistryImpl serviceRegistry =
+    final StandardServiceRegistryImpl serviceRegistry =
             new StandardServiceRegistryImpl(
-                    new BootstrapServiceRegistryBuilder().build(),
+                    new BootstrapServiceRegistryBuilder().applyClassLoaderService(new ClassLoaderServiceImpl() {
+                        @Override
+                        public Class classForName(String className) {
+                            try {
+                                return super.classForName(className);
+                            }
+                            catch (ClassLoadingException e) {
+                                if ( MockSessionFactory.this.isClassDefined(className) ) {
+                                    return Object[].class;
+                                }
+                                else {
+                                    throw e;
+                                }
+                            }
+                        }
+                    }).build(),
                     singletonList(MockJdbcServicesInitiator.INSTANCE),
                     emptyList(),
                     emptyMap()
             );
 
+    private final Map<String,MockEntityPersister> entityPersistersByName = new HashMap<>();
+    private final Map<String,MockCollectionPersister> collectionPersistersByName = new HashMap<>();
+
     private final SqmFunctionRegistry functionRegistry = new SqmFunctionRegistry();
-    {
-        MockJdbcServicesInitiator.genericDialect.initializeFunctionRegistry(this);
-    }
 
     private final MappingMetamodelImpl metamodel = new MockMappingMetamodelImpl();
 
@@ -171,11 +188,24 @@ public abstract class MockSessionFactory
             );
 
     public MockSessionFactory() {
+        typeConfiguration = new TypeConfiguration();
+        typeConfiguration.scope((MetadataBuildingContext) this);
+        MockJdbcServicesInitiator.genericDialect.initializeFunctionRegistry(this);
+        typeConfiguration.scope((SessionFactoryImplementor) this);
     }
 
     @Override
     public TypeConfiguration getTypeConfiguration() {
         return typeConfiguration;
+    }
+
+    @Override
+    public void addObserver(SessionFactoryObserver observer) {
+    }
+
+    @Override
+    public MetadataBuildingOptions getBuildingOptions() {
+        return this;
     }
 
     @Override
@@ -287,18 +317,13 @@ public abstract class MockSessionFactory
     }
 
     @Override
-    public String getUuid() {
-        return options.getUuid();
-    }
-
-    @Override
     public String getName() {
-        return options.getSessionFactoryName();
+        return "mock";
     }
 
     @Override
     public SessionFactoryOptions getSessionFactoryOptions() {
-        return options;
+        return this;
     }
 
     @Override
@@ -313,17 +338,17 @@ public abstract class MockSessionFactory
 
     @Override
     public EntityNotFoundDelegate getEntityNotFoundDelegate() {
-        return options.getEntityNotFoundDelegate();
+        return new StandardEntityNotFoundDelegate();
     }
 
     @Override
     public CustomEntityDirtinessStrategy getCustomEntityDirtinessStrategy() {
-        return options.getCustomEntityDirtinessStrategy();
+        return new DefaultCustomEntityDirtinessStrategy();
     }
 
     @Override
     public CurrentTenantIdentifierResolver getCurrentTenantIdentifierResolver() {
-        return options.getCurrentTenantIdentifierResolver();
+        return null;
     }
 
     @Override
@@ -442,6 +467,55 @@ public abstract class MockSessionFactory
         return false;
     }
 
+    private static final SessionFactoryObserver[] NO_OBSERVERS = new SessionFactoryObserver[0];
+    private static final EntityNameResolver[] NO_RESOLVERS = new EntityNameResolver[0];
+
+    static MutableJpaCompliance jpaCompliance = new MutableJpaComplianceImpl(emptyMap());
+
+    @Override
+    public MutableJpaCompliance getJpaCompliance() {
+        return jpaCompliance;
+    }
+
+    @Override
+    public String getSessionFactoryName() {
+        return "mock";
+    }
+
+    @Override
+    public String getUuid() {
+        return "mock";
+    }
+
+    @Override
+    public SessionFactoryObserver[] getSessionFactoryObservers() {
+        return NO_OBSERVERS;
+    }
+
+    @Override
+    public EntityNameResolver[] getEntityNameResolvers() {
+        return NO_RESOLVERS;
+    }
+
+    @Override
+    public BatchFetchStyle getBatchFetchStyle() {
+        return BatchFetchStyle.LEGACY;
+    }
+
+    @Override
+    public boolean isDelayBatchFetchLoaderCreationsEnabled() {
+        return false;
+    }
+
+    @Override
+    public Integer getMaximumFetchDepth() {
+        return null;
+    }
+
+    @Override
+    public void setCheckNullability(boolean enabled) {}
+
+
     private static class MockMappingDefaults implements MappingDefaults {
         @Override
         public String getImplicitSchemaName() {
@@ -514,46 +588,39 @@ public abstract class MockSessionFactory
         }
     }
 
-    private static class MockJdbcTypeIndicators implements JdbcTypeIndicators {
-        @Override
-        public TypeConfiguration getTypeConfiguration() {
-            return typeConfiguration;
-        }
+    @Override
+    public Dialect getDialect() {
+        return MockJdbcServicesInitiator.genericDialect;
+    }
 
-        @Override
-        public Dialect getDialect() {
-            return MockJdbcServicesInitiator.genericDialect;
-        }
+    @Override
+    public int getPreferredSqlTypeCodeForBoolean() {
+        return SqlTypes.BOOLEAN;
+    }
 
-        @Override
-        public int getPreferredSqlTypeCodeForBoolean() {
-            return SqlTypes.BOOLEAN;
-        }
+    @Override
+    public int getPreferredSqlTypeCodeForDuration() {
+        return SqlTypes.NUMERIC;
+    }
 
-        @Override
-        public int getPreferredSqlTypeCodeForDuration() {
-            return SqlTypes.NUMERIC;
-        }
+    @Override
+    public int getPreferredSqlTypeCodeForUuid() {
+        return SqlTypes.UUID;
+    }
 
-        @Override
-        public int getPreferredSqlTypeCodeForUuid() {
-            return SqlTypes.UUID;
-        }
+    @Override
+    public int getPreferredSqlTypeCodeForInstant() {
+        return SqlTypes.TIMESTAMP_WITH_TIMEZONE;
+    }
 
-        @Override
-        public int getPreferredSqlTypeCodeForInstant() {
-            return SqlTypes.TIMESTAMP_WITH_TIMEZONE;
-        }
-
-        @Override
-        public int getPreferredSqlTypeCodeForArray() {
-            return SqlTypes.ARRAY;
-        }
+    @Override
+    public int getPreferredSqlTypeCodeForArray() {
+        return SqlTypes.ARRAY;
     }
 
     private class MockMappingMetamodelImpl extends MappingMetamodelImpl {
         public MockMappingMetamodelImpl() {
-            super(MockSessionFactory.typeConfiguration, MockSessionFactory.serviceRegistry);
+            super(typeConfiguration, serviceRegistry);
         }
 
         @Override
@@ -630,11 +697,6 @@ public abstract class MockSessionFactory
     }
 
     @Override
-    public Dialect getDialect() {
-        return MockJdbcServicesInitiator.genericDialect;
-    }
-
-    @Override
     public SqlStringGenerationContext getSqlStringGenerationContext() {
         throw new UnsupportedOperationException();
     }
@@ -649,9 +711,14 @@ public abstract class MockSessionFactory
         return new MockMappingDefaults();
     }
 
+    @Override
+    public TimeZoneStorageStrategy getDefaultTimeZoneStorageStrategy() {
+        return TimeZoneStorageStrategy.NATIVE;
+    }
+
     private class MockJpaMetamodelImpl extends JpaMetamodelImpl {
         public MockJpaMetamodelImpl() {
-            super(MockSessionFactory.typeConfiguration, metamodel, MockSessionFactory.serviceRegistry);
+            super(typeConfiguration, metamodel, serviceRegistry);
         }
 
         @Override
@@ -691,7 +758,7 @@ public abstract class MockSessionFactory
 
         @Override
         public JpaCompliance getJpaCompliance() {
-            return MockSessionFactoryOptions.jpaCompliance;
+            return jpaCompliance;
         }
     }
 
