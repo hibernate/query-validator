@@ -1,7 +1,11 @@
 package org.hibernate.query.validator
 
+import org.eclipse.jdt.internal.compiler.lookup.Binding
+import org.hibernate.engine.spi.Mapping
 import org.hibernate.type.*
-import org.hibernate.usertype.CompositeUserType
+import org.hibernate.type.descriptor.java.EnumJavaType
+import org.hibernate.type.descriptor.jdbc.IntegerJdbcType
+import org.hibernate.type.internal.BasicTypeImpl
 
 import javax.persistence.AccessType
 import java.beans.Introspector
@@ -18,7 +22,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class)
     private static final Mocker<ToManyAssociationPersister> toManyPersister = Mocker.variadic(ToManyAssociationPersister.class)
     private static final Mocker<ElementCollectionPersister> collectionPersister = Mocker.variadic(ElementCollectionPersister.class)
-//    private static final Mocker<Component> component = Mocker.variadic(Component.class)
+    private static final Mocker<Component> component = Mocker.variadic(Component.class)
 
     final def unit
 
@@ -76,15 +80,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                              AccessType defaultAccessType) {
         def memberType = getMemberType(member)
         if (isEmbeddedProperty(member)) {
-            throw new UnsupportedOperationException();
-//            return new CompositeCustomType(
-//                    component.make(memberType, entityName, path,
-//                            defaultAccessType)) {
-//                @Override
-//                String getName() {
-//                    return simpleTypeName(memberType)
-//                }
-//            }
+            return component.make(memberType, entityName, path, defaultAccessType);
         }
         else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member)
@@ -96,6 +92,9 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         else if (isElementCollectionProperty(member)) {
             return collectionType(memberType, qualify(entityName, path))
         }
+        else if (isEnumProperty(member)) {
+            return new BasicTypeImpl(new EnumJavaType(Object.class), IntegerJdbcType.INSTANCE);
+        }
         else {
             Type result = typeConfiguration.getBasicTypeRegistry().getRegisteredType(qualifiedTypeName(memberType))
             return result;// == null ? unknownType : result
@@ -106,15 +105,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                                                      String role, String path,
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
-            throw new UnsupportedOperationException();
-//            return new CompositeCustomType(
-//                    component.make(elementType, role, path,
-//                            defaultAccessType)) {
-//                @Override
-//                String getName() {
-//                    return simpleTypeName(elementType)
-//                }
-//            }
+            return component.make(elementType, role, path, defaultAccessType);
         }
         else {
             return typeConfiguration.getBasicTypeRegistry().getRegisteredType(qualifiedTypeName(elementType))
@@ -125,7 +116,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         return createCollectionType(role, simpleTypeName(type.actualType()))
     }
 
-    abstract static class Component implements CompositeUserType {
+    abstract static class Component implements CompositeType {
         private String[] propertyNames
         private Type[] propertyTypes
         def type
@@ -176,6 +167,25 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
             propertyTypes = types.toArray([])
         }
 
+        @Override
+        String[] getPropertyNames() {
+            return propertyNames;
+        }
+
+        @Override
+        Type[] getSubtypes() {
+            return propertyTypes;
+        }
+
+        @Override
+        boolean[] getPropertyNullability() {
+            return new boolean[propertyNames.length];
+        }
+
+        @Override
+        int getColumnSpan(Mapping mapping) {
+            return propertyNames.length;
+        }
     }
 
     static abstract class EntityPersister extends MockEntityPersister {
@@ -312,14 +322,17 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private def findEntityClass(String entityName) {
-        if (entityName.indexOf('.')>0) {
+        if (entityName == null) {
+            return null;
+        }
+        else if (entityName.indexOf('.')>0) {
             def type = findClassByQualifiedName(entityName)
             return isEntity(type) ? type : null
         }
-        def type = unit.scope.getType(entityName.toCharArray())
-        return !missing(type) && isEntity(type) &&
-                getEntityName(type) == entityName ?
-                type : null
+        else {
+            def type = unit.scope.getType(entityName.toCharArray())
+            return !missing(type) && isEntity(type) && getEntityName(type) == entityName ? type : null
+        }
     }
 
     private static def findProperty(type, String property,
@@ -421,6 +434,11 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         return hasAnnotation(member, jpa("Transient"))
     }
 
+    private static boolean isEnumProperty(Binding member) {
+        return hasAnnotation(member, jpa("Enumerated")) ||
+                getMemberType(member).isEnum();
+    }
+
     private static boolean isEmbeddableType(type) {
         return hasAnnotation(type, jpa("Embeddable"))
     }
@@ -513,7 +531,8 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     private static boolean isEntity(member) {
-        return hasAnnotation(member, jpa("Entity"))
+        return member!=null
+            && hasAnnotation(member, jpa("Entity"))
     }
 
     private static boolean isId(member) {
@@ -553,6 +572,18 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                     throw new IllegalStateException()
             }
         }
+    }
+
+    @Override
+    boolean isEntityDefined(String entityName) {
+        return findEntityClass(entityName) != null;
+    }
+
+    @Override
+    boolean isAttributeDefined(String entityName, String fieldName) {
+        def entityClass = findEntityClass(entityName);
+        return entityClass != null
+            && findPropertyByPath(entityClass, fieldName, getDefaultAccessType(entityClass)) != null;
     }
 
     @Override

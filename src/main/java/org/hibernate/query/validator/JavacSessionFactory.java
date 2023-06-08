@@ -8,12 +8,16 @@ import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
+import org.hibernate.engine.spi.Mapping;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.CollectionType;
+import org.hibernate.type.CompositeType;
 import org.hibernate.type.EntityType;
 import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.Type;
-import org.hibernate.usertype.CompositeUserType;
+import org.hibernate.type.descriptor.java.EnumJavaType;
+import org.hibernate.type.descriptor.jdbc.IntegerJdbcType;
+import org.hibernate.type.internal.BasicTypeImpl;
 
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
@@ -38,7 +42,7 @@ import static org.hibernate.query.validator.HQLProcessor.jpa;
  */
 public abstract class JavacSessionFactory extends MockSessionFactory {
 
-//    private static final Mocker<Component> component = Mocker.variadic(Component.class);
+    private static final Mocker<Component> component = Mocker.variadic(Component.class);
     private static final Mocker<ToManyAssociationPersister> toManyPersister = Mocker.variadic(ToManyAssociationPersister.class);
     private static final Mocker<ElementCollectionPersister> collectionPersister = Mocker.variadic(ElementCollectionPersister.class);
     private static final Mocker<EntityPersister> entityPersister = Mocker.variadic(EntityPersister.class);
@@ -100,17 +104,8 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                              String entityName, String path,
                              AccessType defaultAccessType) {
         com.sun.tools.javac.code.Type memberType = getMemberType(member);
-        //TODO:
         if (isEmbeddedProperty(member)) {
-            throw new UnsupportedOperationException();
-//            return new CompositeCustomType(
-//                    component.make(memberType.tsym, entityName, path,
-//                            defaultAccessType)) {
-//                @Override
-//                public String getName() {
-//                    return simpleName(memberType);
-//                }
-//            };
+            return component.make(memberType.tsym, entityName, path, defaultAccessType);
         }
         else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member);
@@ -121,6 +116,9 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         }
         else if (isElementCollectionProperty(member)) {
             return collectionType(memberType, qualify(entityName,path));
+        }
+        else if (isEnumProperty(member)) {
+            return new BasicTypeImpl(new EnumJavaType(Object.class), IntegerJdbcType.INSTANCE);
         }
         else {
             Type result = typeConfiguration.getBasicTypeRegistry()
@@ -133,15 +131,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                                                      String role, String path,
                                                      AccessType defaultAccessType) {
         if (isEmbeddableType(elementType)) {
-            throw new UnsupportedOperationException();
-//            return new CompositeCustomType(
-//                    component.make(elementType, role, path,
-//                            defaultAccessType)) {
-//                @Override
-//                public String getName() {
-//                    return simpleName(elementType.type);
-//                }
-//            };
+            return component.make(elementType, role, path, defaultAccessType);
         }
         else {
             return typeConfiguration.getBasicTypeRegistry()
@@ -154,9 +144,10 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         return createCollectionType(role, simpleName(type));
     }
 
-    public static abstract class Component implements CompositeUserType {
+    public static abstract class Component implements CompositeType {
         private final String[] propertyNames;
         private final Type[] propertyTypes;
+
         Symbol.TypeSymbol type;
 
         public Component(Symbol.TypeSymbol type,
@@ -193,6 +184,26 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
 
             propertyNames = names.toArray(new String[0]);
             propertyTypes = types.toArray(new Type[0]);
+        }
+
+        @Override
+        public String[] getPropertyNames() {
+            return propertyNames;
+        }
+
+        @Override
+        public Type[] getSubtypes() {
+            return propertyTypes;
+        }
+
+        @Override
+        public boolean[] getPropertyNullability() {
+            return new boolean[propertyNames.length];
+        }
+
+        @Override
+        public int getColumnSpan(Mapping mapping) {
+            return propertyNames.length;
         }
     }
 
@@ -271,12 +282,51 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         }
     }
 
+    @Override
+    boolean isEntityDefined(String entityName) {
+        return findEntityClass(entityName) != null;
+    }
+
+    @Override
+    boolean isAttributeDefined(String entityName, String fieldName) {
+        Symbol.ClassSymbol entityClass = findEntityClass(entityName);
+        return entityClass != null
+            && findPropertyByPath(entityClass, fieldName, getDefaultAccessType(entityClass)) != null;
+    }
+
     private Symbol.ClassSymbol findEntityClass(String entityName) {
-        if (entityName.indexOf('.')>0) {
-            Symbol.ClassSymbol type = findClassByQualifiedName(entityName);
-            return isEntity(type) ? type : null;
+        if (entityName == null) {
+            return null;
         }
-        for (Symbol pack: syms.unnamedModule.enclosedPackages) {
+        else if (entityName.indexOf('.')>0) {
+            return findEntityByQualifiedName(entityName);
+        }
+        else {
+            return findEntityByUnqualifiedName(entityName);
+        }
+    }
+
+    private Symbol.ClassSymbol findEntityByQualifiedName(String entityName) {
+        Symbol.ClassSymbol type = findClassByQualifiedName(entityName);
+        return isEntity(type) ? type : null;
+    }
+
+    private Symbol.ClassSymbol findEntityByUnqualifiedName(String entityName) {
+        Symbol.ClassSymbol symbol = findEntityByUnqualifiedName(entityName, syms.unnamedModule);
+        if (symbol!=null) {
+            return symbol;
+        }
+        for (Symbol.ModuleSymbol module: syms.getAllModules()) {
+            symbol = findEntityByUnqualifiedName(entityName, module);
+            if (symbol!=null) {
+                return symbol;
+            }
+        }
+        return null;
+    }
+
+    private static Symbol.ClassSymbol findEntityByUnqualifiedName(String entityName, Symbol.ModuleSymbol module) {
+        for (Symbol pack: module.enclosedPackages) {
             try {
                 for (Symbol type: pack.members()
                         .getSymbols(symbol -> isMatchingEntity(symbol, entityName))) {
@@ -386,6 +436,11 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     private static boolean isTransient(Symbol member) {
         return hasAnnotation(member, jpa("Transient"))
             || (member.flags() & Flags.TRANSIENT)!=0;
+    }
+
+    private static boolean isEnumProperty(Symbol member) {
+        return hasAnnotation(member, jpa("Enumerated"))
+            || getMemberType(member).tsym.isEnum();
     }
 
     private static boolean isEmbeddableType(Symbol.TypeSymbol type) {

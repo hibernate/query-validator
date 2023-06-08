@@ -414,6 +414,7 @@ class EclipseProcessor extends AbstractProcessor {
         private def node
         private def unit
         private def compiler
+        private int errorcount
 
         ErrorReporter(node, unit, compiler) {
             this.compiler = compiler
@@ -422,7 +423,13 @@ class EclipseProcessor extends AbstractProcessor {
         }
 
         @Override
+        int getErrorCount() {
+            return errorcount
+        }
+
+        @Override
         void syntaxError(Recognizer<?, ?> recognizer, Object symbol, int line, int charInLine, String message, RecognitionException e) {
+            errorcount++
             def result = unit.compilationResult()
             char[] fileName = result.fileName
             int[] lineEnds = result.getLineSeparatorPositions()
@@ -482,6 +489,7 @@ class EclipseProcessor extends AbstractProcessor {
         }
 
         private void report(int severity, String message, int offset, int endOffset) {
+            errorcount++
             def result = unit.compilationResult()
             char[] fileName = result.fileName
             int[] lineEnds = result.getLineSeparatorPositions()

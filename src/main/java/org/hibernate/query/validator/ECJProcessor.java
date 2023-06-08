@@ -343,6 +343,7 @@ public class ECJProcessor extends AbstractProcessor {
         private final ASTNode node;
         private final CompilationUnitDeclaration unit;
         private final Compiler compiler;
+        private int errorcount;
 
         ErrorReporter(ASTNode node,
                       CompilationUnitDeclaration unit,
@@ -353,7 +354,13 @@ public class ECJProcessor extends AbstractProcessor {
         }
 
         @Override
+        public int getErrorCount() {
+            return errorcount;
+        }
+
+        @Override
         public void syntaxError(Recognizer<?, ?> recognizer, Object symbol, int line, int charInLine, String message, RecognitionException e) {
+            errorcount++;
             CompilationResult result = unit.compilationResult();
             char[] fileName = result.fileName;
             int[] lineEnds = result.getLineSeparatorPositions();
@@ -413,6 +420,7 @@ public class ECJProcessor extends AbstractProcessor {
         }
 
         private void report(int severity, String message, int offset, int endOffset) {
+            errorcount++;
             CompilationResult result = unit.compilationResult();
             char[] fileName = result.fileName;
             int[] lineEnds = result.getLineSeparatorPositions();
