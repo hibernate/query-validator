@@ -1,6 +1,7 @@
 package org.hibernate.query.validator
 
 import org.eclipse.jdt.internal.compiler.lookup.Binding
+import org.hibernate.PropertyNotFoundException
 import org.hibernate.engine.spi.Mapping
 import org.hibernate.type.*
 import org.hibernate.type.descriptor.java.EnumJavaType
@@ -168,23 +169,46 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         }
 
         @Override
+        int getPropertyIndex(String name) {
+            String[] names = getPropertyNames()
+            for ( int i = 0, max = names.length; i < max; i++ ) {
+                if ( names[i].equals( name ) ) {
+                    return i
+                }
+            }
+            throw new PropertyNotFoundException(
+                    "Unable to locate property named " + name + " on " + getName()
+            )
+        }
+
+        @Override
+        String getName() {
+            return new String(type.sourceName())
+        }
+
+        @Override
+        boolean isComponentType() {
+            return true
+        }
+
+        @Override
         String[] getPropertyNames() {
-            return propertyNames;
+            return propertyNames
         }
 
         @Override
         Type[] getSubtypes() {
-            return propertyTypes;
+            return propertyTypes
         }
 
         @Override
         boolean[] getPropertyNullability() {
-            return new boolean[propertyNames.length];
+            return new boolean[propertyNames.length]
         }
 
         @Override
         int getColumnSpan(Mapping mapping) {
-            return propertyNames.length;
+            return propertyNames.length
         }
     }
 
@@ -575,15 +599,20 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     @Override
+    protected boolean isSubtype(String entityName, String subtypeEntityName) {
+        return findEntityClass(entityName).isSubtypeOf(findEntityClass(subtypeEntityName), false)
+    }
+
+    @Override
     boolean isEntityDefined(String entityName) {
-        return findEntityClass(entityName) != null;
+        return findEntityClass(entityName) != null
     }
 
     @Override
     boolean isAttributeDefined(String entityName, String fieldName) {
-        def entityClass = findEntityClass(entityName);
+        def entityClass = findEntityClass(entityName)
         return entityClass != null
-            && findPropertyByPath(entityClass, fieldName, getDefaultAccessType(entityClass)) != null;
+            && findPropertyByPath(entityClass, fieldName, getDefaultAccessType(entityClass)) != null
     }
 
     @Override

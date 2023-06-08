@@ -3,6 +3,7 @@ package org.hibernate.query.validator;
 import org.eclipse.jdt.internal.compiler.ast.CompilationUnitDeclaration;
 import org.eclipse.jdt.internal.compiler.classfmt.ClassFileConstants;
 import org.eclipse.jdt.internal.compiler.lookup.*;
+import org.hibernate.PropertyNotFoundException;
 import org.hibernate.engine.spi.Mapping;
 import org.hibernate.type.*;
 import org.hibernate.type.descriptor.java.EnumJavaType;
@@ -170,6 +171,29 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
 
             propertyNames = names.toArray(new String[0]);
             propertyTypes = types.toArray(new Type[0]);
+        }
+
+        @Override
+        public int getPropertyIndex(String name) {
+            String[] names = getPropertyNames();
+            for ( int i = 0, max = names.length; i < max; i++ ) {
+                if ( names[i].equals( name ) ) {
+                    return i;
+                }
+            }
+            throw new PropertyNotFoundException(
+                    "Unable to locate property named " + name + " on " + getName()
+            );
+        }
+
+        @Override
+        public String getName() {
+            return new String(type.sourceName());
+        }
+
+        @Override
+        public boolean isComponentType() {
+            return true;
         }
 
         @Override
@@ -603,6 +627,11 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                     throw new IllegalStateException();
             }
         }
+    }
+
+    @Override
+    protected boolean isSubtype(String entityName, String subtypeEntityName) {
+        return findEntityClass(entityName).isSubtypeOf(findEntityClass(subtypeEntityName), false);
     }
 
     @Override
