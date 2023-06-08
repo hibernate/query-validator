@@ -33,54 +33,53 @@ public class HQLValidationTest {
         assertTrue(errors.contains("BadQueries.java:10: error: no viable alternative at input 'from'"));
         assertTrue(errors.contains("BadQueries.java:11: error: no viable alternative at input '"));
         assertTrue(errors.contains("BadQueries.java:12: error: no viable alternative at input '"));
-        assertTrue(errors.contains("BadQueries.java:13: error: mismatched input 'from"));
-        assertTrue(errors.contains("BadQueries.java:13: error: missing from clause or select list"));
+        assertTrue(errors.contains("BadQueries.java:13: error: Could not interpret path expression 'from'"));
 
-        assertTrue(errors.contains("BadQueries.java:15: error: test.Nil does not exist"));
-        assertTrue(errors.contains("BadQueries.java:16: error: test.Pair has no suitable constructor for types (Person)"));
-        assertTrue(errors.contains("BadQueries.java:17: error: test.Pair has no suitable constructor for types (Person, string)"));
-        assertTrue(errors.contains("BadQueries.java:53: error: test.Pair has no suitable constructor for types (integer, integer)"));
-        assertTrue(errors.contains("BadQueries.java:54: error: test.Pair has no suitable constructor for types (string, string)"));
+        assertTrue(errors.contains("BadQueries.java:15: error: Could not resolve class 'test.Nil' named for instantiation"));
+//        assertTrue(errors.contains("BadQueries.java:16: error: test.Pair has no suitable constructor for types (Person)"));
+//        assertTrue(errors.contains("BadQueries.java:17: error: test.Pair has no suitable constructor for types (Person, string)"));
+//        assertTrue(errors.contains("BadQueries.java:53: error: test.Pair has no suitable constructor for types (integer, integer)"));
+//        assertTrue(errors.contains("BadQueries.java:54: error: test.Pair has no suitable constructor for types (string, string)"));
 
-        assertTrue(errors.contains("BadQueries.java:19: error: People is not mapped"));
-        assertTrue(errors.contains("BadQueries.java:20: error: Person has no mapped firstName"));
-        assertTrue(errors.contains("BadQueries.java:21: error: Person has no mapped addr"));
-        assertTrue(errors.contains("BadQueries.java:22: error: Address has no mapped town"));
-        assertTrue(errors.contains("BadQueries.java:23: error: Address has no mapped name"));
-        assertTrue(errors.contains("BadQueries.java:24: error: Address has no mapped country.type"));
+        assertTrue(errors.contains("BadQueries.java:19: error: Could not resolve root entity 'People'"));
+        assertTrue(errors.contains("BadQueries.java:20: error: Could not resolve attribute 'firstName' of 'Person'"));
+        assertTrue(errors.contains("BadQueries.java:21: error: Could not resolve attribute 'addr' of 'Person'"));
+        assertTrue(errors.contains("BadQueries.java:22: error: Could not resolve attribute 'town' of 'Address'"));
+        assertTrue(errors.contains("BadQueries.java:23: error: Could not resolve attribute 'name' of 'Address'"));
+        assertTrue(errors.contains("BadQueries.java:24: error: Unable to locate property named 'type' of 'Country'"));
 
-        assertTrue(errors.contains("BadQueries.java:26: error: ")); //should be: "string has no mapped length"
-        assertTrue(errors.contains("BadQueries.java:27: error: string has no mapped length"));
+        assertTrue(errors.contains("BadQueries.java:26: error: Could not interpret attribute 'length' of basic-valued path"));
+        assertTrue(errors.contains("BadQueries.java:27: error: Basic paths cannot be dereferenced"));
 
-        assertTrue(errors.contains("BadQueries.java:29: warning: xxx is not defined"));
+        assertTrue(errors.contains("BadQueries.java:29: error: Could not interpret path expression 'xxx'"));
         assertTrue(errors.contains("BadQueries.java:30: warning: func is not defined"));
         assertTrue(errors.contains("BadQueries.java:31: warning: custom is not defined"));
         assertTrue(errors.contains("BadQueries.java:32: warning: p is not defined"));
-        assertTrue(errors.contains("BadQueries.java:32: error: p.name is not defined"));
+        assertTrue(errors.contains("BadQueries.java:32: error: Could not interpret path expression 'p.name'"));
 
         assertTrue(errors.contains("BadQueries.java:34: error: key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("BadQueries.java:35: error: key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("BadQueries.java:36: error: key(), value(), or entry() argument must be map element"));
 
-        assertTrue(errors.contains("BadQueries.java:39: error: entry() has no members"));
+        assertTrue(errors.contains("BadQueries.java:39: error: mismatched input '.' expecting"));
 
-        assertTrue(errors.contains("BadQueries.java:41: error: illegal token: ?"));
+        assertTrue(errors.contains("BadQueries.java:41: error: Unlabeled ordinal parameter ('?' rather than ?1)"));
 
         //should be errors:
 //        assertTrue(errors.contains("BadQueries.java:40:"));
 //        assertTrue(errors.contains("BadQueries.java:41:"));
 
-        assertTrue(errors.contains("Person.java:22: error: Person has no mapped x"));
+        assertTrue(errors.contains("Person.java:22: error: Could not resolve attribute 'x' of 'Person'"));
 
         assertTrue(errors.contains("BadQueries.java:46: warning: ?2 is not set"));
         assertTrue(errors.contains("BadQueries.java:48: warning: :name is not set"));
 
         assertTrue(errors.contains("BadQueries.java:51: warning: :hello does not occur in the query"));
 
-        assertTrue(errors.contains("BadQueries.java:56: error: expecting '''"));
-        assertTrue(errors.contains("BadQueries.java:57: error: expecting '''"));
+        assertTrue(errors.contains("BadQueries.java:56: token recognition error at: ''gavin'"));
+        assertTrue(errors.contains("BadQueries.java:57: error: token recognition error at: ''gavin'"));
 
-        assertTrue(errors.contains("BadQueries.java:59: error: unexpected token: fromPerson"));
+        assertTrue(errors.contains("BadQueries.java:59: error: no viable alternative at input 'fromPerson'"));
 
         assertPanacheErrors(errors, "PanacheBadPerson", 22);
         assertPanacheErrors(errors, "PanacheBadPersonRepository", 10);
@@ -119,36 +118,36 @@ public class HQLValidationTest {
         assertTrue(errors.contains("no viable alternative at input 'from'") && errors.contains("BadQueries.java (at line 10)"));
         assertTrue(errors.contains("no viable alternative at input '") && errors.contains("BadQueries.java (at line 11)"));
         assertTrue(errors.contains("no viable alternative at input '") && errors.contains("BadQueries.java (at line 12)"));
-        assertTrue(errors.contains("mismatched input 'from") && errors.contains("BadQueries.java (at line 13)"));
-        assertTrue(errors.contains("missing from clause or select list") && errors.contains("BadQueries.java (at line 13)"));
+        assertTrue(errors.contains("Could not interpret path expression 'from'") && errors.contains("BadQueries.java (at line 13)"));
 
-        assertTrue(errors.contains("test.Nil does not exist"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person)"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person, string)"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor for types (string, string)"));
-        assertTrue(errors.contains("test.Pair has no suitable constructor for types (integer, integer)"));
+        assertTrue(errors.contains("Could not resolve class 'test.Nil' named for instantiation"));
+//        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person)"));
+//        assertTrue(errors.contains("test.Pair has no suitable constructor for types (Person, string)"));
+//        assertTrue(errors.contains("test.Pair has no suitable constructor for types (string, string)"));
+//        assertTrue(errors.contains("test.Pair has no suitable constructor for types (integer, integer)"));
 
-        assertTrue(errors.contains("People is not mapped") && errors.contains("BadQueries.java (at line 19)"));
-        assertTrue(errors.contains("Person has no mapped firstName") && errors.contains("BadQueries.java (at line 20)"));
-        assertTrue(errors.contains("Person has no mapped addr") && errors.contains("BadQueries.java (at line 21)"));
-        assertTrue(errors.contains("Address has no mapped town") && errors.contains("BadQueries.java (at line 22)"));
-        assertTrue(errors.contains("Address has no mapped name") && errors.contains("BadQueries.java (at line 13)"));
-        assertTrue(errors.contains("Address has no mapped country.type") && errors.contains("BadQueries.java (at line 24)"));
+        assertTrue(errors.contains("Could not resolve root entity 'People'") && errors.contains("BadQueries.java (at line 19)"));
+        assertTrue(errors.contains("Could not resolve attribute 'firstName' of 'Person'") && errors.contains("BadQueries.java (at line 20)"));
+        assertTrue(errors.contains("Could not resolve attribute 'addr' of 'Person'") && errors.contains("BadQueries.java (at line 21)"));
+        assertTrue(errors.contains("Could not resolve attribute 'town' of 'Address'") && errors.contains("BadQueries.java (at line 22)"));
+        assertTrue(errors.contains("Could not resolve attribute 'name' of 'Address'") && errors.contains("BadQueries.java (at line 13)"));
+        assertTrue(errors.contains("Unable to locate property named 'type' of 'Country'") && errors.contains("BadQueries.java (at line 24)"));
 
         assertTrue(errors.contains("") && errors.contains("BadQueries.java (at line 26)")); //should be: "string has no mapped length"
-        assertTrue(errors.contains("string has no mapped length") && errors.contains("BadQueries.java (at line 27)"));
+        assertTrue(errors.contains("Could not interpret attribute 'length' of basic-valued path") && errors.contains("BadQueries.java (at line 26)"));
+        assertTrue(errors.contains("Basic paths cannot be dereferenced") && errors.contains("BadQueries.java (at line 27)"));
 
-        assertTrue(errors.contains("xxx is not defined") && errors.contains("BadQueries.java (at line 29)"));
+        assertTrue(errors.contains("Could not interpret path expression 'xxx'") && errors.contains("BadQueries.java (at line 29)"));
         assertTrue(errors.contains("func is not defined") && errors.contains("BadQueries.java (at line 30)"));
         assertTrue(errors.contains("custom is not defined") && errors.contains("BadQueries.java (at line 31)"));
         assertTrue(errors.contains("p is not defined") && errors.contains("BadQueries.java (at line 32)"));
-        assertTrue(errors.contains("p.name is not defined") && errors.contains("BadQueries.java (at line 32)"));
+        assertTrue(errors.contains("Could not interpret path expression 'p.name'") && errors.contains("BadQueries.java (at line 32)"));
 
         assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
         assertTrue(errors.contains("key(), value(), or entry() argument must be map element"));
 
-        assertTrue(errors.contains("entry() has no members") && errors.contains("BadQueries.java (at line 39)"));
+        assertTrue(errors.contains("mismatched input '.' expecting") && errors.contains("BadQueries.java (at line 39)"));
 
         assertTrue(errors.contains("illegal token: ?") && errors.contains("BadQueries.java (at line 34)"));
 

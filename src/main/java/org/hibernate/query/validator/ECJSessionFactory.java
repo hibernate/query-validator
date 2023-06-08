@@ -66,6 +66,15 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
         }
     }
 
+    @Override
+    Type propertyType(String typeName, String propertyPath) {
+        TypeBinding type = findClassByQualifiedName(typeName);
+        AccessType accessType = getAccessType(type, AccessType.FIELD);
+        Binding propertyByPath = findPropertyByPath(type, propertyPath, accessType);
+        if ( propertyByPath == null) return null;
+        return propertyType(propertyByPath, typeName, propertyPath, accessType);
+    }
+
     private static Binding findPropertyByPath(TypeBinding type,
                                              String propertyPath,
                                              AccessType defaultAccessType) {
@@ -182,13 +191,13 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                 }
             }
             throw new PropertyNotFoundException(
-                    "Unable to locate property named " + name + " on " + getName()
+                    "Unable to locate property named '" + name + "' of '" + getName() + "'"
             );
         }
 
         @Override
         public String getName() {
-            return new String(type.sourceName());
+            return charToString(type.sourceName());
         }
 
         @Override
@@ -314,18 +323,21 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
     }
 
     static boolean hasAnnotation(Binding annotations, String name) {
-        for (AnnotationBinding ann: annotations.getAnnotations()) {
-            if (qualifiedName(ann.getAnnotationType()).equals(name)) {
-                return true;
-            }
-        }
-        return false;
+        return getAnnotation(annotations, name)!=null;
     }
 
     static AnnotationBinding getAnnotation(Binding annotations, String name) {
         for (AnnotationBinding ann: annotations.getAnnotations()) {
             if (qualifiedName(ann.getAnnotationType()).equals(name)) {
                 return ann;
+            }
+        }
+        if (name.startsWith(new StringBuilder("javax.").append("persistence.").toString())) {
+            name = "jakarta" + name.substring(5);
+            for (AnnotationBinding ann : annotations.getAnnotations()) {
+                if (qualifiedName(ann.getAnnotationType()).equals(name)) {
+                    return ann;
+                }
             }
         }
         return null;
@@ -376,8 +388,8 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
     private static Binding findProperty(TypeBinding type, String propertyName,
                                 AccessType defaultAccessType) {
         //iterate up the superclass hierarchy
-        while (type instanceof SourceTypeBinding) {
-            SourceTypeBinding classSymbol = (SourceTypeBinding) type;
+        while (type instanceof ReferenceBinding) {
+            ReferenceBinding classSymbol = (ReferenceBinding) type;
             if (isMappedClass(type)) { //ignore unmapped intervening classes
                 AccessType accessType =
                         getAccessType(type, defaultAccessType);
@@ -394,7 +406,7 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                     }
                 }
             }
-            type = classSymbol.superclass;
+            type = type.superclass();
         }
         return null;
     }
@@ -635,6 +647,11 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
     }
 
     @Override
+    protected String getSupertype(String entityName) {
+        return charToString(findEntityClass(entityName).superclass().readableName());
+    }
+
+    @Override
     boolean isEntityDefined(String entityName) {
         return findEntityClass(entityName) != null;
     }
@@ -653,7 +670,7 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
 
     @Override
     boolean isFieldDefined(String qualifiedClassName, String fieldName) {
-        SourceTypeBinding type = (SourceTypeBinding)
+        ReferenceBinding type = (ReferenceBinding)
                 findClassByQualifiedName(qualifiedClassName);
         if (type==null) return false;
         for (FieldBinding field: type.fields()) {
