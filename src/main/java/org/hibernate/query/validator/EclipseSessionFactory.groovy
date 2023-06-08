@@ -1,6 +1,5 @@
 package org.hibernate.query.validator
 
-import org.eclipse.jdt.internal.compiler.lookup.Binding
 import org.hibernate.PropertyNotFoundException
 import org.hibernate.engine.spi.Mapping
 import org.hibernate.type.*
@@ -65,6 +64,15 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         }
     }
 
+    @Override
+    Type propertyType(String typeName, String propertyPath) {
+        def type = findClassByQualifiedName(typeName)
+        AccessType accessType = getAccessType(type, AccessType.FIELD)
+        def propertyByPath = findPropertyByPath(type, propertyPath, accessType)
+        if ( propertyByPath == null) return null
+        return propertyType(propertyByPath, typeName, propertyPath, accessType)
+    }
+
     private static def findPropertyByPath(type,
                                           String propertyPath,
                                           AccessType defaultAccessType) {
@@ -81,7 +89,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                              AccessType defaultAccessType) {
         def memberType = getMemberType(member)
         if (isEmbeddedProperty(member)) {
-            return component.make(memberType, entityName, path, defaultAccessType);
+            return component.make(memberType, entityName, path, defaultAccessType)
         }
         else if (isToOneAssociation(member)) {
             String targetEntity = getToOneTargetEntity(member)
@@ -177,7 +185,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                 }
             }
             throw new PropertyNotFoundException(
-                    "Unable to locate property named " + name + " on " + getName()
+                    "Unable to locate property named '" + name + "' of '" + getName() + "'"
             )
         }
 
@@ -309,18 +317,21 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
 //    }
 
     static boolean hasAnnotation(annotations, String name) {
-        for (ann in annotations.getAnnotations()) {
-            if (qualifiedTypeName(ann.getAnnotationType()) == name) {
-                return true
-            }
-        }
-        return false
+        return getAnnotation(annotations, name)!=null
     }
 
     static def getAnnotation(annotations, String name) {
         for (ann in annotations.getAnnotations()) {
             if (qualifiedTypeName(ann.getAnnotationType()) == name) {
                 return ann
+            }
+        }
+        if (name.startsWith(new StringBuilder("javax.").append("persistence.").toString())) {
+            name = "jakarta" + name.substring(5);
+            for (ann in annotations.getAnnotations()) {
+                if (qualifiedTypeName(ann.getAnnotationType()) == name) {
+                    return ann;
+                }
             }
         }
         return null
@@ -458,7 +469,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
         return hasAnnotation(member, jpa("Transient"))
     }
 
-    private static boolean isEnumProperty(Binding member) {
+    private static boolean isEnumProperty(member) {
         return hasAnnotation(member, jpa("Enumerated")) ||
                 getMemberType(member).isEnum();
     }
@@ -596,6 +607,11 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                     throw new IllegalStateException()
             }
         }
+    }
+
+    @Override
+    protected String getSupertype(String entityName) {
+        return new String(findEntityClass(entityName).superclass().sourceName)
     }
 
     @Override

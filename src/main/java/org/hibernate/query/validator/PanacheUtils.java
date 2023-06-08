@@ -110,7 +110,7 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
                 return null;
             query += " = ?1";
         }
-        String fromPrefix = "UPDATE FROM " + targetType + " ";
+        String fromPrefix = "UPDATE " + targetType + " ";
         if (trimmedLc.startsWith("set ")) {
             offset[0] = fromPrefix.length();
             return fromPrefix + query;

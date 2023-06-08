@@ -8,6 +8,7 @@ import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
+import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
 import org.hibernate.PropertyNotFoundException;
 import org.hibernate.engine.spi.Mapping;
 import org.hibernate.type.BasicType;
@@ -88,6 +89,15 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
         else {
             return null;
         }
+    }
+
+    @Override
+    Type propertyType(String typeName, String propertyPath) {
+        Symbol.ClassSymbol type = findClassByQualifiedName(typeName);
+        AccessType accessType = getAccessType(type, AccessType.FIELD);
+        Symbol propertyByPath = findPropertyByPath(type, propertyPath, accessType);
+        if ( propertyByPath == null) return null;
+        return propertyType(propertyByPath, typeName, propertyPath, accessType);
     }
 
     private static Symbol findPropertyByPath(Symbol.TypeSymbol type,
@@ -196,7 +206,7 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
                 }
             }
             throw new PropertyNotFoundException(
-                    "Unable to locate property named " + name + " on " + getName()
+                    "Unable to locate property named '" + name + "' of '" + getName() + "'"
             );
         }
 
@@ -597,6 +607,11 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
             || classType.getKind() == TypeKind.VOID ?
                 getCollectionElementType(property) :
                 classType;
+    }
+
+    @Override
+    protected String getSupertype(String entityName) {
+        return findEntityClass(entityName).getSuperclass().tsym.name.toString();
     }
 
     @Override
