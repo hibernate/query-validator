@@ -3,7 +3,6 @@ package org.hibernate.query.validator;
 import org.hibernate.FetchMode;
 import org.hibernate.QueryException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
-import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.collection.QueryableCollection;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.type.*;
@@ -23,14 +22,14 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     private static final String[] INDEX_COLUMN = {"pos"};
 
     private final String role;
-    private final SessionFactoryImplementor factory;
+    private final MockSessionFactory factory;
     private final CollectionType collectionType;
     private final String ownerEntityName;
     private final Type elementType;
 
     public MockCollectionPersister(String role, CollectionType collectionType,
                             Type elementType,
-                            SessionFactoryImplementor factory) {
+                            MockSessionFactory factory) {
         this.role = role;
         this.collectionType = collectionType;
         this.elementType = elementType;
