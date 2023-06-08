@@ -29,6 +29,7 @@ class ErrorReporter implements Validation.Handler {
 
 	private final Log log;
 	private final JCTree.JCLiteral literal;
+	private int errorcount;
 
 	ErrorReporter(JavacProcessor processor, JCTree.JCLiteral literal, Element element) {
 		this.literal = literal;
@@ -44,7 +45,13 @@ class ErrorReporter implements Validation.Handler {
 	}
 
 	@Override
+	public int getErrorCount() {
+		return errorcount;
+	}
+
+	@Override
 	public void error(int start, int end, String message) {
+		errorcount++;
 		log.error(literal.pos + start, KEY, message);
 	}
 
@@ -61,6 +68,7 @@ class ErrorReporter implements Validation.Handler {
 			int charPositionInLine,
 			String message,
 			RecognitionException e) {
+		errorcount++;
 		Token offendingToken = e.getOffendingToken();
 		if ( offendingToken != null ) {
 			log.error(literal.pos+1+offendingToken.getStartIndex(), KEY, message);

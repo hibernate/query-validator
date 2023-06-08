@@ -2,27 +2,95 @@ package org.hibernate.query.validator;
 
 import org.hibernate.CustomEntityDirtinessStrategy;
 import org.hibernate.MappingException;
+import org.hibernate.boot.internal.MetadataImpl;
 import org.hibernate.boot.model.FunctionContributions;
+import org.hibernate.boot.model.naming.ImplicitNamingStrategy;
+import org.hibernate.boot.model.naming.ImplicitNamingStrategyJpaCompliantImpl;
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
+import org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl;
+import org.hibernate.boot.model.relational.Database;
+import org.hibernate.boot.model.relational.SqlStringGenerationContext;
 import org.hibernate.boot.registry.BootstrapServiceRegistryBuilder;
 import org.hibernate.boot.registry.internal.StandardServiceRegistryImpl;
+import org.hibernate.boot.spi.BootstrapContext;
+import org.hibernate.boot.spi.MappingDefaults;
+import org.hibernate.boot.spi.MetadataBuildingContext;
+import org.hibernate.boot.spi.MetadataBuildingOptions;
+import org.hibernate.boot.spi.MetadataImplementor;
 import org.hibernate.boot.spi.SessionFactoryOptions;
 import org.hibernate.cache.internal.DisabledCaching;
 import org.hibernate.cache.spi.CacheImplementor;
+import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
+import org.hibernate.engine.query.internal.NativeQueryInterpreterStandardImpl;
+import org.hibernate.engine.query.spi.NativeQueryInterpreter;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.graph.spi.RootGraphImplementor;
+import org.hibernate.id.factory.IdentifierGeneratorFactory;
+import org.hibernate.id.factory.internal.StandardIdentifierGeneratorFactory;
 import org.hibernate.internal.FastSessionServices;
+import org.hibernate.jpa.spi.JpaCompliance;
+import org.hibernate.mapping.Property;
+import org.hibernate.metamodel.AttributeClassification;
+import org.hibernate.metamodel.CollectionClassification;
+import org.hibernate.metamodel.internal.JpaMetaModelPopulationSetting;
+import org.hibernate.metamodel.internal.JpaStaticMetaModelPopulationSetting;
+import org.hibernate.metamodel.internal.MetadataContext;
+import org.hibernate.metamodel.internal.RuntimeMetamodelsImpl;
+import org.hibernate.metamodel.mapping.JdbcMapping;
+import org.hibernate.metamodel.model.domain.BasicDomainType;
+import org.hibernate.metamodel.model.domain.DomainType;
+import org.hibernate.metamodel.model.domain.EmbeddableDomainType;
+import org.hibernate.metamodel.model.domain.EntityDomainType;
+import org.hibernate.metamodel.model.domain.ManagedDomainType;
+import org.hibernate.metamodel.model.domain.PersistentAttribute;
+import org.hibernate.metamodel.model.domain.internal.AbstractAttribute;
+import org.hibernate.metamodel.model.domain.internal.BagAttributeImpl;
+import org.hibernate.metamodel.model.domain.internal.BasicTypeImpl;
+import org.hibernate.metamodel.model.domain.internal.EmbeddableTypeImpl;
+import org.hibernate.metamodel.model.domain.internal.EntityTypeImpl;
+import org.hibernate.metamodel.model.domain.internal.JpaMetamodelImpl;
+import org.hibernate.metamodel.model.domain.internal.ListAttributeImpl;
+import org.hibernate.metamodel.model.domain.internal.MapAttributeImpl;
 import org.hibernate.metamodel.model.domain.internal.MappingMetamodelImpl;
+import org.hibernate.metamodel.model.domain.internal.PluralAttributeBuilder;
+import org.hibernate.metamodel.model.domain.internal.SetAttributeImpl;
+import org.hibernate.metamodel.model.domain.internal.SingularAttributeImpl;
+import org.hibernate.metamodel.model.domain.spi.JpaMetamodelImplementor;
+import org.hibernate.metamodel.spi.MappingMetamodelImplementor;
 import org.hibernate.metamodel.spi.MetamodelImplementor;
+import org.hibernate.metamodel.spi.RuntimeMetamodelsImplementor;
+import org.hibernate.metamodel.spi.RuntimeModelCreationContext;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.proxy.EntityNotFoundDelegate;
+import org.hibernate.query.criteria.ValueHandlingMode;
+import org.hibernate.query.hql.HqlTranslator;
+import org.hibernate.query.hql.internal.StandardHqlTranslator;
+import org.hibernate.query.internal.NamedObjectRepositoryImpl;
+import org.hibernate.query.internal.QueryInterpretationCacheDisabledImpl;
+import org.hibernate.query.named.NamedObjectRepository;
+import org.hibernate.query.spi.QueryEngine;
+import org.hibernate.query.spi.QueryInterpretationCache;
+import org.hibernate.query.sqm.NodeBuilder;
 import org.hibernate.query.sqm.function.SqmFunctionRegistry;
-import org.hibernate.service.ServiceRegistry;
-import org.hibernate.service.spi.ServiceRegistryImplementor;
-import org.hibernate.type.*;
+import org.hibernate.query.sqm.internal.SqmCriteriaNodeBuilder;
+import org.hibernate.query.sqm.sql.SqmTranslatorFactory;
+import org.hibernate.query.sqm.sql.StandardSqmTranslatorFactory;
+import org.hibernate.stat.internal.StatisticsImpl;
+import org.hibernate.stat.spi.StatisticsImplementor;
+import org.hibernate.type.BagType;
+import org.hibernate.type.BasicType;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.ListType;
+import org.hibernate.type.MapType;
+import org.hibernate.type.SetType;
+import org.hibernate.type.SqlTypes;
+import org.hibernate.type.Type;
+import org.hibernate.type.descriptor.java.JavaType;
+import org.hibernate.type.descriptor.java.spi.UnknownBasicJavaType;
 import org.hibernate.type.descriptor.jdbc.JdbcTypeIndicators;
 import org.hibernate.type.spi.TypeConfiguration;
 
@@ -34,7 +102,9 @@ import static java.util.Collections.*;
 /**
  * @author Gavin King
  */
-public abstract class MockSessionFactory implements SessionFactoryImplementor {
+public abstract class MockSessionFactory
+        implements SessionFactoryImplementor, QueryEngine, RuntimeModelCreationContext, MetadataBuildingOptions,
+                BootstrapContext, MetadataBuildingContext, FunctionContributions {
 
     private static final SessionFactoryOptions options = Mocker.nullary(MockSessionFactoryOptions.class).get();
 
@@ -44,91 +114,61 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
     static final TypeConfiguration typeConfiguration = new TypeConfiguration() {
         @Override
         public JdbcTypeIndicators getCurrentBaseSqlTypeIndicators() {
-            return new JdbcTypeIndicators() {
-                @Override
-                public TypeConfiguration getTypeConfiguration() {
-                    return typeConfiguration;
-                }
-
-                @Override
-                public Dialect getDialect() {
-                    return new GenericDialect();
-                }
-
-                @Override
-                public int getPreferredSqlTypeCodeForBoolean() {
-                    return SqlTypes.BOOLEAN;
-                }
-
-                @Override
-                public int getPreferredSqlTypeCodeForDuration() {
-                    return SqlTypes.NUMERIC;
-                }
-
-                @Override
-                public int getPreferredSqlTypeCodeForUuid() {
-                    return SqlTypes.UUID;
-                }
-
-                @Override
-                public int getPreferredSqlTypeCodeForInstant() {
-                    return SqlTypes.TIMESTAMP_WITH_TIMEZONE;
-                }
-
-                @Override
-                public int getPreferredSqlTypeCodeForArray() {
-                    return SqlTypes.ARRAY;
-                }
-            };
+            return new MockJdbcTypeIndicators();
         }
     };
-
-    static final SqmFunctionRegistry functionRegistry = new SqmFunctionRegistry();
-    static {
-        new GenericDialect().initializeFunctionRegistry(new FunctionContributions() {
-            @Override
-            public SqmFunctionRegistry getFunctionRegistry() {
-                return MockSessionFactory.functionRegistry;
-            }
-
-            @Override
-            public TypeConfiguration getTypeConfiguration() {
-                return MockSessionFactory.typeConfiguration;
-            }
-
-            @Override
-            public ServiceRegistry getServiceRegistry() {
-                return MockSessionFactory.serviceRegistry;
-            }
-        });
-    }
 
     static final StandardServiceRegistryImpl serviceRegistry =
             new StandardServiceRegistryImpl(
                     new BootstrapServiceRegistryBuilder().build(),
                     singletonList(MockJdbcServicesInitiator.INSTANCE),
                     emptyList(),
-                    emptyMap());
+                    emptyMap()
+            );
 
-    private final MetamodelImplementor metamodel =
-            new MappingMetamodelImpl(typeConfiguration, serviceRegistry) {
-                @Override
-                public EntityPersister entityPersister(String entityName)
-                        throws MappingException {
-                    return createEntityPersister(entityName);
-                }
+    private final SqmFunctionRegistry functionRegistry = new SqmFunctionRegistry();
+    {
+        MockJdbcServicesInitiator.genericDialect.initializeFunctionRegistry(this);
+    }
 
-                @Override
-                public EntityPersister locateEntityPersister(String entityName)
-                        throws MappingException {
-                    return createEntityPersister(entityName);
-                }
+    private final MappingMetamodelImpl metamodel = new MockMappingMetamodelImpl();
 
-                @Override
-                public CollectionPersister collectionPersister(String role) {
-                    return createCollectionPersister(role);
-                }
-            };
+    private final Database database =
+            new Database(this, MockJdbcServicesInitiator.jdbcServices.getJdbcEnvironment());
+
+    private final MetadataImplementor bootModel =
+            new MetadataImpl(
+                    UUID.randomUUID(),
+                    this,
+                    emptyMap(),
+                    emptyList(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    emptyMap(),
+                    database,
+                    this
+            );
+
+    private final MetadataContext metadataContext =
+            new MetadataContext(
+                    metamodel.getJpaMetamodel(),
+                    metamodel,
+                    bootModel,
+                    JpaStaticMetaModelPopulationSetting.DISABLED,
+                    JpaMetaModelPopulationSetting.DISABLED,
+                    this
+            );
 
     public MockSessionFactory() {
     }
@@ -136,6 +176,16 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
     @Override
     public TypeConfiguration getTypeConfiguration() {
         return typeConfiguration;
+    }
+
+    @Override
+    public PhysicalNamingStrategy getPhysicalNamingStrategy() {
+        return new PhysicalNamingStrategyStandardImpl();
+    }
+
+    @Override
+    public ImplicitNamingStrategy getImplicitNamingStrategy() {
+        return new ImplicitNamingStrategyJpaCompliantImpl();
     }
 
     static CollectionType createCollectionType(String role, String name) {
@@ -165,6 +215,10 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
      * Lazily create a {@link MockCollectionPersister}
      */
     abstract MockCollectionPersister createMockCollectionPersister(String role);
+
+    abstract boolean isEntityDefined(String entityName);
+
+    abstract boolean isAttributeDefined(String entityName, String fieldName);
 
     abstract boolean isClassDefined(String qualifiedName);
 
@@ -222,13 +276,14 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
     }
 
     @Override
-    public ServiceRegistryImplementor getServiceRegistry() {
+    public StandardServiceRegistryImpl getServiceRegistry() {
         return serviceRegistry;
     }
 
     @Override
     public JdbcServices getJdbcServices() {
-        return serviceRegistry.getService(JdbcServices.class);
+        return MockJdbcServicesInitiator.jdbcServices;
+//        return serviceRegistry.getService(JdbcServices.class);
     }
 
     @Override
@@ -308,4 +363,500 @@ public abstract class MockSessionFactory implements SessionFactoryImplementor {
         }
     }
 
+    @Override
+    public NativeQueryInterpreter getNativeQueryInterpreter() {
+        return new NativeQueryInterpreterStandardImpl();
+    }
+
+    @Override
+    public QueryInterpretationCache getInterpretationCache() {
+        return new QueryInterpretationCacheDisabledImpl(this::getStatistics);
+    }
+
+    @Override
+    public StatisticsImplementor getStatistics() {
+        return new StatisticsImpl(this);
+    }
+
+    @Override
+    public SqmFunctionRegistry getSqmFunctionRegistry() {
+        return functionRegistry;
+    }
+
+    @Override
+    public NodeBuilder getCriteriaBuilder() {
+        return new SqmCriteriaNodeBuilder(
+                "",
+                "",
+                this,
+                false,
+                ValueHandlingMode.INLINE,
+                () -> MockSessionFactory.this
+        );
+    }
+
+    @Override
+    public void validateNamedQueries() {
+    }
+
+    @Override
+    public NamedObjectRepository getNamedObjectRepository() {
+        return new NamedObjectRepositoryImpl(new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>());
+    }
+
+    @Override
+    public HqlTranslator getHqlTranslator() {
+        return new StandardHqlTranslator(MockSessionFactory.this, () -> false);
+    }
+
+    @Override
+    public SqmTranslatorFactory getSqmTranslatorFactory() {
+        return new StandardSqmTranslatorFactory();
+    }
+
+    @Override
+    public QueryEngine getQueryEngine() {
+        return this;
+    }
+
+    @Override
+    public JpaMetamodelImplementor getJpaMetamodel() {
+        return metamodel.getJpaMetamodel();
+    }
+
+    @Override
+    public MappingMetamodelImplementor getMappingMetamodel() {
+        return metamodel;
+    }
+
+    @Override
+    public RuntimeMetamodelsImplementor getRuntimeMetamodels() {
+        RuntimeMetamodelsImpl runtimeMetamodels = new RuntimeMetamodelsImpl();
+        runtimeMetamodels.setJpaMetamodel( metamodel.getJpaMetamodel() );
+        runtimeMetamodels.setMappingMetamodel( metamodel );
+        return runtimeMetamodels;
+    }
+
+    @Override
+    public boolean isClosed() {
+        return false;
+    }
+
+    private static class MockMappingDefaults implements MappingDefaults {
+        @Override
+        public String getImplicitSchemaName() {
+            return null;
+        }
+
+        @Override
+        public String getImplicitCatalogName() {
+            return null;
+        }
+
+        @Override
+        public boolean shouldImplicitlyQuoteIdentifiers() {
+            return false;
+        }
+
+        @Override
+        public String getImplicitIdColumnName() {
+            return null;
+        }
+
+        @Override
+        public String getImplicitTenantIdColumnName() {
+            return null;
+        }
+
+        @Override
+        public String getImplicitDiscriminatorColumnName() {
+            return null;
+        }
+
+        @Override
+        public String getImplicitPackageName() {
+            return null;
+        }
+
+        @Override
+        public boolean isAutoImportEnabled() {
+            return false;
+        }
+
+        @Override
+        public String getImplicitCascadeStyleName() {
+            return null;
+        }
+
+        @Override
+        public String getImplicitPropertyAccessorName() {
+            return null;
+        }
+
+        @Override
+        public boolean areEntitiesImplicitlyLazy() {
+            return false;
+        }
+
+        @Override
+        public boolean areCollectionsImplicitlyLazy() {
+            return false;
+        }
+
+        @Override
+        public AccessType getImplicitCacheAccessType() {
+            return null;
+        }
+
+        @Override
+        public CollectionClassification getImplicitListClassification() {
+            return null;
+        }
+    }
+
+    private static class MockJdbcTypeIndicators implements JdbcTypeIndicators {
+        @Override
+        public TypeConfiguration getTypeConfiguration() {
+            return typeConfiguration;
+        }
+
+        @Override
+        public Dialect getDialect() {
+            return MockJdbcServicesInitiator.genericDialect;
+        }
+
+        @Override
+        public int getPreferredSqlTypeCodeForBoolean() {
+            return SqlTypes.BOOLEAN;
+        }
+
+        @Override
+        public int getPreferredSqlTypeCodeForDuration() {
+            return SqlTypes.NUMERIC;
+        }
+
+        @Override
+        public int getPreferredSqlTypeCodeForUuid() {
+            return SqlTypes.UUID;
+        }
+
+        @Override
+        public int getPreferredSqlTypeCodeForInstant() {
+            return SqlTypes.TIMESTAMP_WITH_TIMEZONE;
+        }
+
+        @Override
+        public int getPreferredSqlTypeCodeForArray() {
+            return SqlTypes.ARRAY;
+        }
+    }
+
+    private class MockMappingMetamodelImpl extends MappingMetamodelImpl {
+        public MockMappingMetamodelImpl() {
+            super(MockSessionFactory.typeConfiguration, MockSessionFactory.serviceRegistry);
+        }
+
+        @Override
+        public EntityPersister getEntityDescriptor(String entityName) {
+            return createEntityPersister(entityName);
+        }
+
+        @Override
+        public EntityPersister entityPersister(String entityName)
+                throws MappingException {
+            return createEntityPersister(entityName);
+        }
+
+        @Override
+        public EntityPersister locateEntityPersister(String entityName)
+                throws MappingException {
+            return createEntityPersister(entityName);
+        }
+
+        @Override
+        public CollectionPersister getCollectionDescriptor(String role) {
+            return createCollectionPersister(role);
+        }
+
+        @Override
+        public CollectionPersister findCollectionDescriptor(String role) {
+            return createCollectionPersister(role);
+        }
+
+        @Override
+        public CollectionPersister collectionPersister(String role) {
+            return createCollectionPersister(role);
+        }
+
+        @Override
+        public JpaMetamodelImplementor getJpaMetamodel() {
+            return new MockJpaMetamodelImpl();
+        }
+
+        @Override
+        public EntityPersister findEntityDescriptor(String entityName) {
+            return createEntityPersister(entityName);
+        }
+    }
+
+    @Override
+    public SessionFactoryImplementor getSessionFactory() {
+        return MockSessionFactory.this;
+    }
+
+    @Override
+    public BootstrapContext getBootstrapContext() {
+        return this;
+    }
+
+    @Override
+    public MetadataImplementor getBootModel() {
+        return bootModel;
+    }
+
+    @Override
+    public MappingMetamodelImplementor getDomainModel() {
+        return metamodel;
+    }
+
+    @Override
+    public SqmFunctionRegistry getFunctionRegistry() {
+        return functionRegistry;
+    }
+
+    @Override
+    public Map<String, Object> getSettings() {
+        return emptyMap();
+    }
+
+    @Override
+    public Dialect getDialect() {
+        return MockJdbcServicesInitiator.genericDialect;
+    }
+
+    @Override
+    public SqlStringGenerationContext getSqlStringGenerationContext() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public IdentifierGeneratorFactory getIdentifierGeneratorFactory() {
+        return new StandardIdentifierGeneratorFactory(serviceRegistry, true);
+    }
+
+    @Override
+    public MappingDefaults getMappingDefaults() {
+        return new MockMappingDefaults();
+    }
+
+    private class MockJpaMetamodelImpl extends JpaMetamodelImpl {
+        public MockJpaMetamodelImpl() {
+            super(MockSessionFactory.typeConfiguration, metamodel, MockSessionFactory.serviceRegistry);
+        }
+
+        @Override
+        public <X> EntityDomainType<X> entity(String entityName) {
+            if ( isEntityDefined(entityName) ) {
+                return new MockEntityDomainType<>(entityName);
+            }
+            else {
+                return null;
+            }
+        }
+
+        @Override
+        public String qualifyImportableName(String queryName) {
+            return queryName;
+        }
+
+        @Override
+        public <X> ManagedDomainType<X> findManagedType(Class<X> cls) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <X> EntityDomainType<X> findEntityType(Class<X> cls) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <X> ManagedDomainType<X> managedType(Class<X> cls) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <X> EntityDomainType<X> entity(Class<X> cls) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public JpaCompliance getJpaCompliance() {
+            return MockSessionFactoryOptions.jpaCompliance;
+        }
+    }
+
+    BasicDomainType<?> unknownType = new BasicTypeImpl<>(new UnknownBasicJavaType<>(Object.class));
+    EmbeddableDomainType<?> unknownEmbeddableType =
+            new EmbeddableTypeImpl<>(new UnknownBasicJavaType<>(Object.class), true, metamodel.getJpaMetamodel());
+
+    class MockEntityDomainType<X> extends EntityTypeImpl<X> {
+
+        public MockEntityDomainType(String entityName) {
+            super(entityName, entityName, false, true, false, null, null,
+                    metamodel.getJpaMetamodel());
+        }
+
+        @Override
+        public PersistentAttribute<X,?> findDeclaredAttribute(String name) {
+            String entityName = getHibernateEntityName();
+            return isAttributeDefined(entityName, name)
+                    ? createAttribute(name, entityName, getReferencedPropertyType(entityName, name))
+                    : null;
+        }
+
+        private AbstractAttribute createAttribute(String name, String entityName, Type type) {
+            if ( type ==null ) {
+                throw new UnsupportedOperationException(entityName + "." + name);
+            }
+            else if ( type.isCollectionType() ) {
+                CollectionType collectionType = (CollectionType) type;
+                DomainType<?> elementDomainType;
+                Property property = new Property();
+                property.setName(name);
+                JavaType<Object> javaType =
+                        typeConfiguration.getJavaTypeRegistry().getDescriptor(type.getReturnedClass());
+                BasicType<Integer> integerBasicType =
+                        typeConfiguration.getBasicTypeRegistry().getRegisteredType(Integer.class);
+                Type elementType = ((CollectionType) type).getElementType(MockSessionFactory.this);
+                if ( elementType.isEntityType() ) {
+                    String associatedEntityName = ((CollectionType) type).getAssociatedEntityName(MockSessionFactory.this);
+                    elementDomainType = new MockEntityDomainType<>(associatedEntityName);
+                }
+                else if ( elementType instanceof BasicType ) {
+                    elementDomainType = (BasicType<?>) elementType;
+                }
+                else {
+                    elementDomainType = unknownType;
+                }
+                CollectionClassification classification = collectionType.getCollectionClassification();
+                switch (classification) {
+                    case LIST:
+                        return new ListAttributeImpl(
+                                new PluralAttributeBuilder<>(
+                                        javaType,
+                                        true,
+                                        AttributeClassification.MANY_TO_MANY,
+                                        classification,
+                                        elementDomainType,
+                                        integerBasicType,
+                                        MockEntityDomainType.this,
+                                        property,
+                                        null
+                                ),
+                                metadataContext
+                        );
+                    case BAG:
+                    case ID_BAG:
+                        return new BagAttributeImpl(
+                                new PluralAttributeBuilder<>(
+                                        javaType,
+                                        true,
+                                        AttributeClassification.MANY_TO_MANY,
+                                        classification,
+                                        elementDomainType,
+                                        integerBasicType,
+                                        MockEntityDomainType.this,
+                                        property,
+                                        null
+                                ),
+                                metadataContext
+                        );
+                    case SET:
+                    case SORTED_SET:
+                    case ORDERED_SET:
+                        return new SetAttributeImpl(
+                                new PluralAttributeBuilder<>(
+                                        javaType,
+                                        true,
+                                        AttributeClassification.MANY_TO_MANY,
+                                        classification,
+                                        elementDomainType,
+                                        null,
+                                        MockEntityDomainType.this,
+                                        property,
+                                        null
+                                ),
+                                metadataContext
+                        );
+                    case MAP:
+                    case SORTED_MAP:
+                    case ORDERED_MAP:
+                        return new MapAttributeImpl(
+                                new PluralAttributeBuilder<>(
+                                        javaType,
+                                        true,
+                                        AttributeClassification.MANY_TO_MANY,
+                                        classification,
+                                        elementDomainType,
+                                        unknownType, //TODO: get the key type from the persister
+                                        MockEntityDomainType.this,
+                                        property,
+                                        null
+                                ),
+                                metadataContext
+                        );
+                    default:
+                        return null;
+                }
+            }
+            else if ( type.isEntityType() ) {
+                return new SingularAttributeImpl<>(
+                        this,
+                        name,
+                        AttributeClassification.MANY_TO_ONE,
+                        new MockEntityDomainType<>(type.getName()),
+                        null,
+                        null,
+                        false,
+                        false,
+                        true,
+                        false,
+                        metadataContext
+                );
+
+            }
+            else if ( type.isComponentType() ) {
+                return new SingularAttributeImpl<>(
+                        this,
+                        name,
+                        AttributeClassification.EMBEDDED,
+                        unknownEmbeddableType,
+                        null,
+                        null,
+                        false,
+                        false,
+                        true,
+                        false,
+                        metadataContext
+                );
+            }
+            else {
+                return new SingularAttributeImpl<>(
+                        this,
+                        name,
+                        AttributeClassification.BASIC,
+                        unknownType,
+                        type instanceof JdbcMapping
+                                ? ((JdbcMapping) type).getJavaTypeDescriptor()
+                                : null,
+                        null,
+                        false,
+                        false,
+                        true,
+                        false,
+                        metadataContext
+                );
+            }
+        }
+    }
 }

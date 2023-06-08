@@ -4,6 +4,7 @@ import org.hibernate.EntityNameResolver;
 import org.hibernate.SessionFactoryObserver;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.spi.SessionFactoryOptions;
+import org.hibernate.jpa.internal.JpaComplianceImpl;
 import org.hibernate.jpa.spi.JpaCompliance;
 import org.hibernate.loader.BatchFetchStyle;
 
@@ -15,7 +16,8 @@ public abstract class MockSessionFactoryOptions implements SessionFactoryOptions
     private static final SessionFactoryObserver[] NO_OBSERVERS = new SessionFactoryObserver[0];
     private static final EntityNameResolver[] NO_RESOLVERS = new EntityNameResolver[0];
 
-    private static JpaCompliance jpaCompliance = Mocker.nullary(JpaCompliance.class).get();
+    static JpaCompliance jpaCompliance =
+            new JpaComplianceImpl(false,false,false,false,false,false,false,false,false);
 
     @Override
     public String getSessionFactoryName() {

@@ -11,11 +11,12 @@ import org.antlr.v4.runtime.atn.ATNConfigSet;
 import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
+import org.hibernate.QueryException;
 import org.hibernate.grammars.hql.HqlLexer;
 import org.hibernate.grammars.hql.HqlParser;
-import org.hibernate.query.SemanticException;
+import org.hibernate.query.PathException;
 import org.hibernate.query.hql.internal.HqlParseTreeBuilder;
-import org.hibernate.query.sqm.ParsingException;
+import org.hibernate.query.hql.internal.SemanticQueryBuilder;
 
 import java.util.BitSet;
 import java.util.Set;
@@ -28,6 +29,8 @@ class Validation {
     interface Handler extends ANTLRErrorListener {
         void error(int start, int end, String message);
         void warn(int start, int end, String message);
+
+        int getErrorCount();
     }
 
     static void validate(String hql, boolean checkParams,
@@ -70,52 +73,21 @@ class Validation {
                 hqlParser.setErrorHandler( new DefaultErrorStrategy() );
 
                 statementContext = hqlParser.statement();
+
             }
-            catch ( ParsingException ex ) {
-                throw new SemanticException( "Illegal HQL syntax [" + ex.getMessage() + "]", hql, ex );
+            if (handler.getErrorCount() == 0) {
+                try {
+                    new SemanticQueryBuilder<>(null, () -> false, factory)
+                            .visitStatement( statementContext );
+                }
+                catch (IllegalArgumentException iae) {
+                    handler.error( errorOffset, errorOffset + hql.length(), iae.getCause().getMessage() );
+                }
+                catch (QueryException | PathException | IllegalStateException se) {
+                    handler.error( errorOffset, errorOffset + hql.length(), se.getMessage() );
+                }
             }
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-//
-//            if (handler.getErrorCount() == 0) {
-//                new NodeTraverser(new JavaConstantConverter(factory))
-//                        .traverseDepthFirst(parser.getAST());
-//
-//                HqlSqlWalker walker = new HqlSqlWalker(
-//                        new QueryTranslatorImpl("", hql, emptyMap(), factory),
-//                        factory, parser, emptyMap(), null) {
-//                    @Override
-//                    public Dialect getDialect() {
-//                        return factory.getDialect();
-//                    }
-//                };
-//                walker.setASTFactory(new SqlASTFactory(walker) {
-//                    @Override
-//                    public Class<?> getASTNodeType(int tokenType) {
-//                        return tokenType == CONSTRUCTOR ?
-//                                WorkaroundConstructorNode.class :
-//                                super.getASTNodeType(tokenType);
-//                    }
-//                });
-//                setHandler(walker, handler);
-//                try {
-//                    walker.statement(parser.getAST());
-//                }
-//                catch (HibernateException e) {
-//                    String message = e.getMessage();
-//                    if (message != null) {
-//                        handler.reportError(message);
-//                    }
-//                }
-//                catch (Exception e) {
-//                    //throw away NullPointerExceptions and the like
-//                    //since I guess they represent bugs in Hibernate
-////                    e.printStackTrace();
-//                }
-//
+
 //                if (checkParams) {
 //                    try {
 //                        String unsetParams = null;
@@ -196,59 +168,13 @@ class Validation {
 //                        setParameterLabels.clear();
 //                    }
 //                }
-//            }
-//        }
-//        catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//    private static class JavaConstantConverter implements NodeTraverser.VisitationStrategy {
-//        private final MockSessionFactory factory;
-//        private AST dotRoot;
-//
-//        private JavaConstantConverter(MockSessionFactory factory) {
-//            this.factory = factory;
-//        }
-//
-//        @Override
-//        public void visit(AST node) {
-//            if (dotRoot != null) {
-//                // we are already processing a dot-structure
-//                if (ASTUtil.isSubtreeChild(dotRoot, node)) {
-//                    return;
-//                }
-//                // we are now at a new tree level
-//                dotRoot = null;
-//            }
-//
-//            if (node.getType() == HqlTokenTypes.DOT) {
-//                dotRoot = node;
-//                handleDotStructure(dotRoot);
-//            }
-//        }
-//
-//        private void handleDotStructure(AST dotStructureRoot) {
-//            final String expression = ASTUtil.getPathText(dotStructureRoot);
-//            if (isConstantValue(expression, factory)) {
-//                dotStructureRoot.setFirstChild(null);
-//                dotStructureRoot.setType(HqlTokenTypes.JAVA_CONSTANT);
-//                dotStructureRoot.setText(expression);
-//            }
-//        }
-//
-//        private static final Pattern JAVA_CONSTANT_PATTERN = Pattern.compile(
-//                "([a-z\\d]+\\.)+([A-Z][a-z\\d]+)+\\$?([A-Z][a-z\\d]+)*\\.[A-Z_$]+",
-//                Pattern.UNICODE_CHARACTER_CLASS);
-//
-//        private boolean isConstantValue(String name, MockSessionFactory factory) {
-//            return (!factory.getSessionFactoryOptions().isConventionalJavaConstants()
-//                    || JAVA_CONSTANT_PATTERN.matcher(name).matches())
-//                && factory.isFieldDefined(qualifier(name), unqualify(name));
-//        }
-//    }
-//
-//
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
 //    private static void setHandler(HqlParser object, ParseErrorHandler handler) {
 //        try {
 //            Field field = HqlParser.class.getDeclaredField("parseErrorHandler");
@@ -270,11 +196,16 @@ class Validation {
 //            e.printStackTrace();
 //        }
 //    }
-//
+
     private static class Filter implements Handler {
         private final Handler delegate;
         private final int errorOffset;
         private int errorCount;
+
+        @Override
+        public int getErrorCount() {
+            return errorCount;
+        }
 
         private Filter(Handler delegate, int errorOffset) {
             this.delegate = delegate;

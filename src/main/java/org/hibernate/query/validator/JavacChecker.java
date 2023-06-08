@@ -4,7 +4,6 @@ import com.sun.source.tree.ExpressionTree;
 import com.sun.source.tree.IdentifierTree;
 import com.sun.source.tree.MemberSelectTree;
 import com.sun.source.tree.Tree;
-import com.sun.tools.javac.code.Attribute;
 import com.sun.tools.javac.model.JavacElements;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.TreeScanner;
@@ -13,9 +12,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
@@ -289,34 +286,34 @@ public class JavacChecker {
 		return false;
 	}
 
-	private List<String> getWhitelist(Element element) {
-		List<String> list = new ArrayList<>();
-		element.getAnnotationMirrors().forEach(am -> {
-			if (isCheckAnnotation(am)) {
-				am.getElementValues().forEach((var, act) -> {
-					switch (var.getSimpleName().toString()) {
-						case "whitelist":
-							if (act instanceof Attribute.Array) {
-								for (Attribute a: ((Attribute.Array) act).values) {
-									Object value = a.getValue();
-									if (value instanceof String) {
-										list.add(value.toString());
-									}
-								}
-							}
-							break;
-						case "dialect":
-							if (act instanceof Attribute.Class) {
-								String name = act.getValue().toString().replace(".class","");
-								list.addAll(MockSessionFactory.functionRegistry.getValidFunctionKeys());
-							}
-							break;
-					}
-				});
-			}
-		});
-		return list;
-	}
+//	private List<String> getWhitelist(Element element) {
+//		List<String> list = new ArrayList<>();
+//		element.getAnnotationMirrors().forEach(am -> {
+//			if (isCheckAnnotation(am)) {
+//				am.getElementValues().forEach((var, act) -> {
+//					switch (var.getSimpleName().toString()) {
+//						case "whitelist":
+//							if (act instanceof Attribute.Array) {
+//								for (Attribute a: ((Attribute.Array) act).values) {
+//									Object value = a.getValue();
+//									if (value instanceof String) {
+//										list.add(value.toString());
+//									}
+//								}
+//							}
+//							break;
+//						case "dialect":
+//							if (act instanceof Attribute.Class) {
+//								String name = act.getValue().toString().replace(".class","");
+//								list.addAll(MockSessionFactory.functionRegistry.getValidFunctionKeys());
+//							}
+//							break;
+//					}
+//				});
+//			}
+//		});
+//		return list;
+//	}
 
 	private static String getMethodName(ExpressionTree select) {
 		if (select instanceof MemberSelectTree) {
