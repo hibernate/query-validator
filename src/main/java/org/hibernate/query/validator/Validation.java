@@ -11,6 +11,7 @@ import org.antlr.v4.runtime.atn.ATNConfigSet;
 import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.dfa.DFA;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
+import org.hibernate.PropertyNotFoundException;
 import org.hibernate.QueryException;
 import org.hibernate.grammars.hql.HqlLexer;
 import org.hibernate.grammars.hql.HqlParser;
@@ -83,7 +84,7 @@ class Validation {
                 catch (IllegalArgumentException iae) {
                     handler.error( errorOffset, errorOffset + hql.length(), iae.getCause().getMessage() );
                 }
-                catch (QueryException | PathException | IllegalStateException se) {
+                catch (QueryException | PathException | IllegalStateException | PropertyNotFoundException se) {
                     handler.error( errorOffset, errorOffset + hql.length(), se.getMessage() );
                 }
             }

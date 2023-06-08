@@ -8,6 +8,7 @@ import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
+import org.hibernate.PropertyNotFoundException;
 import org.hibernate.engine.spi.Mapping;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.CollectionType;
@@ -184,6 +185,29 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
 
             propertyNames = names.toArray(new String[0]);
             propertyTypes = types.toArray(new Type[0]);
+        }
+
+        @Override
+        public int getPropertyIndex(String name) {
+            String[] names = getPropertyNames();
+            for ( int i = 0, max = names.length; i < max; i++ ) {
+                if ( names[i].equals( name ) ) {
+                    return i;
+                }
+            }
+            throw new PropertyNotFoundException(
+                    "Unable to locate property named " + name + " on " + getName()
+            );
+        }
+
+        @Override
+        public String getName() {
+            return type.name.toString();
+        }
+
+        @Override
+        public boolean isComponentType() {
+            return true;
         }
 
         @Override
@@ -573,6 +597,11 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
             || classType.getKind() == TypeKind.VOID ?
                 getCollectionElementType(property) :
                 classType;
+    }
+
+    @Override
+    protected boolean isSubtype(String entityName, String subtypeEntityName) {
+        return findEntityClass(entityName).isSubClass(findEntityClass(subtypeEntityName), types);
     }
 
     @Override
