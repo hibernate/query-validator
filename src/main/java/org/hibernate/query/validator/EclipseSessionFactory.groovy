@@ -185,7 +185,7 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
                 }
             }
             throw new PropertyNotFoundException(
-                    "Unable to locate property named '" + name + "' of '" + getName() + "'"
+                    "Could not resolve attribute '" + name + "' of '" + getName() + "'"
             )
         }
 

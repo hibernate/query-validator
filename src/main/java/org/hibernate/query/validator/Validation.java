@@ -11,6 +11,8 @@ import org.hibernate.QueryException;
 import org.hibernate.grammars.hql.HqlLexer;
 import org.hibernate.grammars.hql.HqlParser;
 import org.hibernate.query.PathException;
+import org.hibernate.query.PathElementException;
+import org.hibernate.query.TerminalPathException;
 import org.hibernate.query.hql.internal.HqlParseTreeBuilder;
 import org.hibernate.query.hql.internal.SemanticQueryBuilder;
 import org.hibernate.query.sqm.ParsingException;
@@ -83,13 +85,11 @@ class Validation {
                     new SemanticQueryBuilder<>(null, () -> false, factory)
                             .visitStatement( statementContext );
                 }
-                catch (IllegalArgumentException iae) {
-                    handler.error( -errorOffset+1, -errorOffset + hql.length(), iae.getCause().getMessage() );
-                }
                 catch (JdbcTypeRecommendationException ignored) {
                     // just squash these for now
                 }
-                catch (QueryException | ParsingException | PathException | IllegalStateException | PropertyNotFoundException se) {
+                catch (QueryException | ParsingException | PathException | PathElementException | TerminalPathException
+                       | PropertyNotFoundException se) {
                     handler.error( -errorOffset+1, -errorOffset + hql.length(), se.getMessage() );
                 }
             }

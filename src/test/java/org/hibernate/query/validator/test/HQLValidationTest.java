@@ -49,7 +49,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("BadQueries.java:24: error: Could not resolve attribute 'type' of 'Country'"));
 
         assertTrue(errors.contains("BadQueries.java:26: error: Could not interpret attribute 'length' of basic-valued path"));
-        assertTrue(errors.contains("BadQueries.java:27: error: Basic paths cannot be dereferenced"));
+        assertTrue(errors.contains("BadQueries.java:27: error: Terminal path has no attribute 'length'"));
 
         assertTrue(errors.contains("BadQueries.java:29: error: Could not interpret path expression 'xxx'"));
 //        assertTrue(errors.contains("BadQueries.java:30: warning: func is not defined"));
@@ -131,9 +131,8 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Could not resolve attribute 'name' of 'Address'") && errors.contains("BadQueries.java (at line 13)"));
         assertTrue(errors.contains("Could not resolve attribute 'type' of 'Country'") && errors.contains("BadQueries.java (at line 24)"));
 
-        assertTrue(errors.contains("") && errors.contains("BadQueries.java (at line 26)")); //should be: "string has no mapped length"
         assertTrue(errors.contains("Could not interpret attribute 'length' of basic-valued path") && errors.contains("BadQueries.java (at line 26)"));
-        assertTrue(errors.contains("Basic paths cannot be dereferenced") && errors.contains("BadQueries.java (at line 27)"));
+        assertTrue(errors.contains("Terminal path has no attribute 'length'") && errors.contains("BadQueries.java (at line 27)"));
 
         assertTrue(errors.contains("Could not interpret path expression 'xxx'") && errors.contains("BadQueries.java (at line 29)"));
 //        assertTrue(errors.contains("func is not defined") && errors.contains("BadQueries.java (at line 30)"));
