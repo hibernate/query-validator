@@ -8,7 +8,6 @@ import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.processing.JavacProcessingEnvironment;
 import com.sun.tools.javac.util.Context;
 import com.sun.tools.javac.util.Names;
-import org.eclipse.jdt.internal.compiler.lookup.TypeBinding;
 import org.hibernate.PropertyNotFoundException;
 import org.hibernate.engine.spi.Mapping;
 import org.hibernate.type.BasicType;
@@ -319,6 +318,12 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     @Override
     boolean isEntityDefined(String entityName) {
         return findEntityClass(entityName) != null;
+    }
+
+    @Override
+    String qualifyName(String entityName) {
+        Symbol.ClassSymbol entityClass = findEntityClass(entityName);
+        return entityClass == null ? null : entityClass.name.toString();
     }
 
     @Override
@@ -721,6 +726,9 @@ public abstract class JavacSessionFactory extends MockSessionFactory {
     }
 
     private Symbol.ClassSymbol findClassByQualifiedName(String path) {
+        if ( path == null ) {
+            return null;
+        }
         Iterator<Symbol.ClassSymbol> it = syms.getClassesForName(names.fromString(path)).iterator();
         return it.hasNext() ? it.next() : null;
     }

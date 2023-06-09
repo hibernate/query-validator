@@ -256,6 +256,8 @@ public abstract class MockSessionFactory
 
     abstract boolean isEntityDefined(String entityName);
 
+    abstract String qualifyName(String entityName);
+
     abstract boolean isAttributeDefined(String entityName, String fieldName);
 
     abstract boolean isClassDefined(String qualifiedName);
@@ -747,7 +749,13 @@ public abstract class MockSessionFactory
 
         @Override
         public String qualifyImportableName(String queryName) {
-            return queryName;
+            if (isClassDefined(queryName)) {
+                return queryName;
+            }
+            else if (isEntityDefined(queryName)) {
+                return qualifyName(queryName);
+            }
+            return null;
         }
 
         @Override

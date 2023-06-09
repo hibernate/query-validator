@@ -625,6 +625,12 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     @Override
+    String qualifyName(String entityName) {
+        def entityClass = findEntityClass(entityName);
+        return entityClass==null ? null : new String(entityClass.readableName());
+    }
+
+    @Override
     boolean isAttributeDefined(String entityName, String fieldName) {
         def entityClass = findEntityClass(entityName)
         return entityClass != null
@@ -738,6 +744,9 @@ abstract class EclipseSessionFactory extends MockSessionFactory {
     }
 
     def findClassByQualifiedName(String path) {
+        if (path==null) {
+            return null
+        }
         char[][] name =
                 stream(path.split("\\.")).map {s -> s.toCharArray()}.toArray {len -> new char[len][]}
         def type = unit.scope.getType(name, name.length)
