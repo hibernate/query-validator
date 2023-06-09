@@ -14,6 +14,7 @@ import org.hibernate.query.PathException;
 import org.hibernate.query.hql.internal.HqlParseTreeBuilder;
 import org.hibernate.query.hql.internal.SemanticQueryBuilder;
 import org.hibernate.query.sqm.ParsingException;
+import org.hibernate.type.descriptor.java.spi.JdbcTypeRecommendationException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -84,6 +85,9 @@ class Validation {
                 }
                 catch (IllegalArgumentException iae) {
                     handler.error( -errorOffset+1, -errorOffset + hql.length(), iae.getCause().getMessage() );
+                }
+                catch (JdbcTypeRecommendationException ignored) {
+                    // just squash these for now
                 }
                 catch (QueryException | ParsingException | PathException | IllegalStateException | PropertyNotFoundException se) {
                     handler.error( -errorOffset+1, -errorOffset + hql.length(), se.getMessage() );
