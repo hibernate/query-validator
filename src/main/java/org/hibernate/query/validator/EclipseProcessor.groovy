@@ -17,6 +17,7 @@ import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
 
 import static java.lang.Integer.parseInt
+import static org.hibernate.query.hql.internal.StandardHqlTranslator.prettifyAntlrError
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
 import static org.hibernate.query.validator.HQLProcessor.jpa
@@ -298,14 +299,14 @@ class EclipseProcessor extends AbstractProcessor {
 
         void validateArgument(arg, boolean inCreateQueryMethod) {
             String hql = new String((char[]) arg.source())
-            ErrorReporter handler = new ErrorReporter(arg, unit, compiler)
+            ErrorReporter handler = new ErrorReporter(arg, unit, compiler, hql)
             validate(hql, inCreateQueryMethod && immediatelyCalled,
                     setParameterLabels, setParameterNames, handler,
                     sessionFactory.make(unit))
         }
 
         void checkPanacheQuery(stringLiteral, targetType, methodName, panacheQl, args) {
-            ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler)
+            ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler, panacheQl)
             collectPanacheArguments(args)
             int[] offset = new int[1]
             String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
@@ -415,8 +416,10 @@ class EclipseProcessor extends AbstractProcessor {
         private def unit
         private def compiler
         private int errorcount
+        private final String hql
 
-        ErrorReporter(node, unit, compiler) {
+        ErrorReporter(node, unit, compiler, String hql) {
+            this.hql = hql
             this.compiler = compiler
             this.node = node
             this.unit = unit
@@ -429,6 +432,7 @@ class EclipseProcessor extends AbstractProcessor {
 
         @Override
         void syntaxError(Recognizer<?, ?> recognizer, Object symbol, int line, int charInLine, String message, RecognitionException e) {
+            message = prettifyAntlrError(symbol, line, charInLine, message, e, hql, false)
             errorcount++
             def result = unit.compilationResult()
             char[] fileName = result.fileName

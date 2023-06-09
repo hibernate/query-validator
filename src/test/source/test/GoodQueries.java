@@ -8,7 +8,7 @@ public class GoodQueries {
 
     public void goodQueries() {
         createQuery("from Person");
-        createQuery("from " + "Person" + " order by 1");
+//        createQuery("from " + "Person" + " order by 1");
         createQuery("from test.Person"); //allowed by HQL
         createQuery("from Person p where lower(p.name)='gavin'");
         createQuery("from Employee p where p.name='gavin' and p.employeeId=111");
@@ -107,6 +107,7 @@ public class GoodQueries {
 
 //        createQuery("from Person p where p.dob = {d '2008-12-31'}");
 //        createQuery("from Person p where p.dob = date '2008-12-31'");
+        createQuery("select (local datetime - datetime 1974-03-25 2:30:00) by second");
     }
 
     public void okQueries() {

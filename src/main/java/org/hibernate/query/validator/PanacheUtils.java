@@ -196,11 +196,11 @@ at org.hibernate.query.validator.JavacProcessor$1.visitApply(JavacProcessor.java
     private static boolean missingRequiredSingleParam(Validation.Handler handler, String query,
                                                Set<Integer> setParameterLabels) {
         if (setParameterLabels.size() < 1) {
-            handler.warn(0, 0, "Missing required parameter for "+query);
+            handler.warn(0, 0, "Missing required argument for '" + query + "'");
             return true;
         }
         else if (setParameterLabels.size() > 1){
-            handler.warn(0, 0, "Too many parameters for "+query);
+            handler.warn(0, 0, "Too many arguments for '" + query + "'");
             return true;
         }
         return false;
