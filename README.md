@@ -191,7 +191,7 @@ If the query validator doesn't run, please ensure that:
 The query validator was developed and tested with:
 
 - JDK 15, JDK 17, JDK 20
-- Hibernate 5.6.15.Final
+- Hibernate 6.3.0-SNAPSHOT
 - ECJ 3.33.0
 - Eclipse IDE with JDT Core 3.33.0
 
