@@ -46,7 +46,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("BadQueries.java:21: error: Could not resolve attribute 'addr' of 'Person'"));
         assertTrue(errors.contains("BadQueries.java:22: error: Could not resolve attribute 'town' of 'Address'"));
         assertTrue(errors.contains("BadQueries.java:23: error: Could not resolve attribute 'name' of 'Address'"));
-        assertTrue(errors.contains("BadQueries.java:24: error: Unable to locate property named 'type' of 'Country'"));
+        assertTrue(errors.contains("BadQueries.java:24: error: Could not resolve attribute 'type' of 'Country'"));
 
         assertTrue(errors.contains("BadQueries.java:26: error: Could not interpret attribute 'length' of basic-valued path"));
         assertTrue(errors.contains("BadQueries.java:27: error: Basic paths cannot be dereferenced"));
@@ -129,7 +129,7 @@ public class HQLValidationTest {
         assertTrue(errors.contains("Could not resolve attribute 'addr' of 'Person'") && errors.contains("BadQueries.java (at line 21)"));
         assertTrue(errors.contains("Could not resolve attribute 'town' of 'Address'") && errors.contains("BadQueries.java (at line 22)"));
         assertTrue(errors.contains("Could not resolve attribute 'name' of 'Address'") && errors.contains("BadQueries.java (at line 13)"));
-        assertTrue(errors.contains("Unable to locate property named 'type' of 'Country'") && errors.contains("BadQueries.java (at line 24)"));
+        assertTrue(errors.contains("Could not resolve attribute 'type' of 'Country'") && errors.contains("BadQueries.java (at line 24)"));
 
         assertTrue(errors.contains("") && errors.contains("BadQueries.java (at line 26)")); //should be: "string has no mapped length"
         assertTrue(errors.contains("Could not interpret attribute 'length' of basic-valued path") && errors.contains("BadQueries.java (at line 26)"));
