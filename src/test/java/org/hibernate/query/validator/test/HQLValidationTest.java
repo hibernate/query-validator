@@ -78,6 +78,8 @@ public class HQLValidationTest {
 
         assertTrue(errors.contains("BadQueries.java:59: error: no viable alternative at input '*fromPerson'"));
 
+        assertTrue(errors.contains("BadQueries.java:62: error: Could not resolve treat target type 'Employe'"));
+
         assertPanacheErrors(errors, "PanacheBadPerson", 22);
         assertPanacheErrors(errors, "PanacheBadPersonRepository", 10);
     }
@@ -161,6 +163,8 @@ public class HQLValidationTest {
                 && errors.contains("BadQueries.java (at line 57)"));
 
         assertTrue(errors.contains("no viable alternative at input '*fromPerson'") && errors.contains("BadQueries.java (at line 59)"));
+
+        assertTrue(errors.contains("Could not resolve treat target type 'Employe'") && errors.contains("BadQueries.java (at line 62)"));
 
         assertPanacheErrorsEcj(errors, "PanacheBadPerson", 22);
         assertPanacheErrorsEcj(errors, "PanacheBadPersonRepository", 10);

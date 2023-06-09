@@ -657,6 +657,12 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
     }
 
     @Override
+    String qualifyName(String entityName) {
+        TypeBinding entityClass = findEntityClass(entityName);
+        return entityClass==null ? null : charToString(entityClass.readableName());
+    }
+
+    @Override
     boolean isAttributeDefined(String entityName, String fieldName) {
         TypeBinding entityClass = findEntityClass(entityName);
         return entityClass != null
@@ -771,6 +777,9 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
     }
 
     private TypeBinding findClassByQualifiedName(String path) {
+        if ( path == null) {
+            return null;
+        }
         char[][] name = stream(path.split("\\."))
                 .map(String::toCharArray)
                 .toArray(char[][]::new);

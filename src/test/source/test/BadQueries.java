@@ -58,6 +58,8 @@ public class BadQueries {
 
         createQuery("from" + "Person"); //error missing space in concatenated query
         createQuery("from " + "Person" + " order by 1");
+
+        createQuery("from Person p where treat(p.emergencyContact as Employe).employeeId = 2"); //JPQL "treat as" operator
     }
 
     private static Query createQuery(String s) { return new Query(); }
