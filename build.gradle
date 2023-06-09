@@ -69,10 +69,13 @@ shadowJar {
         exclude 'org.hibernate.query.validator.*'
     }
     relocate 'org.jboss', 'org.hibernate.query.validator'
-    relocate 'javax.persistence', 'org.hibernate.query.validator.jpa'
-    relocate 'javax.transaction', 'org.hibernate.query.validator.jta'
+    relocate 'javax.persistence', 'org.hibernate.query.validator.javax.jpa'
+    relocate 'javax.transaction', 'org.hibernate.query.validator.javax.jta'
+    relocate 'jakarta.persistence', 'org.hibernate.query.validator.jakarta.jpa'
+    relocate 'jakarta.transaction', 'org.hibernate.query.validator.jakarta.jta'
     relocate 'net', 'org.hibernate.query.validator'
-    relocate 'antlr', 'org.hibernate.query.validator.antlr'
+    relocate 'org.antlr.v4.runtime', 'org.hibernate.query.validator.antlr'
+    relocate 'org.jboss.jandex', 'org.hibernate.query.validator.jandex'
     relocate 'org.apache.groovy', 'org.hibernate.query.validator.groovy.apache'
     relocate ('org.codehaus.groovy', 'org.hibernate.query.validator.groovy.codehaus') {
         exclude 'org.codehaus.groovy.runtime.*'
