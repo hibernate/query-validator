@@ -41,7 +41,8 @@ you prefer.
 
 The validator will check any static string argument of
 
-- the `createQuery()` method or
+- the `createQuery()`, `createSelectionQuery()`, and 
+  `createMutationQuery()` methods, or
 - the `@NamedQuery()` annotation
 
 which occurs in the annotated package or class. 
