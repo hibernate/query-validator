@@ -23,6 +23,11 @@ Maven repository.
 It also creates a far jar `query-validator-2.0-SNAPSHOT-all.jar`
 in the `build/libs` directory of this project.
 
+### Temporary requirement
+
+Temporarily, you'll need to build a snapshot of Hibernate ORM 6.3 
+from the `main` branch of the `hibernate-orm` project.
+
 ## Usage
 
 The persistent entity classes *must* be annotated with the 
