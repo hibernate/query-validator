@@ -65,7 +65,7 @@ shadowJar {
         exclude(dependency('org.eclipse.jdt:ecj'))
 //        exclude "tools.jar"
     }
-    relocate ('org.hibernate', 'org.hibernate.query.validator.hibernate') {
+    relocate ('org.hibernate', 'org.hibernate.query.validator.orm') {
         exclude 'org.hibernate.query.validator.*'
     }
     relocate 'org.jboss', 'org.hibernate.query.validator'
@@ -73,6 +73,8 @@ shadowJar {
     relocate 'javax.transaction', 'org.hibernate.query.validator.javax.jta'
     relocate 'jakarta.persistence', 'org.hibernate.query.validator.jakarta.jpa'
     relocate 'jakarta.transaction', 'org.hibernate.query.validator.jakarta.jta'
+    exclude 'javax.activation'
+    exclude 'jakarta.activation'
     relocate 'net', 'org.hibernate.query.validator'
     relocate 'org.antlr.v4.runtime', 'org.hibernate.query.validator.antlr'
     relocate 'org.jboss.jandex', 'org.hibernate.query.validator.jandex'
@@ -88,7 +90,6 @@ shadowJar {
     relocate 'groovyjarjarasm', 'org.hibernate.query.validator.asm'
     relocate 'groovyjarjarcommonscli', 'org.hibernate.query.validator.cli'
     relocate 'groovyjarjarpicocli', 'org.hibernate.query.validator.picocli'
-    archiveClassifier.set('all')
 }
 
 jar {
