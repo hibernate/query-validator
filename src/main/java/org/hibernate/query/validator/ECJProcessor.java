@@ -4,6 +4,7 @@ import static java.lang.Integer.parseInt;
 import static org.eclipse.jdt.core.compiler.CharOperation.charToString;
 import static org.eclipse.jdt.internal.compiler.util.Util.getLineNumber;
 import static org.eclipse.jdt.internal.compiler.util.Util.searchColumnNumber;
+import static org.hibernate.query.hql.internal.StandardHqlTranslator.prettifyAntlrError;
 import static org.hibernate.query.validator.ECJSessionFactory.getAnnotation;
 import static org.hibernate.query.validator.ECJSessionFactory.qualifiedName;
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
@@ -182,14 +183,14 @@ public class ECJProcessor extends AbstractProcessor {
 
                     void check(StringLiteral stringLiteral, boolean inCreateQueryMethod) {
                         String hql = charToString(stringLiteral.source());
-                        ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
+                        ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler, hql);
                         validate(hql, inCreateQueryMethod && immediatelyCalled,
                                 setParameterLabels, setParameterNames, handler,
                                 sessionFactory.make(unit));
                     }
                     
                     void checkPanacheQuery(StringLiteral stringLiteral, String targetType, String methodName, String panacheQl, Expression[] args) {
-                        ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler);
+                        ErrorReporter handler = new ErrorReporter(stringLiteral, unit, compiler, panacheQl);
                         collectPanacheArguments(args);
                         int[] offset = new int[1];
                         String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName, 
@@ -343,14 +344,17 @@ public class ECJProcessor extends AbstractProcessor {
         private final ASTNode node;
         private final CompilationUnitDeclaration unit;
         private final Compiler compiler;
+        private final String hql;
         private int errorcount;
 
         ErrorReporter(ASTNode node,
                       CompilationUnitDeclaration unit,
-                      Compiler compiler) {
+                      Compiler compiler,
+                      String hql) {
             this.node = node;
             this.unit = unit;
             this.compiler = compiler;
+            this.hql = hql;
         }
 
         @Override
@@ -360,6 +364,7 @@ public class ECJProcessor extends AbstractProcessor {
 
         @Override
         public void syntaxError(Recognizer<?, ?> recognizer, Object symbol, int line, int charInLine, String message, RecognitionException e) {
+            message = prettifyAntlrError(symbol, line, charInLine, message, e, hql, false);
             errorcount++;
             CompilationResult result = unit.compilationResult();
             char[] fileName = result.fileName;

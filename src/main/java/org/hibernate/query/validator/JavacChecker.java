@@ -44,7 +44,7 @@ public class JavacChecker {
 
 					private void check(JCTree.JCLiteral jcLiteral, String hql,
 									   boolean inCreateQueryMethod) {
-						ErrorReporter handler = new ErrorReporter(javacProcessor, jcLiteral, element);
+						ErrorReporter handler = new ErrorReporter(javacProcessor, jcLiteral, element, hql);
 						validate(hql, inCreateQueryMethod && immediatelyCalled,
 								setParameterLabels, setParameterNames, handler,
 								JavacProcessor.sessionFactory.make(javacProcessor.getProcessingEnv()));
@@ -52,7 +52,7 @@ public class JavacChecker {
 
 					private void checkPanacheQuery(JCTree.JCLiteral jcLiteral, String targetType, String methodName, String panacheQl,
 									   com.sun.tools.javac.util.List<JCTree.JCExpression> args) {
-						ErrorReporter handler = new ErrorReporter(javacProcessor, jcLiteral, element);
+						ErrorReporter handler = new ErrorReporter(javacProcessor, jcLiteral, element, panacheQl);
 						collectPanacheArguments(args);
 						int[] offset = new int[1];
 						String hql = PanacheUtils.panacheQlToHql(handler, targetType, methodName,

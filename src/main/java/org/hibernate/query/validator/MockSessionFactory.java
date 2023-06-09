@@ -30,6 +30,7 @@ import org.hibernate.cache.spi.CacheImplementor;
 import org.hibernate.cache.spi.access.AccessType;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.hibernate.dialect.Dialect;
+import org.hibernate.dialect.function.CommonFunctionFactory;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
 import org.hibernate.engine.query.internal.NativeQueryInterpreterStandardImpl;
 import org.hibernate.engine.query.spi.NativeQueryInterpreter;
@@ -193,6 +194,11 @@ public abstract class MockSessionFactory
         typeConfiguration = new TypeConfiguration();
         typeConfiguration.scope((MetadataBuildingContext) this);
         MockJdbcServicesInitiator.genericDialect.initializeFunctionRegistry(this);
+        CommonFunctionFactory functionFactory = new CommonFunctionFactory(this);
+        functionFactory.listagg(null);
+        functionFactory.inverseDistributionOrderedSetAggregates();
+        functionFactory.hypotheticalOrderedSetAggregates();
+        functionFactory.windowFunctions();
         typeConfiguration.scope((SessionFactoryImplementor) this);
     }
 

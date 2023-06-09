@@ -19,6 +19,7 @@ import javax.tools.JavaFileObject;
 import java.util.BitSet;
 
 import static com.sun.tools.javac.resources.CompilerProperties.Warnings.ProcMessager;
+import static org.hibernate.query.hql.internal.StandardHqlTranslator.prettifyAntlrError;
 
 /**
  * @author Gavin King
@@ -29,10 +30,12 @@ class ErrorReporter implements Validation.Handler {
 
 	private final Log log;
 	private final JCTree.JCLiteral literal;
+	private final String hql;
 	private int errorcount;
 
-	ErrorReporter(JavacProcessor processor, JCTree.JCLiteral literal, Element element) {
+	ErrorReporter(JavacProcessor processor, JCTree.JCLiteral literal, Element element, String hql) {
 		this.literal = literal;
+		this.hql = hql;
 
 		Context context = processor.getContext();
 		log = Log.instance(context);
@@ -58,6 +61,7 @@ class ErrorReporter implements Validation.Handler {
 	@Override
 	public void warn(int start, int end, String message) {
 		log.warning(literal.pos + start, ProcMessager(message));
+//		log.error(literal.pos + start, KEY, message);
 	}
 
 	@Override
@@ -68,6 +72,7 @@ class ErrorReporter implements Validation.Handler {
 			int charPositionInLine,
 			String message,
 			RecognitionException e) {
+		message = prettifyAntlrError(offendingSymbol, line, charPositionInLine, message, e, hql, false);
 		errorcount++;
 		Token offendingToken = e.getOffendingToken();
 		if ( offendingToken != null ) {

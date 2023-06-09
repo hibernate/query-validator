@@ -53,10 +53,11 @@ public class BadQueries {
         createQuery("select new test.Pair(1,1) from Person p"); //"select new" with literals
         createQuery("select new test.Pair('','') from Person p"); //"select new" with literals
 
-        createQuery("from Person p where p.fistName='gavin"); //error
+        createQuery("from Person p where p.name='gavin"); //error
         createQuery("from Person p where p.firstName='gavin"); //error
 
         createQuery("from" + "Person"); //error missing space in concatenated query
+        createQuery("from " + "Person" + " order by 1");
     }
 
     private static Query createQuery(String s) { return new Query(); }
