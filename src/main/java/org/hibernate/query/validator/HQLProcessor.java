@@ -28,6 +28,14 @@ public class HQLProcessor extends AbstractProcessor {
                 .toString();
     }
 
+    static String hibernate(String name) {
+        //sneak it past shadow
+        return new StringBuilder("org.")
+                .append("hibernate.")
+                .append("annotations.")
+                .append(name)
+                .toString();
+    }
     public static boolean forceEclipseForTesting = false;
 
     private AbstractProcessor delegate;
@@ -56,15 +64,7 @@ public class HQLProcessor extends AbstractProcessor {
         }
         if (delegate!=null) {
             delegate.init(processingEnv);
-//            processingEnv.getMessager()
-//                    .printMessage(Diagnostic.Kind.NOTE,
-//                            "Installed Hibernate Query Validator");
         }
-//        else {
-//            processingEnv.getMessager()
-//                    .printMessage(Diagnostic.Kind.NOTE,
-//                            "Could not install Hibernate Query Validator");
-//        }
     }
 
     private static AbstractProcessor newEclipseProcessor() {

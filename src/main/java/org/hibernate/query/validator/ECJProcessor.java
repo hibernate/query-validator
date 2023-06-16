@@ -8,6 +8,7 @@ import static org.hibernate.query.hql.internal.StandardHqlTranslator.prettifyAnt
 import static org.hibernate.query.validator.ECJSessionFactory.getAnnotation;
 import static org.hibernate.query.validator.ECJSessionFactory.qualifiedName;
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
+import static org.hibernate.query.validator.HQLProcessor.hibernate;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 import static org.hibernate.query.validator.Validation.validate;
 
@@ -16,10 +17,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.annotation.processing.RoundEnvironment;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
+import javax.tools.Diagnostic;
 
 import org.antlr.v4.runtime.LexerNoViableAltException;
 import org.antlr.v4.runtime.Parser;
@@ -61,6 +64,12 @@ import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
 public class ECJProcessor extends AbstractProcessor {
 
     static Mocker<ECJSessionFactory> sessionFactory = Mocker.variadic(ECJSessionFactory.class);
+
+    @Override
+    public synchronized void init(ProcessingEnvironment processingEnv) {
+        super.init(processingEnv);
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "Hibernate Query Validator for ECJ");
+    }
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -172,8 +181,10 @@ public class ECJProcessor extends AbstractProcessor {
 
                     @Override
                     public boolean visit(MemberValuePair pair, BlockScope scope) {
-                        if (qualifiedName(pair.binding)
-                                .equals(jpa("NamedQuery.query"))) {
+                        String qualifiedName = qualifiedName(pair.binding);
+                        if (qualifiedName.equals(jpa("NamedQuery.query"))
+                         || qualifiedName.equals(hibernate("NamedQuery.query"))
+                         || qualifiedName.equals(hibernate("Hql.value"))) {
                             if (pair.value instanceof StringLiteral) {
                                 check((StringLiteral) pair.value, false);
                             }
