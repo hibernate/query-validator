@@ -15,6 +15,7 @@ import javax.annotation.processing.ProcessingEnvironment
 import javax.annotation.processing.RoundEnvironment
 import javax.lang.model.SourceVersion
 import javax.lang.model.element.TypeElement
+import javax.tools.Diagnostic
 
 import static java.lang.Integer.parseInt
 import static org.hibernate.query.hql.internal.StandardHqlTranslator.prettifyAntlrError
@@ -39,6 +40,7 @@ class EclipseProcessor extends AbstractProcessor {
     synchronized void init(ProcessingEnvironment processingEnv) {
         this.processingEnv = processingEnv
         super.init(processingEnv)
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "Hibernate Query Validator for Eclipse");
     }
 
     static Mocker<EclipseSessionFactory> sessionFactory = Mocker.variadic(EclipseSessionFactory.class)
@@ -105,7 +107,15 @@ class EclipseProcessor extends AbstractProcessor {
 //                    whitelist = getWhitelist(type.binding, unit, compiler)
                     type.annotations.each { annotation ->
                         switch (qualifiedTypeName(annotation.resolvedType)) {
+                            case hibernate("Hql"):
+                                annotation.memberValuePairs.each { pair ->
+                                    if (simpleVariableName(pair) == "value") {
+                                        validateArgument(pair.value, false)
+                                    }
+                                }
+                                break
                             case jpa("NamedQuery"):
+                            case hibernate("NamedQuery"):
                                 annotation.memberValuePairs.each { pair ->
                                     if (simpleVariableName(pair) == "query") {
                                         validateArgument(pair.value, false)

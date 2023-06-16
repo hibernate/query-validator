@@ -10,6 +10,7 @@ import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
+import javax.tools.Diagnostic;
 import java.util.Set;
 
 
@@ -30,6 +31,7 @@ public class JavacProcessor extends AbstractProcessor {
     public synchronized void init(ProcessingEnvironment processingEnv) {
         ModularityWorkaround.addOpens();
         super.init(processingEnv);
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "Hibernate Query Validator for Javac");
     }
 
     ProcessingEnvironment getProcessingEnv() {

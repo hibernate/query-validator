@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL;
+import static org.hibernate.query.validator.HQLProcessor.hibernate;
 import static org.hibernate.query.validator.HQLProcessor.jpa;
 import static org.hibernate.query.validator.Validation.validate;
 
@@ -248,11 +249,26 @@ public class JavacChecker {
 					public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
 						AnnotationMirror annotation = jcAnnotation.attribute;
 						String name = annotation.getAnnotationType().toString();
-						if (name.equals(jpa("NamedQuery"))) {
+						if (name.equals(jpa("NamedQuery")) || name.equals(hibernate("NamedQuery"))) {
 							for (JCTree.JCExpression arg : jcAnnotation.args) {
 								if (arg instanceof JCTree.JCAssign) {
 									JCTree.JCAssign assign = (JCTree.JCAssign) arg;
 									if ("query".equals(assign.lhs.toString())
+											&& assign.rhs instanceof JCTree.JCLiteral) {
+										JCTree.JCLiteral jcLiteral =
+												(JCTree.JCLiteral) assign.rhs;
+										if (jcLiteral.value instanceof String) {
+											check(jcLiteral, (String) jcLiteral.value, false);
+										}
+									}
+								}
+							}
+						}
+						else if (name.equals(hibernate("Hql"))) {
+							for (JCTree.JCExpression arg : jcAnnotation.args) {
+								if (arg instanceof JCTree.JCAssign) {
+									JCTree.JCAssign assign = (JCTree.JCAssign) arg;
+									if ("value".equals(assign.lhs.toString())
 											&& assign.rhs instanceof JCTree.JCLiteral) {
 										JCTree.JCLiteral jcLiteral =
 												(JCTree.JCLiteral) assign.rhs;
