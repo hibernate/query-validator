@@ -10,12 +10,11 @@ import org.hibernate.PropertyNotFoundException;
 import org.hibernate.QueryException;
 import org.hibernate.grammars.hql.HqlLexer;
 import org.hibernate.grammars.hql.HqlParser;
-import org.hibernate.query.PathException;
-import org.hibernate.query.PathElementException;
-import org.hibernate.query.TerminalPathException;
 import org.hibernate.query.hql.internal.HqlParseTreeBuilder;
 import org.hibernate.query.hql.internal.SemanticQueryBuilder;
-import org.hibernate.query.sqm.ParsingException;
+import org.hibernate.query.sqm.EntityTypeException;
+import org.hibernate.query.sqm.PathElementException;
+import org.hibernate.query.sqm.TerminalPathException;
 import org.hibernate.type.descriptor.java.spi.JdbcTypeRecommendationException;
 
 import java.util.ArrayList;
@@ -88,8 +87,8 @@ class Validation {
                 catch (JdbcTypeRecommendationException ignored) {
                     // just squash these for now
                 }
-                catch (QueryException | ParsingException | PathException | PathElementException | TerminalPathException
-                       | PropertyNotFoundException se) {
+                catch (QueryException | PathElementException | TerminalPathException | EntityTypeException
+                       | PropertyNotFoundException se) { //TODO is this one really thrown by core? It should not be!
                     handler.error( -errorOffset+1, -errorOffset + hql.length(), se.getMessage() );
                 }
             }
