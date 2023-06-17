@@ -1,9 +1,7 @@
 package test;
+import org.hibernate.annotations.processing.CheckHQL;
 
-import org.hibernate.query.validator.CheckHQL;
-
-@CheckHQL(whitelist={"func", "current_thing", "custom"},
-        dialect=org.hibernate.dialect.HSQLDialect.class)
+@CheckHQL(dialect=org.hibernate.dialect.HSQLDialect.class)
 public class GoodQueries {
 
     public void goodQueries() {

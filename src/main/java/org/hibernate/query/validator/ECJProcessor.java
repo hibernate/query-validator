@@ -56,7 +56,7 @@ import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
  * Annotation processor that validates HQL and JPQL queries
  * for ECJ.
  *
- * @see CheckHQL
+ * @see org.hibernate.annotations.processing.CheckHQL
  *
  * @author Gavin King
  */
@@ -184,7 +184,7 @@ public class ECJProcessor extends AbstractProcessor {
                         String qualifiedName = qualifiedName(pair.binding);
                         if (qualifiedName.equals(jpa("NamedQuery.query"))
                          || qualifiedName.equals(hibernate("NamedQuery.query"))
-                         || qualifiedName.equals(hibernate("Hql.value"))) {
+                         || qualifiedName.equals(hibernate("processing.HQL.value"))) {
                             if (pair.value instanceof StringLiteral) {
                                 check((StringLiteral) pair.value, false);
                             }
