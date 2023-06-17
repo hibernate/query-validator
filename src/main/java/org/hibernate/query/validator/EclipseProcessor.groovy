@@ -22,13 +22,14 @@ import static org.hibernate.query.hql.internal.StandardHqlTranslator.prettifyAnt
 import static org.hibernate.query.validator.EclipseSessionFactory.*
 import static org.hibernate.query.validator.HQLProcessor.CHECK_HQL
 import static org.hibernate.query.validator.HQLProcessor.jpa
+import static org.hibernate.query.validator.HQLProcessor.hibernate
 import static org.hibernate.query.validator.Validation.validate
 
 /**
  * Annotation processor that validates HQL and JPQL queries
  * for Eclipse.
  *
- * @see CheckHQL
+ * @see org.hibernate.annotations.processing.CheckHQL
  *
  * @author Gavin King
  */
@@ -107,7 +108,7 @@ class EclipseProcessor extends AbstractProcessor {
 //                    whitelist = getWhitelist(type.binding, unit, compiler)
                     type.annotations.each { annotation ->
                         switch (qualifiedTypeName(annotation.resolvedType)) {
-                            case hibernate("Hql"):
+                            case hibernate("processing.HQL"):
                                 annotation.memberValuePairs.each { pair ->
                                     if (simpleVariableName(pair) == "value") {
                                         validateArgument(pair.value, false)

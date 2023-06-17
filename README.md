@@ -80,21 +80,6 @@ A compile-time error is produced if
 
 #### Warnings
 
-A compile-time warning is produced if
-
-- the query calls a function which isn't defined by the JPA 
-  specification or by HQL.
-
-The warning may be suppressed by adding the function name to 
-the `whitelist`:
-
-    @CheckHQL(whitelist={"stddev", "variance", "md5"})
-
-It's even possible to whitelist all the SQL functions known 
-to a certain Hibernate `Dialect`:
-
-    @CheckHQL(dialect=HSQLDialect.class)
-
 Additionally, any JPA `Query` instance that is created and 
 immediately invoked in a single expression will have its 
 parameter bindings validated. A warning is produced if

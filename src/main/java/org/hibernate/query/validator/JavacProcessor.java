@@ -16,9 +16,9 @@ import java.util.Set;
 
 /**
  * Annotation processor that validates HQL and JPQL queries
- * for `javac`.
+ * for {@code javac}.
  *
- * @see CheckHQL
+ * @see org.hibernate.annotations.processing.CheckHQL
  *
  * @author Gavin King
  */

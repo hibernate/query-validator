@@ -264,7 +264,7 @@ public class JavacChecker {
 								}
 							}
 						}
-						else if (name.equals(hibernate("Hql"))) {
+						else if (name.equals(hibernate("processing.HQL"))) {
 							for (JCTree.JCExpression arg : jcAnnotation.args) {
 								if (arg instanceof JCTree.JCAssign) {
 									JCTree.JCAssign assign = (JCTree.JCAssign) arg;
