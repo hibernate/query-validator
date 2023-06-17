@@ -24,7 +24,7 @@ import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.type.TypeKind;
-import javax.persistence.AccessType;
+import jakarta.persistence.AccessType;
 import java.beans.Introspector;
 import java.util.ArrayList;
 import java.util.Iterator;

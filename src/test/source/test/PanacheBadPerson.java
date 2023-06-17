@@ -1,9 +1,9 @@
 package test;
 
-import javax.persistence.Entity;
-import javax.persistence.Basic;
-import javax.persistence.NamedQuery;
-import javax.persistence.NamedQueries;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Basic;
+import jakarta.persistence.NamedQuery;
+import jakarta.persistence.NamedQueries;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import io.quarkus.panache.common.Sort;
 import io.quarkus.panache.common.Parameters;

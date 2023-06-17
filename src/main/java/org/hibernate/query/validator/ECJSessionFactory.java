@@ -10,7 +10,7 @@ import org.hibernate.type.descriptor.java.EnumJavaType;
 import org.hibernate.type.descriptor.jdbc.IntegerJdbcType;
 import org.hibernate.type.internal.BasicTypeImpl;
 
-import javax.persistence.AccessType;
+import jakarta.persistence.AccessType;
 import java.beans.Introspector;
 import java.util.ArrayList;
 import java.util.List;
@@ -332,14 +332,14 @@ public abstract class ECJSessionFactory extends MockSessionFactory {
                 return ann;
             }
         }
-        if (name.startsWith(new StringBuilder("javax.").append("persistence.").toString())) {
-            name = "jakarta" + name.substring(5);
-            for (AnnotationBinding ann : annotations.getAnnotations()) {
-                if (qualifiedName(ann.getAnnotationType()).equals(name)) {
-                    return ann;
-                }
-            }
-        }
+//        if (name.startsWith(new StringBuilder("jakarta.").append("persistence.").toString())) {
+//            name = "javax" + name.substring(5);
+//            for (AnnotationBinding ann : annotations.getAnnotations()) {
+//                if (qualifiedName(ann.getAnnotationType()).equals(name)) {
+//                    return ann;
+//                }
+//            }
+//        }
         return null;
     }
 

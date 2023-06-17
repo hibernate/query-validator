@@ -20,9 +20,7 @@ dependencies {
     }
     //explicit the Hibernate dependencies we need:
     implementation 'org.antlr:antlr4-runtime:4.10.1'
-    implementation 'javax.persistence:javax.persistence-api:2.2'
     implementation 'jakarta.persistence:jakarta.persistence-api:3.1.0'
-    runtimeOnly 'javax.transaction:javax.transaction-api:1.3'
     runtimeOnly 'jakarta.transaction:jakarta.transaction-api:2.0.1'
     implementation 'net.bytebuddy:byte-buddy:1.14.5'
     runtimeOnly 'org.jboss.logging:jboss-logging:3.5.0.Final'
@@ -72,11 +70,8 @@ shadowJar {
     relocate ('org.jboss', 'org.hibernate.query.validator') {
         exclude 'org.jboss.logging.*'
     }
-    relocate 'javax.persistence', 'org.hibernate.query.validator.javax.jpa'
-    relocate 'javax.transaction', 'org.hibernate.query.validator.javax.jta'
     relocate 'jakarta.persistence', 'org.hibernate.query.validator.jakarta.jpa'
     relocate 'jakarta.transaction', 'org.hibernate.query.validator.jakarta.jta'
-    exclude 'javax.activation'
     exclude 'jakarta.activation'
     relocate 'net', 'org.hibernate.query.validator'
     relocate 'org.antlr.v4.runtime', 'org.hibernate.query.validator.antlr'

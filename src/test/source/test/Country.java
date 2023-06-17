@@ -1,7 +1,7 @@
 package test;
 
-import javax.persistence.Embeddable;
-import javax.persistence.OneToMany;
+import jakarta.persistence.Embeddable;
+import jakarta.persistence.OneToMany;
 import java.util.Set;
 
 @Embeddable

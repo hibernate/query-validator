@@ -18,11 +18,11 @@ import java.util.Set;
 @SupportedAnnotationTypes("*")
 public class HQLProcessor extends AbstractProcessor {
 
-    static final String CHECK_HQL = "org.hibernate.annotations.processing.CheckHQL";
+    static final String CHECK_HQL = hibernate("processing.CheckHQL");
 
     static String jpa(String name) {
         //sneak it past shadow
-        return new StringBuilder("javax.")
+        return new StringBuilder("jakarta.")
                 .append("persistence.")
                 .append(name)
                 .toString();
