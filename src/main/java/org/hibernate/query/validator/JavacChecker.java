@@ -249,7 +249,7 @@ public class JavacChecker {
 					public void visitAnnotation(JCTree.JCAnnotation jcAnnotation) {
 						AnnotationMirror annotation = jcAnnotation.attribute;
 						String name = annotation.getAnnotationType().toString();
-						if (name.equals(jpa("NamedQuery")) || name.equals(hibernate("NamedQuery"))) {
+						if (jpa("NamedQuery").equals(name) || hibernate("NamedQuery").equals(name)) {
 							for (JCTree.JCExpression arg : jcAnnotation.args) {
 								if (arg instanceof JCTree.JCAssign) {
 									JCTree.JCAssign assign = (JCTree.JCAssign) arg;
@@ -264,7 +264,7 @@ public class JavacChecker {
 								}
 							}
 						}
-						else if (name.equals(hibernate("processing.HQL"))) {
+						else if (hibernate("processing.HQL").equals(name)) {
 							for (JCTree.JCExpression arg : jcAnnotation.args) {
 								if (arg instanceof JCTree.JCAssign) {
 									JCTree.JCAssign assign = (JCTree.JCAssign) arg;

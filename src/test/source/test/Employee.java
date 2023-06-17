@@ -1,11 +1,11 @@
 package test;
 
 import java.util.Map;
-import javax.persistence.Entity;
-import javax.persistence.Access;
-import javax.persistence.ManyToMany;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Access;
+import jakarta.persistence.ManyToMany;
 
-import static javax.persistence.AccessType.PROPERTY;
+import static jakarta.persistence.AccessType.PROPERTY;
 
 @Entity @Access(PROPERTY)
 public class Employee extends Person {

@@ -7,7 +7,7 @@ import org.hibernate.type.descriptor.java.EnumJavaType
 import org.hibernate.type.descriptor.jdbc.IntegerJdbcType
 import org.hibernate.type.internal.BasicTypeImpl
 
-import javax.persistence.AccessType
+import jakarta.persistence.AccessType
 import java.beans.Introspector
 
 import static java.util.Arrays.stream

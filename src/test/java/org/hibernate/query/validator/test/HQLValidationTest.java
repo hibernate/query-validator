@@ -278,7 +278,7 @@ public class HQLValidationTest {
         Files.list(TEST_LIBS)
                 .map(Path::toString)
                 .filter(s -> useFatjar ?
-                        s.contains("/javax.persistence")
+                        s.contains("/jakarta.persistence")
                             || s.contains("/quarkus-")
                             || s.contains("/hibernate-core")
                             || s.contains("/org.eclipse.jdt.core_") :

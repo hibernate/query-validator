@@ -8,7 +8,7 @@ import org.hibernate.persister.entity.Queryable;
 import org.hibernate.tuple.entity.EntityMetamodel;
 import org.hibernate.type.Type;
 
-import javax.persistence.AccessType;
+import jakarta.persistence.AccessType;
 import java.io.Serializable;
 import java.util.*;
 
