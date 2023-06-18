@@ -24,7 +24,7 @@ import static org.hibernate.query.hql.internal.StandardHqlTranslator.prettifyAnt
 /**
  * @author Gavin King
  */
-class ErrorReporter implements Validation.Handler {
+class JavacErrorReporter implements Validation.Handler {
 
 	private static final String KEY = "proc.messager";
 
@@ -33,7 +33,7 @@ class ErrorReporter implements Validation.Handler {
 	private final String hql;
 	private int errorcount;
 
-	ErrorReporter(JavacProcessor processor, JCTree.JCLiteral literal, Element element, String hql) {
+	JavacErrorReporter(JavacProcessor processor, JCTree.JCLiteral literal, Element element, String hql) {
 		this.literal = literal;
 		this.hql = hql;
 
