@@ -2,7 +2,8 @@
 
 # Hibernate Query Validator
 
-Compile time validation for queries written in HQL, JPQL, and [Panache][].
+Compile time validation for queries written in HQL, JPQL, and 
+[Panache][].
 
 [Panache]: https://quarkus.io/guides/hibernate-orm-panache
 [Hibernate logo]: http://static.jboss.org/hibernate/images/hibernate_logo_whitebkg_200px.png
@@ -25,8 +26,8 @@ in the `build/libs` directory of this project.
 
 ### Temporary requirement
 
-Temporarily, you'll need to build a snapshot of Hibernate ORM 6.3 
-from the `main` branch of the `hibernate-orm` project.
+Temporarily, you'll need to build a snapshot of Hibernate ORM 
+6.3 from the `main` branch of the `hibernate-orm` project.
 
 ## Usage
 
@@ -35,7 +36,8 @@ basic JPA metadata annotations like `@Entity`, `@ManyToOne`,
 `@Embeddable`, `@MappedSuperclass`, `@ElementCollection`, and 
 `@Access`. You *may* use XML-based mappings to specify database 
 mapping information like table and column names if that's what 
-you prefer.
+you prefer. But entities mapped *completely* in XML will not be 
+discovered by the query validator.
 
 1. Put `query-validator-2.0-SNAPSHOT-all.jar` in the 
    compile-time classpath of your project. (Or depend on
@@ -47,42 +49,46 @@ you prefer.
 The validator will check any static string argument of
 
 - the `createQuery()`, `createSelectionQuery()`, and 
-  `createMutationQuery()` methods, or
-- the `@NamedQuery()` annotation
+  `createMutationQuery()` methods,
+- the `@NamedQuery()` annotation, or
+- the `@HQL` annotation
 
-which occurs in the annotated package or class. 
+which occurs in a package, class, or interface annotated 
+`@CheckHQL`. 
 
 #### Usage with Panache
 
 Inside a Panache entity or repository, the following queries 
 will be checked:
 
-- `list`/`find`/`stream`
-- `count`
-- `delete`
-- `update`
+- `list()`, `find()`, and `stream()`,
+- `count()`,
+- `delete()`, and
+- `update()`
 
 ### Errors and warnings
 
-The purpose of the query validator is to detect erroneous query 
-strings and query parameter bindings when the Java code is compiled,
-instead of at runtime when the query is executed.
+The purpose of the query validator is to detect erroneous 
+query strings and query parameter bindings when the Java code 
+is compiled, instead of at runtime when the query is executed.
 
 #### Errors
 
-A compile-time error is produced if
+A compile-time error is produced if:
 
 - the query has syntax errors,
 - an entity name in the query doesn't reference a persistent 
-  entity class, or
+  entity class,
 - a member name in the query doesn't reference a mapped field 
-  or property of the entity.
+  or property of the entity, or
+- there is some other typing error, for example, incorrect
+  function argument types.
 
 #### Warnings
 
 Additionally, any JPA `Query` instance that is created and 
 immediately invoked in a single expression will have its 
-parameter bindings validated. A warning is produced if
+parameter bindings validated. A warning is produced if:
 
 - the query string has a parameter with no argument specified 
   using `setParameter()`, or
@@ -105,20 +111,32 @@ the classpath:
 
     -classpath query-validator-2.0-SNAPSHOT-all.jar
 
+Of course, you'll also need Hibernate core on the classpath.
+
 #### Gradle
 
-Annoyingly, Gradle requires that the dependency on the query
-validator be declared *twice*:
+In principle, it's enough to declare dependencies on Hibernate core 
+and on the query validator, just like this:
+
+    dependencies {
+        implementation 'org.hibernate.orm:hibernate-core:6.3.0-SNAPSHOT'
+        annotationProcessor 'org.hibernate:query-validator:2.0-SNAPSHOT'
+    }
+
+Unfortunately, this often results in some quite annoying warnings 
+from `javac`. Get rid of them by also declaring an `implementation`
+dependency on the Query validator:
 
     dependencies {
         implementation 'org.hibernate:query-validator:2.0-SNAPSHOT'
         annotationProcessor 'org.hibernate:query-validator:2.0-SNAPSHOT'
+        implementation 'org.hibernate:query-validator:2.0-SNAPSHOT'
     }
 
 #### Maven
 
-Maven handles annotation processors correctly. Just declare 
-the dependency to the query validator.
+Maven handles annotation processors correctly. Just declare the 
+dependency on the query validator:
 
     <dependencies>
         <dependency>
@@ -141,6 +159,9 @@ preferences under **Build, Execution, Deployment > Compiler >
 AnnotationProcessors**. 
 
 ![IntelliJ Screenshot 1](img/intellij-annotation-processors.png)
+
+You do not need to do this if you're using Gradle to build
+your project.
 
 IntelliJ only runs annotation processors during a build (that
 is, when you `Run` your code or explicitly `Build Project`). 
@@ -173,9 +194,10 @@ displayed inline in your Java editor.
 
 If the query validator doesn't run, please ensure that:
 
-- Eclipse itself is running on JDK 8.
-- Your project is set up to compile with a JDK 8-compatible
-  compiler, and the compiler compliance level is set to 1.8.  
+- Eclipse itself is running on a compatible JDK.
+- Your project is set up to compile with a compatible Java
+  compiler, and the compiler compliance level is set to at 
+  least 1.8.  
 
 ## Compatibility
 
@@ -199,27 +221,17 @@ Please be aware of the following issues.
 
 Queries are interpreted according to Hibernate's flavor of JPQL 
 (i.e. HQL), which is a superset of the query language defined by 
-the JPA specification.
-
-#### Function arguments are not checked
-
-Hibernate's query translator never typechecks function arguments 
-and instead simply passes anything which looks like it might be 
-a function call straight through to the database.
-
-Fixing this will require a nontrivial enhancement to Hibernate's
-HQL translator.
+the JPA specification. Queries accepted by the query validator
+may not execute correctly on other implementations of JPA.
 
 #### Explicit entity names are not supported in Eclipse/ECJ
 
-In ECJ, don't use `@Entity(name="Whatever")`, since during an
+In ECJ, don't use `@Entity(name="Whatever")`, since, during an
 incremental build, the processor won't be able to discover the
-entity named `Whatever`. (Just let the entity name default to
-the name of the class.) 
+entity named `Whatever`. Just let the entity name default to
+the name of the class.
 
-#### Some ugly error messages
+#### Ugly error messages
 
-Sometimes Hibernate's HQL parser produces ugly error messages,
-which are passed on by the query validator.
-
-Fixing this requires a new release of Hibernate.
+Please report ugly, confusing, or badly-formatted error messages 
+as bugs.
