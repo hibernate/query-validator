@@ -1,18 +1,14 @@
 package org.hibernate.query.validator;
 
+import org.hibernate.annotations.processing.GenericDialect;
 import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.dialect.Dialect;
-import org.hibernate.engine.jdbc.env.internal.JdbcEnvironmentImpl;
 import org.hibernate.engine.jdbc.env.internal.QualifiedObjectNameFormatterStandardImpl;
-import org.hibernate.engine.jdbc.env.spi.ExtractedDatabaseMetaData;
-import org.hibernate.engine.jdbc.env.spi.IdentifierHelper;
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
-import org.hibernate.engine.jdbc.env.spi.LobCreatorBuilder;
 import org.hibernate.engine.jdbc.env.spi.NameQualifierSupport;
 import org.hibernate.engine.jdbc.env.spi.QualifiedObjectNameFormatter;
 import org.hibernate.engine.jdbc.internal.JdbcServicesInitiator;
 import org.hibernate.engine.jdbc.spi.JdbcServices;
-import org.hibernate.engine.jdbc.spi.SqlExceptionHelper;
 import org.hibernate.service.spi.ServiceRegistryImplementor;
 import org.hibernate.sql.ast.SqlAstTranslatorFactory;
 import org.hibernate.sql.ast.spi.StandardSqlAstTranslatorFactory;
