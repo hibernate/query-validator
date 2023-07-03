@@ -51,7 +51,6 @@ import org.hibernate.metamodel.internal.JpaStaticMetaModelPopulationSetting;
 import org.hibernate.metamodel.internal.MetadataContext;
 import org.hibernate.metamodel.internal.RuntimeMetamodelsImpl;
 import org.hibernate.metamodel.mapping.JdbcMapping;
-import org.hibernate.metamodel.model.domain.BasicDomainType;
 import org.hibernate.metamodel.model.domain.DomainType;
 import org.hibernate.metamodel.model.domain.EntityDomainType;
 import org.hibernate.metamodel.model.domain.ManagedDomainType;
@@ -94,7 +93,6 @@ import org.hibernate.query.sqm.sql.StandardSqmTranslatorFactory;
 import org.hibernate.stat.internal.StatisticsImpl;
 import org.hibernate.stat.spi.StatisticsImplementor;
 import org.hibernate.type.BagType;
-import org.hibernate.type.BasicType;
 import org.hibernate.type.CollectionType;
 import org.hibernate.type.CompositeType;
 import org.hibernate.type.ListType;
@@ -105,6 +103,7 @@ import org.hibernate.type.Type;
 import org.hibernate.type.descriptor.java.JavaType;
 import org.hibernate.type.descriptor.java.spi.UnknownBasicJavaType;
 import org.hibernate.type.descriptor.jdbc.JdbcTypeIndicators;
+import org.hibernate.type.descriptor.jdbc.ObjectJdbcType;
 import org.hibernate.type.spi.TypeConfiguration;
 
 import java.util.*;
@@ -784,8 +783,6 @@ public abstract class MockSessionFactory
         }
     }
 
-    BasicDomainType<?> unknownType = new BasicTypeImpl<>(new UnknownBasicJavaType<>(Object.class));
-
     class MockMappedDomainType<X> extends MappedSuperclassTypeImpl<X>{
         public MockMappedDomainType(String typeName) {
             super(typeName, false, true, false, null, null, metamodel.getJpaMetamodel());
@@ -847,7 +844,7 @@ public abstract class MockSessionFactory
         }
         else if ( type.isCollectionType() ) {
             CollectionType collectionType = (CollectionType) type;
-            return createPluralAttribute(collectionType, getElementDomainType(entityName, collectionType, owner), name, owner);
+            return createPluralAttribute(collectionType, entityName, name, owner);
         }
         else if ( type.isEntityType() ) {
             return new SingularAttributeImpl<>(
@@ -885,7 +882,7 @@ public abstract class MockSessionFactory
                     owner,
                     name,
                     AttributeClassification.BASIC,
-                    unknownType,
+                    (DomainType<?>) type,
                     type instanceof JdbcMapping
                             ? ((JdbcMapping) type).getJavaTypeDescriptor()
                             : null,
@@ -901,6 +898,15 @@ public abstract class MockSessionFactory
 
     private DomainType<?> getElementDomainType(String entityName, CollectionType collectionType, ManagedDomainType<?> owner) {
         Type elementType = collectionType.getElementType(MockSessionFactory.this);
+        return getDomainType(entityName, collectionType, owner, elementType);
+    }
+
+    private DomainType<?> getMapKeyDomainType(String entityName, CollectionType collectionType, ManagedDomainType<?> owner) {
+        Type keyType = getMappingMetamodel().getCollectionDescriptor( collectionType.getRole() ).getIndexType();
+        return getDomainType(entityName, collectionType, owner, keyType);
+    }
+
+    private DomainType<?> getDomainType(String entityName, CollectionType collectionType, ManagedDomainType<?> owner, Type elementType) {
         if ( elementType.isEntityType() ) {
             String associatedEntityName = collectionType.getAssociatedEntityName(MockSessionFactory.this);
             return new MockEntityDomainType<>(associatedEntityName);
@@ -909,17 +915,17 @@ public abstract class MockSessionFactory
             CompositeType compositeType = (CompositeType) elementType;
             return createEmbeddableDomainType(entityName, compositeType, owner);
         }
-        else if ( elementType instanceof BasicType ) {
-            return (BasicType<?>) elementType;
+        else if ( elementType instanceof DomainType ) {
+            return (DomainType<?>) elementType;
         }
         else {
-            return unknownType;
+            return new BasicTypeImpl<>(new UnknownBasicJavaType<>(Object.class), ObjectJdbcType.INSTANCE);
         }
     }
 
     private AbstractPluralAttribute createPluralAttribute(
             CollectionType collectionType,
-            DomainType<?> elementDomainType,
+            String entityName,
             String name,
             ManagedDomainType<?> owner) {
         Property property = new Property();
@@ -927,6 +933,7 @@ public abstract class MockSessionFactory
         JavaType<Object> collectionJavaType =
                 typeConfiguration.getJavaTypeRegistry()
                         .getDescriptor(collectionType.getReturnedClass());
+        DomainType<?> elementDomainType = getElementDomainType(entityName, collectionType, owner);
         CollectionClassification classification = collectionType.getCollectionClassification();
         switch (classification) {
             case LIST:
@@ -981,6 +988,7 @@ public abstract class MockSessionFactory
             case MAP:
             case SORTED_MAP:
             case ORDERED_MAP:
+                DomainType<?> keyDomainType = getMapKeyDomainType(entityName, collectionType, owner);
                 return new MapAttributeImpl(
                         new PluralAttributeBuilder<>(
                                 collectionJavaType,
@@ -988,7 +996,7 @@ public abstract class MockSessionFactory
                                 AttributeClassification.MANY_TO_MANY,
                                 classification,
                                 elementDomainType,
-                                unknownType, //TODO: get the key type from the persister
+                                keyDomainType,
                                 owner,
                                 property,
                                 null

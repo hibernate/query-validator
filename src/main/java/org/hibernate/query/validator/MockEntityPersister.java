@@ -125,7 +125,24 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
 
     @Override
     public String getRootEntityName() {
+        for (MockEntityPersister persister : factory.getMockEntityPersisters()) {
+            if (isSubclassPersister(persister)) {
+                return persister.getRootEntityName();
+            }
+        }
         return entityName;
+    }
+
+    @Override
+    public Set<String> getSubclassEntityNames() {
+        Set<String> names = new HashSet<>();
+        names.add( entityName );
+        for (MockEntityPersister persister : factory.getMockEntityPersisters()) {
+            if (persister.isSubclassPersister(this)) {
+                names.add(persister.entityName);
+            }
+        }
+        return names;
     }
 
     @Override
