@@ -59,6 +59,13 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     abstract boolean isSubclassPersister(MockEntityPersister entityPersister);
 
     @Override
+    public boolean isSubclassEntityName(String name) {
+        return isSubclassPersister(subclassPersisters.stream()
+                .filter(persister -> persister.entityName.equals(name))
+                .findFirst().orElseThrow());
+    }
+
+    @Override
     public SessionFactoryImplementor getFactory() {
         return factory;
     }
@@ -126,7 +133,7 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     @Override
     public String getRootEntityName() {
         for (MockEntityPersister persister : factory.getMockEntityPersisters()) {
-            if (isSubclassPersister(persister)) {
+            if (this != persister && persister.isSubclassPersister(this)) {
                 return persister.getRootEntityName();
             }
         }

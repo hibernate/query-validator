@@ -86,6 +86,7 @@ import org.hibernate.query.named.NamedObjectRepository;
 import org.hibernate.query.spi.QueryEngine;
 import org.hibernate.query.spi.QueryInterpretationCache;
 import org.hibernate.query.sqm.NodeBuilder;
+import org.hibernate.query.sqm.SqmPathSource;
 import org.hibernate.query.sqm.function.SqmFunctionRegistry;
 import org.hibernate.query.sqm.internal.SqmCriteriaNodeBuilder;
 import org.hibernate.query.sqm.sql.SqmTranslatorFactory;
@@ -805,6 +806,31 @@ public abstract class MockSessionFactory
         }
 
         @Override
+        public SqmPathSource<?> findSubPathSource(String name, JpaMetamodelImplementor metamodel) {
+            SqmPathSource<?> source = super.findSubPathSource(name, metamodel);
+            if ( source != null ) {
+                return source;
+            }
+            String supertype = MockSessionFactory.this.getSupertype(getHibernateEntityName());
+            PersistentAttribute<? super Object, ?> superattribute
+                    = new MockMappedDomainType<>(supertype).findAttribute(name);
+            if (superattribute != null) {
+                return (SqmPathSource<?>) superattribute;
+            }
+            for (Map.Entry<String, MockEntityPersister> entry : entityPersistersByName.entrySet()) {
+                if (!entry.getValue().getEntityName().equals(getHibernateEntityName())
+                        && isSubtype(entry.getValue().getEntityName(), getHibernateEntityName())) {
+                    PersistentAttribute<? super Object, ?> subattribute
+                            = new MockEntityDomainType<>(entry.getValue().getEntityName()).findAttribute(name);
+                    if (subattribute != null) {
+                        return (SqmPathSource<?>) subattribute;
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
         public PersistentAttribute<? super X, ?> findAttribute(String name) {
             PersistentAttribute<? super X, ?> attribute = super.findAttribute(name);
             if (attribute != null) {
@@ -815,16 +841,6 @@ public abstract class MockSessionFactory
                     = new MockMappedDomainType<>(supertype).findAttribute(name);
             if (superattribute != null) {
                 return superattribute;
-            }
-            for (Map.Entry<String, MockEntityPersister> entry : entityPersistersByName.entrySet()) {
-                if (!entry.getValue().getEntityName().equals(getHibernateEntityName())
-                        && isSubtype(entry.getValue().getEntityName(), getHibernateEntityName())) {
-                    PersistentAttribute<? super Object, ?> subattribute
-                            = new MockEntityDomainType<>(entry.getValue().getEntityName()).findAttribute(name);
-                    if (subattribute != null) {
-                        return subattribute;
-                    }
-                }
             }
             return null;
         }

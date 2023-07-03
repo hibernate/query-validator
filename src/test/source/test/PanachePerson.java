@@ -37,6 +37,6 @@ public class PanachePerson extends PanacheEntity {
         find("order by name");
         find("from Person");
         String stef = "";
-        find("completed = 0 and title like ?1", "%"+stef+"%");
+        find("completed = false and title like ?1", "%"+stef+"%");
     }
 }
