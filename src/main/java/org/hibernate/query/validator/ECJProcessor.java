@@ -60,7 +60,7 @@ public class ECJProcessor extends AbstractProcessor {
                 Elements elements = processingEnv.getElementUtils();
                 TypeElement typeElement = elements.getTypeElement(qualifiedName(type.binding));
                 TypeElement panacheEntity = PanacheUtils.isPanache(typeElement, processingEnv.getTypeUtils(), elements);
-                type.traverse(new ECJASTVisitor(panacheEntity, unit, compiler), unit.scope);
+                type.traverse(new ECJASTVisitor(panacheEntity, unit, compiler, processingEnv), unit.scope);
             }
         }
     }

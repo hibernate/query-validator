@@ -43,7 +43,8 @@ class JavacTreeScanner extends TreeScanner {
         JavacErrorReporter handler = new JavacErrorReporter(javacChecker.getJavacProcessor(), jcLiteral, element, hql);
         validate(hql, inCreateQueryMethod && immediatelyCalled,
                 setParameterLabels, setParameterNames, handler,
-                JavacProcessor.sessionFactory.make(javacChecker.getProcessingEnv()));
+                ProcessorSessionFactory.instance.make(javacChecker.getProcessingEnv()));
+//                JavacProcessor.sessionFactory.make(javacChecker.getProcessingEnv()));
     }
 
     private void checkPanacheQuery(JCTree.JCLiteral jcLiteral, String targetType, String methodName, String panacheQl,
@@ -58,7 +59,7 @@ class JavacTreeScanner extends TreeScanner {
             return;
         validate(hql, true,
                 setParameterLabels, setParameterNames, handler,
-                JavacProcessor.sessionFactory.make(javacChecker.getJavacProcessor().getProcessingEnv()),
+                ProcessorSessionFactory.instance.make(javacChecker.getProcessingEnv()),
                 offset[0]);
     }
 

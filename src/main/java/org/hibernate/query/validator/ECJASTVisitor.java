@@ -12,6 +12,7 @@ import org.eclipse.jdt.internal.compiler.ast.StringLiteral;
 import org.eclipse.jdt.internal.compiler.ast.ThisReference;
 import org.eclipse.jdt.internal.compiler.lookup.BlockScope;
 
+import javax.annotation.processing.ProcessingEnvironment;
 import javax.lang.model.element.TypeElement;
 import java.util.HashSet;
 import java.util.Set;
@@ -33,12 +34,14 @@ class ECJASTVisitor extends ASTVisitor {
     private final TypeElement panacheEntity;
     private final CompilationUnitDeclaration unit;
     private final Compiler compiler;
+    private final ProcessingEnvironment processingEnv;
     boolean immediatelyCalled;
 
-    public ECJASTVisitor(TypeElement panacheEntity, CompilationUnitDeclaration unit, Compiler compiler) {
+    public ECJASTVisitor(TypeElement panacheEntity, CompilationUnitDeclaration unit, Compiler compiler, ProcessingEnvironment processingEnv) {
         this.panacheEntity = panacheEntity;
         this.unit = unit;
         this.compiler = compiler;
+        this.processingEnv = processingEnv;
         setParameterLabels = new HashSet<>();
         setParameterNames = new HashSet<>();
         setOrderBy = new HashSet<>();
@@ -145,6 +148,7 @@ class ECJASTVisitor extends ASTVisitor {
         ECJErrorReporter handler = new ECJErrorReporter(stringLiteral, unit, compiler, hql);
         validate(hql, inCreateQueryMethod && immediatelyCalled,
                 setParameterLabels, setParameterNames, handler,
+//                ProcessorSessionFactory.instance.make(processingEnv));
                 ECJProcessor.sessionFactory.make(unit));
     }
 
@@ -158,7 +162,9 @@ class ECJASTVisitor extends ASTVisitor {
         if (hql != null) {
             validate(hql, true,
                     setParameterLabels, setParameterNames, handler,
-                    ECJProcessor.sessionFactory.make(unit), offset[0]);
+//                    ProcessorSessionFactory.instance.make(processingEnv),
+                    ECJProcessor.sessionFactory.make(unit),
+                    offset[0]);
         }
     }
 

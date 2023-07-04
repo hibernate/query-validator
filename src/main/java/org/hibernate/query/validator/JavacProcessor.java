@@ -25,7 +25,7 @@ import java.util.Set;
 //@SupportedAnnotationTypes(CHECK_HQL)
 public class JavacProcessor extends AbstractProcessor {
 
-    static Mocker<JavacSessionFactory> sessionFactory = Mocker.variadic(JavacSessionFactory.class);
+//    static Mocker<JavacSessionFactory> sessionFactory = Mocker.variadic(JavacSessionFactory.class);
 
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
