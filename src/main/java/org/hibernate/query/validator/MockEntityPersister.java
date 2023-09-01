@@ -1,5 +1,6 @@
 package org.hibernate.query.validator;
 
+import jakarta.persistence.AccessType;
 import org.hibernate.QueryException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.persister.entity.DiscriminatorMetadata;
@@ -8,9 +9,14 @@ import org.hibernate.persister.entity.Queryable;
 import org.hibernate.tuple.entity.EntityMetamodel;
 import org.hibernate.type.Type;
 
-import jakarta.persistence.AccessType;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 
 import static org.hibernate.query.validator.MockSessionFactory.typeConfiguration;
 
@@ -27,9 +33,7 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     final AccessType defaultAccessType;
     private final Map<String,Type> propertyTypesByName = new HashMap<>();
 
-    public MockEntityPersister(String entityName,
-                        AccessType defaultAccessType,
-                        MockSessionFactory factory) {
+    public MockEntityPersister(String entityName, AccessType defaultAccessType, MockSessionFactory factory) {
         this.entityName = entityName;
         this.factory = factory;
         this.defaultAccessType = defaultAccessType;
@@ -62,7 +66,7 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     public boolean isSubclassEntityName(String name) {
         return isSubclassPersister(subclassPersisters.stream()
                 .filter(persister -> persister.entityName.equals(name))
-                .findFirst().orElseThrow());
+                .findFirst().get());
     }
 
     @Override
@@ -72,7 +76,6 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
 
     @Override
     public EntityMetamodel getEntityMetamodel() {
-        //TODO: this is bad
         throw new UnsupportedOperationException();
     }
 
@@ -115,7 +118,7 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
 
     @Override
     public String getIdentifierPropertyName() {
-        //TODO!!!!!!
+        //TODO: return the correct @Id property name
         return "id";
     }
 
@@ -163,8 +166,8 @@ public abstract class MockEntityPersister implements EntityPersister, Queryable,
     }
 
     @Override
-    public Serializable[] getPropertySpaces() {
-        return new Serializable[] {entityName};
+    public String[] getPropertySpaces() {
+        return new String[] {entityName};
     }
 
     @Override

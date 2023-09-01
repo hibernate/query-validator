@@ -5,12 +5,12 @@ import org.hibernate.QueryException;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.persister.collection.QueryableCollection;
 import org.hibernate.persister.entity.EntityPersister;
-import org.hibernate.type.*;
-
-import java.io.Serializable;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.ListType;
+import org.hibernate.type.MapType;
+import org.hibernate.type.Type;
 
 import static org.hibernate.internal.util.StringHelper.root;
-
 import static org.hibernate.query.validator.MockSessionFactory.typeConfiguration;
 
 /**
@@ -27,9 +27,7 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     private final String ownerEntityName;
     private final Type elementType;
 
-    public MockCollectionPersister(String role, CollectionType collectionType,
-                            Type elementType,
-                            MockSessionFactory factory) {
+    public MockCollectionPersister(String role, CollectionType collectionType, Type elementType, MockSessionFactory factory) {
         this.role = role;
         this.collectionType = collectionType;
         this.elementType = elementType;
@@ -65,10 +63,10 @@ public abstract class MockCollectionPersister implements QueryableCollection {
 
     @Override
     public Type toType(String propertyName) throws QueryException {
-        if (propertyName.equals("index")) {
+        if ("index".equals(propertyName)) {
             //this is what AbstractCollectionPersister does!
             //TODO: move it to FromElementType:626 or all
-            //      the way to CollectionPropertyMapping
+            //	  the way to CollectionPropertyMapping
             return getIndexType();
         }
         Type type = getElementPropertyType(propertyName);
@@ -93,7 +91,8 @@ public abstract class MockCollectionPersister implements QueryableCollection {
             return typeConfiguration.getBasicTypeForJavaType(Integer.class);
         }
         else if (collectionType instanceof MapType) {
-            return typeConfiguration.getBasicTypeForJavaType(String.class); //TODO!!!
+            //TODO!!! this is incorrect, return the correct key type
+            return typeConfiguration.getBasicTypeForJavaType(String.class);
         }
         else {
             return null;
@@ -113,7 +112,7 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     @Override
     public boolean hasIndex() {
         return getCollectionType() instanceof ListType
-            || getCollectionType() instanceof MapType;
+                || getCollectionType() instanceof MapType;
     }
 
     @Override
@@ -138,8 +137,8 @@ public abstract class MockCollectionPersister implements QueryableCollection {
     }
 
     @Override
-    public Serializable[] getCollectionSpaces() {
-        return new Serializable[] {role};
+    public String[] getCollectionSpaces() {
+        return new String[] {role};
     }
 
     @Override

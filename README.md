@@ -24,11 +24,6 @@ Maven repository.
 It also creates a far jar `query-validator-2.0-SNAPSHOT-all.jar`
 in the `build/libs` directory of this project.
 
-### Temporary requirement
-
-Temporarily, you'll need to build a snapshot of Hibernate ORM 
-6.3 from the `main` branch of the `hibernate-orm` project.
-
 ## Usage
 
 The persistent entity classes *must* be annotated with the 
@@ -204,7 +199,7 @@ If the query validator doesn't run, please ensure that:
 The query validator was developed and tested with:
 
 - JDK 15, JDK 17, JDK 20
-- Hibernate 6.3.0-SNAPSHOT
+- Hibernate 6.3.0
 - ECJ 3.33.0
 - Eclipse IDE with JDT Core 3.33.0
 

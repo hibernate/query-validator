@@ -107,90 +107,100 @@ import org.hibernate.type.descriptor.jdbc.JdbcTypeIndicators;
 import org.hibernate.type.descriptor.jdbc.ObjectJdbcType;
 import org.hibernate.type.spi.TypeConfiguration;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static java.util.Collections.*;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
 
 /**
  * @author Gavin King
  */
 public abstract class MockSessionFactory
         implements SessionFactoryImplementor, QueryEngine, RuntimeModelCreationContext, MetadataBuildingOptions,
-                BootstrapContext, MetadataBuildingContext, FunctionContributions, SessionFactoryOptions, JdbcTypeIndicators {
+        BootstrapContext, MetadataBuildingContext, FunctionContributions, SessionFactoryOptions, JdbcTypeIndicators {
 
     // static so other things can get at it
     // TODO: make a static instance of this whole object instead!
     static TypeConfiguration typeConfiguration;
 
-    final StandardServiceRegistryImpl serviceRegistry =
-            new StandardServiceRegistryImpl(
-                    new BootstrapServiceRegistryBuilder().applyClassLoaderService(new ClassLoaderServiceImpl() {
-                        @Override
-                        public Class classForName(String className) {
-                            try {
-                                return super.classForName(className);
-                            }
-                            catch (ClassLoadingException e) {
-                                if ( MockSessionFactory.this.isClassDefined(className) ) {
-                                    return Object[].class;
-                                }
-                                else {
-                                    throw e;
-                                }
-                            }
-                        }
-                    }).build(),
-                    singletonList(MockJdbcServicesInitiator.INSTANCE),
-                    emptyList(),
-                    emptyMap()
-            );
+    private final Map<String, MockEntityPersister> entityPersistersByName = new HashMap<>();
+    private final Map<String, MockCollectionPersister> collectionPersistersByName = new HashMap<>();
 
-    private final Map<String,MockEntityPersister> entityPersistersByName = new HashMap<>();
-    private final Map<String,MockCollectionPersister> collectionPersistersByName = new HashMap<>();
+    private final StandardServiceRegistryImpl serviceRegistry;
+    private final SqmFunctionRegistry functionRegistry;
+    private final MappingMetamodelImpl metamodel;
 
-    private final SqmFunctionRegistry functionRegistry = new SqmFunctionRegistry();
-
-    private final MappingMetamodelImpl metamodel = new MockMappingMetamodelImpl();
-
-    private final Database database =
-            new Database(this, MockJdbcServicesInitiator.jdbcServices.getJdbcEnvironment());
-
-    private final MetadataImplementor bootModel =
-            new MetadataImpl(
-                    UUID.randomUUID(),
-                    this,
-                    emptyMap(),
-                    emptyList(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    emptyMap(),
-                    database,
-                    this
-            );
-
-    private final MetadataContext metadataContext =
-            new MetadataContext(
-                    metamodel.getJpaMetamodel(),
-                    metamodel,
-                    bootModel,
-                    JpaStaticMetaModelPopulationSetting.DISABLED,
-                    JpaMetaModelPopulationSetting.DISABLED,
-                    this
-            );
+    private final MetadataImplementor bootModel;
+    private final MetadataContext metadataContext;
 
     public MockSessionFactory() {
+
+        serviceRegistry = StandardServiceRegistryImpl.create(
+                new BootstrapServiceRegistryBuilder().applyClassLoaderService(new ClassLoaderServiceImpl() {
+                    @Override
+                    @SuppressWarnings("unchecked")
+                    public Class<?> classForName(String className) {
+                        try {
+                            return super.classForName(className);
+                        }
+                        catch (ClassLoadingException e) {
+                            if (isClassDefined(className)) {
+                                return Object[].class;
+                            }
+                            else {
+                                throw e;
+                            }
+                        }
+                    }
+                }).build(),
+                singletonList(MockJdbcServicesInitiator.INSTANCE),
+                emptyList(),
+                emptyMap()
+        );
+
+        functionRegistry = new SqmFunctionRegistry();
+        metamodel = new MockMappingMetamodelImpl();
+
+        bootModel = new MetadataImpl(
+                UUID.randomUUID(),
+                this,
+                emptyMap(),
+                emptyList(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                emptyMap(),
+                new Database(this, MockJdbcServicesInitiator.jdbcServices.getJdbcEnvironment()),
+                this
+        );
+
+        metadataContext = new MetadataContext(
+                metamodel.getJpaMetamodel(),
+                metamodel,
+                bootModel,
+                JpaStaticMetaModelPopulationSetting.DISABLED,
+                JpaMetaModelPopulationSetting.DISABLED,
+                this
+        );
+
         typeConfiguration = new TypeConfiguration();
         typeConfiguration.scope((MetadataBuildingContext) this);
         MockJdbcServicesInitiator.genericDialect.initializeFunctionRegistry(this);
@@ -274,7 +284,9 @@ public abstract class MockSessionFactory
 
     private EntityPersister createEntityPersister(String entityName) {
         MockEntityPersister result = entityPersistersByName.get(entityName);
-        if (result!=null) return result;
+        if (result!=null) {
+            return result;
+        }
         result = createMockEntityPersister(entityName);
         entityPersistersByName.put(entityName, result);
         return result;
@@ -282,7 +294,9 @@ public abstract class MockSessionFactory
 
     private CollectionPersister createCollectionPersister(String entityName) {
         MockCollectionPersister result = collectionPersistersByName.get(entityName);
-        if (result!=null) return result;
+        if (result!=null) {
+            return result;
+        }
         result = createMockCollectionPersister(entityName);
         collectionPersistersByName.put(entityName, result);
         return result;
@@ -329,7 +343,7 @@ public abstract class MockSessionFactory
     @Override
     public JdbcServices getJdbcServices() {
         return MockJdbcServicesInitiator.jdbcServices;
-//        return serviceRegistry.getService(JdbcServices.class);
+//		return serviceRegistry.getService(JdbcServices.class);
     }
 
     @Override
@@ -765,7 +779,12 @@ public abstract class MockSessionFactory
 
         @Override
         public <X> EntityDomainType<X> findEntityType(Class<X> cls) {
-            throw new UnsupportedOperationException();
+            if ( isEntityDefined( cls.getName() ) ) {
+                return new MockEntityDomainType<>( cls.getName() );
+            }
+            else {
+                return null;
+            }
         }
 
         @Override

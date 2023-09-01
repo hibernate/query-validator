@@ -63,8 +63,7 @@ class MockJdbcServicesInitiator extends JdbcServicesInitiator {
     }
 
     @Override
-    public JdbcServices initiateService(Map configurationValues,
-                                        ServiceRegistryImplementor registry) {
+    public JdbcServices initiateService(Map configurationValues, ServiceRegistryImplementor registry) {
         return jdbcServices;
     }
 }

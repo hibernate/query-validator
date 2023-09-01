@@ -81,7 +81,7 @@ class Validation {
             }
             if (handler.getErrorCount() == 0) {
                 try {
-                    new SemanticQueryBuilder<>(null, () -> false, factory)
+                    new SemanticQueryBuilder<>( Object[].class, () -> false, factory )
                             .visitStatement( statementContext );
                 }
                 catch (JdbcTypeRecommendationException ignored) {
