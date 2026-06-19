@@ -19,7 +19,7 @@ dependencies {
         transitive = false
     }
     //explicit the Hibernate dependencies we need:
-    implementation 'org.antlr:antlr4-runtime:4.10.1'
+    implementation 'org.antlr:antlr4-runtime:4.13.0'
     implementation 'jakarta.persistence:jakarta.persistence-api:3.1.0'
     runtimeOnly 'jakarta.transaction:jakarta.transaction-api:2.0.1'
     implementation 'net.bytebuddy:byte-buddy:1.14.5'
